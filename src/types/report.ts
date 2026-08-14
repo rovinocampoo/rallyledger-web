@@ -14,3 +14,15 @@ export type OutstandingParticipant = {
   nickname: string;
   balance: number;
 };
+
+export type PaymentMethodSummary = {
+  paymentMethod: string;
+  paymentCount: number;
+  totalAmount: number;
+};
+
+export type PaymentReport = {
+  totalPayments: number;
+  paymentCount: number;
+  byMethod: PaymentMethodSummary[];
+};

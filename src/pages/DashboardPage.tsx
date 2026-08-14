@@ -1,8 +1,58 @@
 import { useEffect, useState } from "react";
-import { getReportSummary, getTopOutstanding } from "../api/reports";
-import type { OutstandingParticipant, ReportSummary } from "../types/report";
-import { formatCurrency, formatFullName } from "../utils/format";
+import {
+  getReportSummary,
+  getTopOutstanding,
+  getPaymentReport,
+  type ReportDateRange,
+} from "../api/reports";
+import type {
+  OutstandingParticipant,
+  ReportSummary,
+  PaymentReport,
+} from "../types/report";
+import { formatCurrency, formatFullName, formatLabel } from "../utils/format";
 import { useNavigate } from "react-router-dom";
+
+type DateFilter = "ALL_TIME" | "TODAY" | "THIS_MONTH" | "CUSTOM";
+
+function formatDateInput(date: Date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function buildDateRange(
+  filter: DateFilter,
+  customFrom: string,
+  customTo: string,
+) {
+  const today = new Date();
+
+  if (filter === "TODAY") {
+    const date = formatDateInput(today);
+
+    return {
+      from: date,
+      to: date,
+    };
+  }
+
+  if (filter === "THIS_MONTH") {
+    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+
+    return {
+      from: formatDateInput(firstDay),
+      to: formatDateInput(today),
+    };
+  }
+
+  if (filter === "CUSTOM") {
+    return {
+      from: customFrom || undefined,
+      to: customTo || undefined,
+    };
+  }
+
+  return undefined;
+}
 
 function DashboardPage() {
   const [summary, setSummary] = useState<ReportSummary | null>(null);
@@ -12,15 +62,50 @@ function DashboardPage() {
     OutstandingParticipant[]
   >([]);
   const navigate = useNavigate();
+  const [paymentReport, setPaymentReport] = useState<PaymentReport | null>(
+    null,
+  );
+  const [dateFilter, setDateFilter] = useState<DateFilter>("ALL_TIME");
+
+  const [customFrom, setCustomFrom] = useState("");
+  const [customTo, setCustomTo] = useState("");
+  const [appliedDateRange, setAppliedDateRange] = useState<
+    ReportDateRange | undefined
+  >(undefined);
+
+  function handleApplyFilter() {
+    setLoading(true);
+    setError(null);
+
+    setAppliedDateRange(buildDateRange(dateFilter, customFrom, customTo));
+  }
+
+  function handlePresetFilter(filter: DateFilter) {
+    setDateFilter(filter);
+
+    if (filter === "CUSTOM") {
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    setAppliedDateRange(buildDateRange(filter, customFrom, customTo));
+  }
 
   useEffect(() => {
     let ignore = false;
 
-    Promise.all([getReportSummary(), getTopOutstanding()])
-      .then(([summaryData, outstandingData]) => {
+    Promise.all([
+      getReportSummary(appliedDateRange),
+      getTopOutstanding(),
+      getPaymentReport(appliedDateRange),
+    ])
+      .then(([summaryData, outstandingData, paymentData]) => {
         if (!ignore) {
           setSummary(summaryData);
           setOutstandingParticipants(outstandingData);
+          setPaymentReport(paymentData);
           setLoading(false);
         }
       })
@@ -35,7 +120,7 @@ function DashboardPage() {
     return () => {
       ignore = true;
     };
-  }, []);
+  }, [appliedDateRange]);
 
   if (loading) {
     return <p>Loading dashboard...</p>;
@@ -56,6 +141,59 @@ function DashboardPage() {
 
         <p className="mt-1 text-sm text-zinc-400">RallyLedger overview.</p>
       </div>
+      <div className="mb-6 flex flex-wrap gap-2">
+        {[
+          ["ALL_TIME", "All Time"],
+          ["TODAY", "Today"],
+          ["THIS_MONTH", "This Month"],
+          ["CUSTOM", "Custom"],
+        ].map(([value, label]) => (
+          <button
+            key={value}
+            type="button"
+            onClick={() => handlePresetFilter(value as DateFilter)}
+            className={`rounded-lg px-3 py-2 text-sm ${
+              dateFilter === value
+                ? "bg-white text-black"
+                : "bg-zinc-900 text-zinc-400 hover:text-white"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      {dateFilter === "CUSTOM" && (
+        <div className="mb-6 flex flex-wrap gap-3">
+          <div>
+            <label className="mb-1 block text-xs text-zinc-500">From</label>
+
+            <input
+              type="date"
+              value={customFrom}
+              onChange={(event) => setCustomFrom(event.target.value)}
+              className="rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs text-zinc-500">To</label>
+
+            <input
+              type="date"
+              value={customTo}
+              onChange={(event) => setCustomTo(event.target.value)}
+              className="rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={handleApplyFilter}
+            className="self-end rounded-lg bg-white px-4 py-2 text-sm font-medium text-black"
+          >
+            Apply
+          </button>
+        </div>
+      )}
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
@@ -92,8 +230,9 @@ function DashboardPage() {
         </div>
 
         <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
-          <p className="text-sm text-zinc-400">Outstanding Balance</p>
-
+          <p className="text-sm text-zinc-400">
+            {dateFilter === "ALL_TIME" ? "Outstanding Balance" : "Net Balance"}
+          </p>
           <p className="mt-2 text-3xl font-bold">
             {formatCurrency(summary.outstandingBalance)}
           </p>
@@ -148,6 +287,64 @@ function DashboardPage() {
           </div>
         )}
       </div>
+      {/* Payment Report */}
+      {paymentReport && (
+        <div className="mt-8 rounded-xl border border-zinc-800 bg-zinc-900 p-5">
+          <div className="mb-5">
+            <h2 className="text-lg font-semibold">Payments Overview</h2>
+
+            <p className="mt-1 text-sm text-zinc-400">
+              Breakdown of recorded payments by method.
+            </p>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="rounded-lg bg-zinc-950 p-4">
+              <p className="text-sm text-zinc-400">Total Payments</p>
+
+              <p className="mt-2 text-2xl font-bold">
+                {formatCurrency(paymentReport.totalPayments)}
+              </p>
+            </div>
+
+            <div className="rounded-lg bg-zinc-950 p-4">
+              <p className="text-sm text-zinc-400">Payment Records</p>
+
+              <p className="mt-2 text-2xl font-bold">
+                {paymentReport.paymentCount}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-5 space-y-2">
+            {paymentReport.byMethod.length === 0 ? (
+              <p className="text-sm text-zinc-500">No payments recorded yet.</p>
+            ) : (
+              paymentReport.byMethod.map((method) => (
+                <div
+                  key={method.paymentMethod}
+                  className="flex items-center justify-between rounded-lg bg-zinc-950 px-4 py-3"
+                >
+                  <div>
+                    <p className="font-medium">
+                      {formatLabel(method.paymentMethod)}
+                    </p>
+
+                    <p className="text-xs text-zinc-500">
+                      {method.paymentCount}{" "}
+                      {method.paymentCount === 1 ? "payment" : "payments"}
+                    </p>
+                  </div>
+
+                  <p className="font-semibold">
+                    {formatCurrency(method.totalAmount)}
+                  </p>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
