@@ -33,6 +33,7 @@ function ParticipantsPage() {
     ) ?? null;
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+  const [searchQuery, setSearchQuery] = useState("");
 
   function handleSort(key: SortKey) {
     if (sortKey === key) {
@@ -123,8 +124,27 @@ function ParticipantsPage() {
       console.error(err);
     }
   }
+  const filteredParticipants = participants.filter((participant) => {
+    const query = searchQuery.trim().toLowerCase();
 
-  const sortedParticipants = [...participants].sort((a, b) => {
+    if (!query) {
+      return true;
+    }
+
+    const fullName = formatFullName(
+      participant.firstName,
+      participant.lastName,
+    ).toLowerCase();
+
+    return (
+      fullName.includes(query) ||
+      participant.firstName.toLowerCase().includes(query) ||
+      participant.lastName.toLowerCase().includes(query) ||
+      participant.nickname?.toLowerCase().includes(query) ||
+      participant.participantType.toLowerCase().includes(query)
+    );
+  });
+  const sortedParticipants = [...filteredParticipants].sort((a, b) => {
     let aValue = "";
     let bValue = "";
 
@@ -190,6 +210,20 @@ function ParticipantsPage() {
       )}
       <div>
         {/* DESKTOP HEADER */}
+        <div className="mb-4">
+          <input
+            type="search"
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder="Search players..."
+            className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-4 py-2.5 text-sm text-white outline-none placeholder:text-zinc-600 focus:border-zinc-600 sm:max-w-sm"
+          />
+        </div>
+        {sortedParticipants.length === 0 && (
+          <p className="py-8 text-center text-sm text-zinc-500">
+            No players found.
+          </p>
+        )}
         <div className="hidden grid-cols-[160px_160px_minmax(0,1fr)_auto] items-center gap-4 rounded-t-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-left text-sm text-zinc-400 md:grid">
           <button
             type="button"
