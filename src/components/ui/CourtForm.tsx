@@ -12,7 +12,7 @@ type CourtFormProps = {
 function CourtForm({ court, onSaved, onCancel }: CourtFormProps) {
   const [name, setName] = useState(court?.name ?? "");
   const [location, setLocation] = useState(court?.location ?? "Outdoor Court");
-  const [surface, setSurface] = useState(court?.surface ?? "");
+  const [surface, setSurface] = useState(court?.surface ?? "HARD");
   const [isActive, setIsActive] = useState(court?.isActive ?? true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);

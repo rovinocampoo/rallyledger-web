@@ -18,7 +18,7 @@ type SessionMatchesPanelProps = {
 function SessionMatchesPanel({ session, onClose }: SessionMatchesPanelProps) {
   const [matches, setMatches] = useState<Match[]>([]);
   const [courts, setCourts] = useState<Court[]>([]);
-
+  const activeCourts = courts.filter((court) => court.isActive);
   const [showForm, setShowForm] = useState(false);
   const [courtId, setCourtId] = useState("");
   const [matchType, setMatchType] = useState("DOUBLES");
@@ -213,11 +213,14 @@ function SessionMatchesPanel({ session, onClose }: SessionMatchesPanelProps) {
                 onChange={(event) => setCourtId(event.target.value)}
                 className="mt-2 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2"
               >
-                <option value="">Select court</option>
-
-                {courts.map((court) => (
+                <option value="">
+                  {activeCourts.length === 0
+                    ? "No active courts available"
+                    : "Select court"}
+                </option>
+                {activeCourts.map((court) => (
                   <option key={court.id} value={court.id}>
-                    {court.name}
+                    {court.name} - {formatLabel(court.surface)} - {court.location}
                   </option>
                 ))}
               </select>
@@ -253,7 +256,7 @@ function SessionMatchesPanel({ session, onClose }: SessionMatchesPanelProps) {
           <div className="mt-4 flex gap-2">
             <button
               type="submit"
-              disabled={submitting}
+              disabled={submitting || activeCourts.length === 0}
               className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-black disabled:opacity-50"
             >
               {submitting ? "Creating..." : "Create Match"}
@@ -320,6 +323,7 @@ function SessionMatchesPanel({ session, onClose }: SessionMatchesPanelProps) {
                     </p>
                     <p className="mt-1 text-sm text-zinc-400">
                       {court?.name ?? `Court ${match.courtId}`}
+                       - {court?.location}
                     </p>
 
                     <div className="mt-2 flex flex-wrap gap-2 text-xs">
@@ -371,7 +375,7 @@ function SessionMatchesPanel({ session, onClose }: SessionMatchesPanelProps) {
                   type="button"
                   onClick={() => setScoreMatch(match)}
                   disabled={hasCharges}
-                 className="text-sm text-zinc-300 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="text-sm text-zinc-300 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   Manage Score
                 </button>
