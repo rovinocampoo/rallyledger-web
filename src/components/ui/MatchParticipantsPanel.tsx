@@ -178,7 +178,7 @@ function MatchParticipantsPanel({
 
   if (loading) {
     return (
-      <div className="mt-5 rounded-lg border border-zinc-800 bg-zinc-950 p-4">
+      <div className="mt-5 min-w-0 overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950 p-4">
         <p className="text-sm text-zinc-400">Loading match players...</p>
       </div>
     );
@@ -206,28 +206,26 @@ function MatchParticipantsPanel({
 
       {error && <p className="mt-4 text-sm text-red-400">{error}</p>}
 
-      <div className="mt-5 flex flex-wrap gap-2">
+      <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto_auto]">
         <ParticipantPicker
           participants={availableParticipants}
           selectedParticipantId={selectedParticipantId}
           onSelect={setSelectedParticipantId}
           placeholder="Search session player..."
         />
-
         <select
           value={teamSide}
           onChange={(event) => setTeamSide(event.target.value)}
-          className="rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2"
+          className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 sm:w-auto"
         >
           <option value="A">Team A</option>
           <option value="B">Team B</option>
         </select>
-
         <button
           type="button"
           onClick={handleAddParticipant}
           disabled={!selectedParticipantId}
-          className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-black disabled:opacity-50"
+          className="w-full rounded-lg bg-white px-4 py-2 font-medium text-black sm:w-auto"
         >
           Add Player
         </button>
@@ -235,7 +233,7 @@ function MatchParticipantsPanel({
 
       <div className="mt-6 grid gap-4 md:grid-cols-2">
         <div>
-          <h4 className="mb-2 font-semibold">Team A</h4>
+          <h4 className="mb-2 text-left text-sm font-semibold uppercase tracking-wide text-zinc-500">Team A</h4>
 
           <div className="space-y-2">
             {teamA.length === 0 ? (
@@ -250,10 +248,10 @@ function MatchParticipantsPanel({
                 return (
                   <div
                     key={matchParticipant.participantId}
-                    className="flex items-center justify-between gap-3 rounded-lg bg-zinc-900 px-3 py-2"
+                    className="rounded-lg bg-zinc-900 p-3"
                   >
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium">
+                    <div className="min-w-0 text-left">
+                      <p className="truncate font-medium">
                         {matchParticipant.nickname ||
                           (participant
                             ? formatFullName(
@@ -264,7 +262,7 @@ function MatchParticipantsPanel({
                       </p>
 
                       {participant && matchParticipant.nickname && (
-                        <p className="text-xs text-zinc-500">
+                        <p className="truncate text-xs text-zinc-500">
                           {formatFullName(
                             participant.firstName,
                             participant.lastName,
@@ -273,7 +271,7 @@ function MatchParticipantsPanel({
                       )}
                     </div>
 
-                    <div className="flex shrink-0 gap-3">
+                    <div className="mt-3 grid grid-cols-2 gap-2">
                       <button
                         type="button"
                         onClick={() =>
@@ -281,7 +279,7 @@ function MatchParticipantsPanel({
                             matchParticipant.participantId,
                           )
                         }
-                        className="text-xs text-red-400 hover:text-red-300"
+                        className="rounded-lg border border-red-900/60 px-3 py-2 text-xs text-red-400 hover:bg-red-950/30"
                       >
                         Remove
                       </button>
@@ -294,7 +292,7 @@ function MatchParticipantsPanel({
                             "B",
                           )
                         }
-                        className="text-xs text-zinc-400 hover:text-white"
+                        className="rounded-lg border border-zinc-700 px-3 py-2 text-xs text-zinc-300 hover:bg-zinc-800"
                       >
                         Move to Team B
                       </button>
@@ -307,7 +305,7 @@ function MatchParticipantsPanel({
         </div>
 
         <div>
-          <h4 className="mb-2 font-semibold">Team B</h4>
+          <h4 className="mb-2 text-left text-sm font-semibold uppercase tracking-wide text-zinc-500">Team B</h4>
 
           <div className="space-y-2">
             {teamB.length === 0 ? (
@@ -322,10 +320,10 @@ function MatchParticipantsPanel({
                 return (
                   <div
                     key={matchParticipant.participantId}
-                    className="flex items-center justify-between gap-3 rounded-lg bg-zinc-900 px-3 py-2"
+                    className="rounded-lg bg-zinc-900 p-3"
                   >
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium">
+                    <div className="min-w-0 text-left">
+                      <p className="truncate font-medium">
                         {matchParticipant.nickname ||
                           (participant
                             ? formatFullName(
@@ -336,7 +334,7 @@ function MatchParticipantsPanel({
                       </p>
 
                       {participant && matchParticipant.nickname && (
-                        <p className="text-xs text-zinc-500">
+                        <p className="truncate text-xs text-zinc-500">
                           {formatFullName(
                             participant.firstName,
                             participant.lastName,
@@ -345,7 +343,7 @@ function MatchParticipantsPanel({
                       )}
                     </div>
 
-                    <div className="flex shrink-0 gap-3">
+                    <div className="mt-3 grid grid-cols-2 gap-2">
                       <button
                         type="button"
                         onClick={() =>
@@ -353,7 +351,7 @@ function MatchParticipantsPanel({
                             matchParticipant.participantId,
                           )
                         }
-                        className="text-xs text-red-400 hover:text-red-300"
+                        className="rounded-lg border border-red-900/60 px-3 py-2 text-xs text-red-400 hover:bg-red-950/30"
                       >
                         Remove
                       </button>
@@ -366,7 +364,7 @@ function MatchParticipantsPanel({
                             "A",
                           )
                         }
-                        className="text-xs text-zinc-400 hover:text-white"
+                        className="rounded-lg border border-zinc-700 px-3 py-2 text-xs text-zinc-300 hover:bg-zinc-800"
                       >
                         Move to Team A
                       </button>

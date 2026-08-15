@@ -53,9 +53,8 @@ function CourtForm({ court, onSaved, onCancel }: CourtFormProps) {
         {court ? "Edit Court" : "Add Court"}
       </h2>
       <div className="grid gap-4 md:grid-cols-2">
-        <label>
+        <label className="block text-left">
           <span className="text-sm text-zinc-400">Court Name</span>
-
           <input
             type="text"
             value={name}
@@ -63,8 +62,8 @@ function CourtForm({ court, onSaved, onCancel }: CourtFormProps) {
             required
             className="mt-2 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2"
           />
-        </label>{" "}
-        <label>
+        </label>
+        <label className="block text-left">
           <span className="text-sm text-zinc-400">Location</span>
 
           <input
@@ -81,10 +80,11 @@ function CourtForm({ court, onSaved, onCancel }: CourtFormProps) {
             <option value="Covered Court" />
           </datalist>
         </label>
-        <div>
+        <label className="block text-left">
           <span className="text-sm text-zinc-400">Surface</span>
 
-          <div className="mt-2 flex flex-wrap gap-2">
+          <div className="mt-2 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+            {" "}
             {["HARD", "CLAY", "GRASS", "SHELL"].map((value) => (
               <button
                 key={value}
@@ -100,7 +100,7 @@ function CourtForm({ court, onSaved, onCancel }: CourtFormProps) {
               </button>
             ))}
           </div>
-        </div>
+        </label>
         <label className="flex items-center gap-2 self-end rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2">
           <input
             type="checkbox"

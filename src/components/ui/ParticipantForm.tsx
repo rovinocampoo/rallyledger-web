@@ -57,7 +57,10 @@ function ParticipantForm({
       onSaved(savedParticipant);
     } catch (err) {
       console.error(err);
-      setFormError("Failed to save participant");
+
+      setFormError(
+        err instanceof Error ? err.message : "Failed to save participant",
+      );
     } finally {
       setSubmitting(false);
     }
@@ -68,47 +71,51 @@ function ParticipantForm({
       <div className="mb-6 rounded-xl border border-zinc-800 bg-zinc-900 p-4">
         <div className="grid gap-4">
           <div className="grid gap-4">
-            <label className="block">
+            <label className="block text-left">
               <span className="text-sm text-zinc-400">First Name</span>
-
               <input
                 type="text"
                 value={firstName}
                 onChange={(event) => setFirstName(event.target.value)}
+                required
                 className="mt-2 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-white outline-none"
               />
             </label>
-            <label className="block">
+            <label className="block text-left">
               <span className="text-sm text-zinc-400">Last Name</span>
-
               <input
                 type="text"
                 value={lastName}
                 onChange={(event) => setLastName(event.target.value)}
+                required
                 className="mt-2 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-white outline-none"
               />
             </label>
-            <label className="block">
-              <span className="text-sm text-zinc-400">Nickname</span>
-
+            <label className="block text-left">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-zinc-300">Nickname</span>
+                <span className="text-xs text-zinc-500">Optional</span>
+              </div>
               <input
                 type="text"
                 value={nickname}
+                placeholder="Optional"
                 onChange={(event) => setNickname(event.target.value)}
                 className="mt-2 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-white outline-none"
               />
             </label>
-            <label className="block">
+            <label className="block text-left">
               <span className="text-sm text-zinc-400">Birthday</span>
 
               <input
                 type="date"
                 value={birthday}
                 onChange={(event) => setBirthday(event.target.value)}
+                required
                 className="mt-2 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-white outline-none"
               />
             </label>
-            <label className="block">
+            <label className="block text-left">
               <span className="text-sm text-zinc-400">Participant Type</span>
 
               <select
@@ -123,7 +130,7 @@ function ParticipantForm({
                 <option value="MMSU_VARSITY">MMSU Varsity</option>
               </select>
             </label>
-            <label className="block">
+            <label className="block text-left">
               <span className="text-sm text-zinc-400">Membership Status</span>
 
               <select

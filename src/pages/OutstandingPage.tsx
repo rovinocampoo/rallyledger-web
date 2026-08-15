@@ -138,44 +138,47 @@ function OutstandingPage() {
 
   return (
     <div>
-      <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">Outstanding Balances</h1>
+      <div className="mb-6">
+        <div className="grid grid-cols-[1fr_auto] items-end gap-4">
+          <div className="min-w-0 text-left">
+            <h1 className="text-2xl font-bold">Outstanding Balances</h1>
 
-          <p className="mt-1 text-sm text-zinc-400">
-            Participants with unpaid balances.
-          </p>
+            <p className="mt-1 text-sm text-zinc-400">
+              Participants with unpaid balances.
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center justify-end gap-2">
+            <label className="flex items-center gap-2 text-sm">
+              <span className="text-sm text-zinc-500">Show</span>
+
+              <select
+                value={limit?.toString() ?? "ALL"}
+                onChange={(event) => handleLimitChange(event.target.value)}
+                className="rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2"
+              >
+                <option value="ALL">All</option>
+                <option value="5">5</option>
+                <option value="10">10</option>
+                <option value="20">20</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+              </select>
+            </label>
+
+            <button
+              type="button"
+              onClick={handleExportCsv}
+              disabled={outstanding.length === 0}
+              className="rounded-lg border border-zinc-700 px-3 py-2 text-sm text-zinc-300 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Export CSV
+            </button>
+          </div>
         </div>
-        {actionError && (
-          <p className="mb-4 text-sm text-red-400">{actionError}</p>
-        )}
-
-        <label className="text-sm">
-          <span className="mb-1 block text-xs text-zinc-500">Show</span>
-
-          <select
-            value={limit?.toString() ?? "ALL"}
-            onChange={(event) => handleLimitChange(event.target.value)}
-            className="rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2"
-          >
-            <option value="ALL">All</option>
-            <option value="5">5</option>
-            <option value="10">10</option>
-            <option value="20">20</option>
-            <option value="50">50</option>
-            <option value="100">100</option>
-          </select>
-        </label>
-
-        <button
-          type="button"
-          onClick={handleExportCsv}
-          disabled={outstanding.length === 0}
-          className="rounded-lg border border-zinc-700 px-3 py-2 text-sm text-zinc-300 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          Export CSV
-        </button>
       </div>
+      {actionError && (
+        <p className="mb-4 text-sm text-red-400">{actionError}</p>
+      )}
 
       <div className="mb-6 rounded-xl border border-zinc-800 bg-zinc-900 p-5">
         <p className="text-sm text-zinc-400">

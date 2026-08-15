@@ -81,13 +81,14 @@ function SessionChargesPanel({
   return (
     <div className="mt-5 rounded-lg border border-zinc-800 bg-zinc-950 p-4">
       <div className="flex items-start justify-between">
-        <div>
+         <div className="min-w-0 text-left">
           <p className="text-sm text-zinc-400">Session Charges</p>
           <h3 className="text-lg font-semibold">{session.name}</h3>
           <p className="mt-1 text-sm text-zinc-500">
             Total: {formatCurrency(total)}
-          </p>{" "}
+          </p>
         </div>
+        
 
         <button
           type="button"

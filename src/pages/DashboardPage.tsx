@@ -69,19 +69,32 @@ function DashboardPage() {
 
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
+  const [filterError, setFilterError] = useState<string | null>(null);
   const [appliedDateRange, setAppliedDateRange] = useState<
     ReportDateRange | undefined
   >(undefined);
 
   function handleApplyFilter() {
+    if (!customFrom || !customTo) {
+      setFilterError("Please select both From and To dates.");
+      return;
+    }
+
+    if (customFrom > customTo) {
+      setFilterError("From date cannot be after To date.");
+      return;
+    }
+
     setLoading(true);
     setError(null);
+    setFilterError(null);
 
     setAppliedDateRange(buildDateRange(dateFilter, customFrom, customTo));
   }
 
   function handlePresetFilter(filter: DateFilter) {
     setDateFilter(filter);
+    setFilterError(null);
 
     if (filter === "CUSTOM") {
       return;
@@ -192,6 +205,9 @@ function DashboardPage() {
           >
             Apply
           </button>
+          {filterError && (
+            <p className="w-full text-sm text-red-400">{filterError}</p>
+          )}
         </div>
       )}
 
@@ -230,9 +246,7 @@ function DashboardPage() {
         </div>
 
         <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
-          <p className="text-sm text-zinc-400">
-            {dateFilter === "ALL_TIME" ? "Outstanding Balance" : "Net Balance"}
-          </p>
+          <p className="text-sm text-zinc-400">Net Balance</p>
           <p className="mt-2 text-3xl font-bold">
             {formatCurrency(summary.outstandingBalance)}
           </p>

@@ -1,5 +1,10 @@
 import { useEffect, useState, type SubmitEvent } from "react";
-import { createMatch, deleteMatch, getSessionMatches } from "../../api/matches";
+import {
+  createMatch,
+  deleteMatch,
+  getSessionMatches,
+  updateMatch,
+} from "../../api/matches";
 import { getCourts } from "../../api/courts";
 import type { Session } from "../../types/session";
 import type { Match } from "../../types/match";
@@ -9,6 +14,8 @@ import MatchSetsPanel from "./MatchSetsPanel";
 import { formatLabel } from "../../utils/format";
 import { generateMatchCharges, getMatchCharges } from "../../api/charges";
 import MatchChargesPanel from "./MatchChargesPanel";
+import { getMatchParticipants } from "../../api/matchParticipants";
+import type { MatchParticipant } from "../../types/matchParticipant";
 
 type SessionMatchesPanelProps = {
   session: Session;
@@ -17,6 +24,7 @@ type SessionMatchesPanelProps = {
 
 function SessionMatchesPanel({ session, onClose }: SessionMatchesPanelProps) {
   const [matches, setMatches] = useState<Match[]>([]);
+  const [editingMatch, setEditingMatch] = useState<Match | null>(null);
   const [courts, setCourts] = useState<Court[]>([]);
   const activeCourts = courts.filter((court) => court.isActive);
   const [showForm, setShowForm] = useState(false);
@@ -31,6 +39,9 @@ function SessionMatchesPanel({ session, onClose }: SessionMatchesPanelProps) {
   const [scoreMatch, setScoreMatch] = useState<Match | null>(null);
   const [chargeMatch, setChargeMatch] = useState<Match | null>(null);
   const [chargedMatchIds, setChargedMatchIds] = useState<number[]>([]);
+  const [participantsByMatch, setParticipantsByMatch] = useState<
+    Record<number, MatchParticipant[]>
+  >({});
 
   useEffect(() => {
     let ignore = false;
@@ -48,6 +59,17 @@ function SessionMatchesPanel({ session, onClose }: SessionMatchesPanelProps) {
           }),
         );
 
+        const participantResults = await Promise.all(
+          matchData.map(async (match) => {
+            const participants = await getMatchParticipants(match.id);
+
+            return {
+              matchId: match.id,
+              participants,
+            };
+          }),
+        );
+
         if (!ignore) {
           setMatches(matchData);
           setCourts(courtData);
@@ -57,7 +79,13 @@ function SessionMatchesPanel({ session, onClose }: SessionMatchesPanelProps) {
               .filter((result) => result.hasCharges)
               .map((result) => result.matchId),
           );
+          const groupedParticipants: Record<number, MatchParticipant[]> = {};
 
+          participantResults.forEach((result) => {
+            groupedParticipants[result.matchId] = result.participants;
+          });
+
+          setParticipantsByMatch(groupedParticipants);
           setLoading(false);
         }
       },
@@ -70,7 +98,30 @@ function SessionMatchesPanel({ session, onClose }: SessionMatchesPanelProps) {
 
   async function loadMatches() {
     const data = await getSessionMatches(session.id);
+
     setMatches(data);
+    await loadMatchParticipants(data);
+  }
+
+  async function loadMatchParticipants(matchList: Match[]) {
+    const results = await Promise.all(
+      matchList.map(async (match) => {
+        const participants = await getMatchParticipants(match.id);
+
+        return {
+          matchId: match.id,
+          participants,
+        };
+      }),
+    );
+
+    const grouped: Record<number, MatchParticipant[]> = {};
+
+    results.forEach((result) => {
+      grouped[result.matchId] = result.participants;
+    });
+
+    setParticipantsByMatch(grouped);
   }
 
   async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
@@ -85,18 +136,35 @@ function SessionMatchesPanel({ session, onClose }: SessionMatchesPanelProps) {
       setSubmitting(true);
       setError(null);
 
-      await createMatch({
-        sessionId: session.id,
-        courtId: Number(courtId),
-        matchType,
-        lightsOn,
-      });
+      if (editingMatch) {
+        const updatedMatch = await updateMatch(editingMatch.id, {
+          sessionId: session.id,
+          courtId: Number(courtId),
+          matchType,
+          result: editingMatch.result,
+          lightsOn,
+        });
+
+        setMatches((current) =>
+          current.map((match) =>
+            match.id === updatedMatch.id ? updatedMatch : match,
+          ),
+        );
+      } else {
+        await createMatch({
+          sessionId: session.id,
+          courtId: Number(courtId),
+          matchType,
+          lightsOn,
+        });
+      }
 
       await loadMatches();
 
       setCourtId("");
       setMatchType("DOUBLES");
       setLightsOn(false);
+      setEditingMatch(null);
       setShowForm(false);
     } catch (err) {
       console.error(err);
@@ -104,6 +172,15 @@ function SessionMatchesPanel({ session, onClose }: SessionMatchesPanelProps) {
     } finally {
       setSubmitting(false);
     }
+  }
+
+  function handleEditMatch(match: Match) {
+    setEditingMatch(match);
+    setCourtId(String(match.courtId));
+    setMatchType(match.matchType);
+    setLightsOn(match.lightsOn);
+    setShowForm(true);
+    setError(null);
   }
 
   function handleMatchUpdated(updatedMatch: Match) {
@@ -220,7 +297,8 @@ function SessionMatchesPanel({ session, onClose }: SessionMatchesPanelProps) {
                 </option>
                 {activeCourts.map((court) => (
                   <option key={court.id} value={court.id}>
-                    {court.name} - {formatLabel(court.surface)} - {court.location}
+                    {court.name} - {formatLabel(court.surface)} -{" "}
+                    {court.location}
                   </option>
                 ))}
               </select>
@@ -259,12 +337,23 @@ function SessionMatchesPanel({ session, onClose }: SessionMatchesPanelProps) {
               disabled={submitting || activeCourts.length === 0}
               className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-black disabled:opacity-50"
             >
-              {submitting ? "Creating..." : "Create Match"}
+              {submitting
+                ? "Saving..."
+                : editingMatch
+                  ? "Update Match"
+                  : "Create Match"}
             </button>
 
             <button
               type="button"
-              onClick={() => setShowForm(false)}
+              onClick={() => {
+                setShowForm(false);
+                setEditingMatch(null);
+                setCourtId("");
+                setMatchType("DOUBLES");
+                setLightsOn(false);
+                setError(null);
+              }}
               className="rounded-lg border border-zinc-700 px-4 py-2 text-sm"
             >
               Cancel
@@ -278,7 +367,10 @@ function SessionMatchesPanel({ session, onClose }: SessionMatchesPanelProps) {
           key={selectedMatch.id}
           match={selectedMatch}
           session={session}
-          onClose={() => setSelectedMatch(null)}
+          onClose={async () => {
+            setSelectedMatch(null);
+            await loadMatchParticipants(matches);
+          }}
         />
       )}
       {scoreMatch && (
@@ -304,6 +396,15 @@ function SessionMatchesPanel({ session, onClose }: SessionMatchesPanelProps) {
           matches.map((match) => {
             const court = courts.find((court) => court.id === match.courtId);
             const hasCharges = chargedMatchIds.includes(match.id);
+            const matchParticipants = participantsByMatch[match.id] ?? [];
+
+            const teamA = matchParticipants.filter(
+              (participant) => participant.teamSide === "A",
+            );
+
+            const teamB = matchParticipants.filter(
+              (participant) => participant.teamSide === "B",
+            );
             const canGenerateCharges = [
               "TEAM_A_WIN",
               "TEAM_B_WIN",
@@ -315,70 +416,134 @@ function SessionMatchesPanel({ session, onClose }: SessionMatchesPanelProps) {
 
             return (
               <div key={match.id} className="rounded-lg bg-zinc-950 px-4 py-3">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="font-medium">Match #{match.id}</p>
-                    <p className="font-medium">
-                      {`Status: ${formatLabel(match.result)}`}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1 text-left">
+                    <p className="text-lg font-semibold">Match #{match.id}</p>
+
+                    <p className="mt-1 truncate text-sm text-zinc-400">
+                      {court?.name ?? `Court ${match.courtId}`} ·{" "}
+                      {court?.location}
                     </p>
-                    <p className="mt-1 text-sm text-zinc-400">
-                      {court?.name ?? `Court ${match.courtId}`}
-                       - {court?.location}
+                  </div>
+
+                  <span className="shrink-0 rounded-full bg-zinc-800 px-3 py-1 text-sm">
+                    {formatLabel(match.result)}
+                  </span>
+                </div>
+
+                <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                  <span className="rounded-full bg-zinc-800 px-2.5 py-1">
+                    {formatLabel(match.matchType)}
+                  </span>
+
+                  {match.lightsOn && (
+                    <span className="rounded-full bg-zinc-800 px-2.5 py-1">
+                      Lights On
+                    </span>
+                  )}
+                </div>
+                <div className="mt-4 grid grid-cols-2 gap-3">
+                  <div className="w-fit max-w-full justify-self-start rounded-lg bg-zinc-900 px-3 py-2 text-left">
+                    <p className="text-xs font-medium uppercase text-zinc-500">
+                      Team A
                     </p>
 
-                    <div className="mt-2 flex flex-wrap gap-2 text-xs">
-                      <span className="rounded-full bg-zinc-800 px-2.5 py-1">
-                        {match.matchType}
-                      </span>
-
-                      {match.lightsOn && (
-                        <span className="rounded-full bg-zinc-800 px-2.5 py-1">
-                          Lights On
-                        </span>
+                    <div className="mt-2 space-y-1">
+                      {teamA.length === 0 ? (
+                        <p className="text-sm text-zinc-600">Empty</p>
+                      ) : (
+                        teamA.map((participant) => (
+                          <p
+                            key={participant.participantId}
+                            className="truncate text-sm font-medium"
+                            title={participant.nickname}
+                          >
+                            {participant.nickname}
+                          </p>
+                        ))
                       )}
                     </div>
                   </div>
 
+                  <div className="w-fit max-w-full justify-self-start rounded-lg bg-zinc-900 px-3 py-2 text-left">
+                    <p className="text-xs font-medium uppercase text-zinc-500">
+                      Team B
+                    </p>
+
+                    <div className="mt-2 space-y-1">
+                      {teamB.length === 0 ? (
+                        <p className="text-sm text-zinc-600">Empty</p>
+                      ) : (
+                        teamB.map((participant) => (
+                          <p
+                            key={participant.participantId}
+                            className="truncate text-sm font-medium"
+                            title={participant.nickname}
+                          >
+                            {participant.nickname}
+                          </p>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-4 grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedMatch(match)}
+                    disabled={hasCharges}
+                    className="rounded-lg border border-zinc-700 px-3 py-2 text-sm disabled:opacity-40"
+                  >
+                    Manage Players
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setScoreMatch(match)}
+                    disabled={hasCharges}
+                    className="rounded-lg border border-zinc-700 px-3 py-2 text-sm disabled:opacity-40"
+                  >
+                    Manage Score
+                  </button>
+                </div>
+                <div className="mt-4 grid grid-cols-2 gap-2 border-t border-zinc-800 pt-4 sm:grid-cols-3">
+                  <button
+                    type="button"
+                    onClick={() => handleEditMatch(match)}
+                    disabled={hasCharges}
+                    className="rounded-lg border border-zinc-700 px-3 py-2 text-sm text-zinc-300 transition hover:bg-zinc-900 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Edit Match
+                  </button>
+
                   <button
                     type="button"
                     onClick={() => handleDeleteMatch(match)}
-                    className="text-xs text-red-400 hover:text-red-300"
+                    disabled={hasCharges}
+                    className="rounded-lg border border-red-900/60 px-3 py-2 text-sm text-red-400 transition hover:bg-red-950/30 disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     Delete
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => handleGenerateCharges(match)}
-                    disabled={!canGenerateCharges || hasCharges}
-                    className="text-sm text-zinc-300 disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    {hasCharges ? "Charges Generated" : "Generate Charges"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setChargeMatch(match)}
-                    disabled={!hasCharges}
-                    className="text-sm text-zinc-300 disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    View Charges
-                  </button>
+
+                  {!hasCharges ? (
+                    <button
+                      type="button"
+                      onClick={() => handleGenerateCharges(match)}
+                      disabled={!canGenerateCharges}
+                      className="col-span-2 rounded-lg bg-white px-3 py-2 text-sm font-medium text-black transition disabled:cursor-not-allowed disabled:opacity-40 sm:col-span-1"
+                    >
+                      Generate Charges
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setChargeMatch(match)}
+                      className="col-span-2 rounded-lg bg-white px-3 py-2 text-sm font-medium text-black transition hover:bg-zinc-200 sm:col-span-1"
+                    >
+                      View Charges
+                    </button>
+                  )}
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setSelectedMatch(match)}
-                  disabled={hasCharges}
-                  className="text-sm text-zinc-300 disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  Manage Players
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setScoreMatch(match)}
-                  disabled={hasCharges}
-                  className="text-sm text-zinc-300 disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  Manage Score
-                </button>
               </div>
             );
           })

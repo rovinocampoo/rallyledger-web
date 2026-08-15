@@ -19,17 +19,21 @@ function SessionCard({
 }: SessionCardProps) {
   return (
     <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4">
-      <h2 className="font-semibold">{session.name}</h2>
+      <div className="min-w-0 text-left">
+        <h2 className="truncate text-xl font-semibold">{session.name}</h2>
 
-      <p className="mt-1 text-sm text-zinc-400">{session.sessionDate}</p>
+        <p className="mt-2 text-sm text-zinc-400">{session.sessionDate}</p>
 
-      <p className="mt-1 text-sm text-zinc-500">
-        {session.startTime} - {session.endTime}
-      </p>
+        <p className="mt-1 text-sm text-zinc-500">
+          {session.startTime} - {session.endTime}
+        </p>
+      </div>
 
       <div className="mt-3 flex flex-wrap gap-2 text-xs">
-        <span className="rounded-full bg-zinc-800 px-2.5 py-1">
-          Max {session.maxPlayers} players
+        <span className="rounded-full bg-zinc-800 px-3 py-1 text-sm">
+          {session.maxPlayers === null
+            ? "Unlimited players"
+            : `Max ${session.maxPlayers} players`}
         </span>
         {session.freeBalls && (
           <span className="rounded-full bg-zinc-800 px-2.5 py-1">
@@ -43,11 +47,11 @@ function SessionCard({
           </span>
         )}
       </div>
-      <div className="mt-4 flex gap-2">
+      <div className="mt-4 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-center">
         <button
           type="button"
           onClick={() => onEdit(session)}
-          className="rounded-lg border border-zinc-700 px-3 py-1.5 text-sm text-zinc-300"
+          className="w-full rounded-lg border border-zinc-700 px-3 py-2 text-sm sm:w-auto"
         >
           Edit
         </button>
@@ -55,28 +59,28 @@ function SessionCard({
         <button
           type="button"
           onClick={() => onDelete(session)}
-          className="rounded-lg border border-red-900 px-3 py-1.5 text-sm text-red-400"
+          className="w-full rounded-lg border border-red-900/60 px-3 py-2 text-sm text-red-400 sm:w-auto"
         >
           Delete
         </button>
         <button
           type="button"
           onClick={() => onManagePlayers(session)}
-          className="rounded-lg border border-zinc-700 px-3 py-1.5 text-sm text-zinc-300"
+          className="w-full rounded-lg border border-zinc-700 px-3 py-2 text-sm sm:w-auto"
         >
           Manage Players
         </button>
         <button
           type="button"
           onClick={() => onManageMatches(session)}
-          className="rounded-lg border border-zinc-700 px-3 py-1.5 text-sm text-zinc-300"
+          className="w-full rounded-lg border border-zinc-700 px-3 py-2 text-sm sm:w-auto"
         >
           Manage Matches
         </button>
         <button
           type="button"
           onClick={onViewCharges}
-          className="text-sm text-zinc-300"
+          className="col-span-2 w-full rounded-lg border border-zinc-700 px-3 py-2 text-sm sm:w-auto"
         >
           View Charges
         </button>

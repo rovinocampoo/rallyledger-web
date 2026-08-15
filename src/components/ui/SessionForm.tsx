@@ -27,7 +27,7 @@ function SessionForm({ session, onSaved, onCancel }: SessionFormProps) {
   const [startTime, setStartTime] = useState(session?.startTime ?? "");
   const [endTime, setEndTime] = useState(session?.endTime ?? "");
   const [maxPlayers, setMaxPlayers] = useState(
-    session?.maxPlayers.toString() ?? "8",
+    session?.maxPlayers?.toString() ?? "",
   );
   const [freeBalls, setFreeBalls] = useState(session?.freeBalls ?? false);
   const [freeLights, setFreeLights] = useState(session?.freeLights ?? false);
@@ -42,13 +42,14 @@ function SessionForm({ session, onSaved, onCancel }: SessionFormProps) {
       setSubmitting(true);
       setFormError(null);
 
+      const parsedMaxPlayers = maxPlayers.trim();
       const data = {
         name,
         description,
         sessionDate,
         startTime,
         endTime,
-        maxPlayers: Number(maxPlayers),
+        maxPlayers: parsedMaxPlayers === "" ? null : Number(parsedMaxPlayers),
         freeBalls,
         freeLights,
       };
@@ -64,7 +65,10 @@ function SessionForm({ session, onSaved, onCancel }: SessionFormProps) {
       onSaved(savedSession);
     } catch (err) {
       console.error(err);
-      setFormError("Failed to save session");
+
+      setFormError(
+        err instanceof Error ? err.message : "Failed to save session",
+      );
     } finally {
       setSubmitting(false);
     }
@@ -72,64 +76,77 @@ function SessionForm({ session, onSaved, onCancel }: SessionFormProps) {
 
   return (
     <form onSubmit={handleSubmit}>
-      <div className="mb-6 rounded-xl border border-zinc-800 bg-zinc-900 p-4">
+      <div className="mt-5 w-full min-w-0 rounded-xl border border-zinc-800 bg-zinc-900 p-4 sm:p-6">
         <div className="grid gap-4 md:grid-cols-2">
-          <label className="md:col-span-2">
+          <label className="block text-left">
             <span className="text-sm text-zinc-400">Session Name</span>
             <input
               type="text"
               value={name}
               onChange={(event) => setName(event.target.value)}
-              className="mt-2 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2"
+              required
+              className="mt-2 w-full min-w-0 rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-3"
             />
           </label>
-
-          <label className="md:col-span-2">
-            <span className="text-sm text-zinc-400">Description</span>
+          <label className="block text-left">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-zinc-400">Description</span>
+              <span className="text-xs font-normal text-zinc-500">
+                Optional
+              </span>
+            </div>
             <textarea
               value={description}
               onChange={(event) => setDescription(event.target.value)}
               className="mt-2 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2"
             />
           </label>
-
-          <label>
+          <label className="block min-w-0 text-left">
             <span className="text-sm text-zinc-400">Session Date</span>
+
             <input
               type="date"
               value={sessionDate}
               onChange={(event) => setSessionDate(event.target.value)}
-              className="mt-2 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2"
+              className="mt-2 block w-full min-w-0 max-w-full box-border rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-3"
             />
           </label>
 
-          <label>
-            <span className="text-sm text-zinc-400">Max Players</span>
+          <label className="block text-left">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-zinc-400">Max Players</span>
+              <span className="text-xs font-normal text-zinc-500">
+                Optional
+              </span>
+            </div>{" "}
             <input
               type="number"
               min="1"
               value={maxPlayers}
               onChange={(event) => setMaxPlayers(event.target.value)}
+              placeholder="Unlimited"
               className="mt-2 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2"
             />
           </label>
 
-          <label>
+          <label className="block text-left">
             <span className="text-sm text-zinc-400">Start Time</span>
             <input
               type="time"
               value={startTime}
               onChange={(event) => setStartTime(event.target.value)}
+              required
               className="mt-2 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2"
             />
           </label>
 
-          <label>
+          <label className="block text-left">
             <span className="text-sm text-zinc-400">End Time</span>
             <input
               type="time"
               value={endTime}
               onChange={(event) => setEndTime(event.target.value)}
+              required
               className="mt-2 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2"
             />
           </label>

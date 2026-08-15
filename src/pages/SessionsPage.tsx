@@ -107,19 +107,20 @@ function SessionsPage() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">Sessions</h1>
-
-        <p className="mt-1 text-sm text-zinc-400">
-          Manage tennis sessions and events.
-        </p>
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="text-left">
+          <h1 className="text-2xl font-bold sm:text-3xl">Sessions</h1>
+          <p className="mt-1 text-sm text-zinc-400">
+            Manage tennis sessions and events.
+          </p>
+        </div>
         <button
           type="button"
           onClick={() => {
             setEditingSession(null);
             setShowForm(true);
           }}
-          className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-black"
+          className="w-full rounded-lg bg-white px-4 py-3 text-sm font-medium text-black sm:w-auto sm:py-2"
         >
           Add Session
         </button>

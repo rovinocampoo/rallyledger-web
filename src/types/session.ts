@@ -5,7 +5,7 @@ export type Session = {
   sessionDate: string;
   startTime: string;
   endTime: string;
-  maxPlayers: number;
+  maxPlayers: number | null;
   freeBalls: boolean;
   freeLights: boolean;
   createdAt: string;

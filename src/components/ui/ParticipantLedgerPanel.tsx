@@ -165,6 +165,15 @@ function LedgerStatement({ participant, ledger }: LedgerStatementProps) {
   );
 }
 
+function getTodayDate() {
+  const today = new Date();
+
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
 function ParticipantLedgerPanel({
   participant,
   onClose,
@@ -176,7 +185,7 @@ function ParticipantLedgerPanel({
   const [amount, setAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("CASH");
   const [reference, setReference] = useState("");
-  const [paymentDate, setPaymentDate] = useState("");
+  const [paymentDate, setPaymentDate] = useState(getTodayDate());
   const [submittingPayment, setSubmittingPayment] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [expandedChargeDate, setExpandedChargeDate] = useState<string | null>(
@@ -217,7 +226,7 @@ function ParticipantLedgerPanel({
       setAmount("");
       setPaymentMethod("CASH");
       setReference("");
-      setPaymentDate("");
+      setPaymentDate(getTodayDate());
       setShowPaymentForm(false);
     } catch (err) {
       console.error(err);
@@ -455,29 +464,32 @@ function ParticipantLedgerPanel({
   }
 
   return (
-    <div className="mb-6 rounded-xl border border-zinc-800 bg-zinc-900 p-4">
-      <div className="mb-5 flex items-start justify-between">
-        <div>
+    <div className="mb-6 rounded-xl border border-zinc-800 bg-zinc-900 p-4 sm:p-5">
+      <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0 flex-1">
           <p className="text-sm text-zinc-400">Ledger</p>
 
-          <div>
-            <h2 className="text-xl font-semibold">
-              {formatFullName(participant.firstName, participant.lastName)}
-            </h2>
+          <h2
+            className="truncate text-xl font-semibold"
+            title={formatFullName(participant.firstName, participant.lastName)}
+          >
+            {formatFullName(participant.firstName, participant.lastName)}
+          </h2>
 
-            {participant.nickname && (
-              <p className="mt-1 text-sm text-zinc-500">
-                {participant.nickname}
-              </p>
-              
-            )}
-          </div>
+          {participant.nickname && (
+            <p
+              className="mt-1 truncate text-sm text-zinc-500"
+              title={participant.nickname}
+            >
+              {participant.nickname}
+            </p>
+          )}
         </div>
-        <div className="flex gap-2">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-center">
           <button
             type="button"
             onClick={() => setShowPaymentForm(true)}
-            className="rounded-lg bg-white px-3 py-1.5 text-sm font-medium text-black"
+            className="w-full rounded-lg bg-white px-3 py-2 text-sm sm:w-auto text-black"
           >
             Add Payment
           </button>
@@ -485,59 +497,26 @@ function ParticipantLedgerPanel({
             type="button"
             onClick={handleShareLedgerPng}
             disabled={sharingLedger}
-            className="rounded-lg border border-zinc-700 px-4 py-2 text-sm font-medium text-zinc-200 hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
+            className="w-full rounded-lg border border-zinc-700 px-3 py-2 text-sm sm:w-auto text-zinc-200 hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {sharingLedger ? "Preparing..." : "Share PNG"}
-          </button>
-
-          <button
-            type="button"
-            onClick={handleCopyLedgerText}
-            className="rounded-lg border border-zinc-700 px-4 py-2 text-sm font-medium text-zinc-200 hover:bg-zinc-800"
-          >
-            Copy Text
+            {sharingLedger ? "Preparing..." : "Share as PNG"}
           </button>
           <button
             type="button"
             onClick={onClose}
-            className="text-sm text-zinc-400 hover:text-white"
+            className="w-full rounded-lg border border-zinc-700 px-3 py-2 text-sm sm:w-auto text-zinc-400"
           >
             Close
           </button>
+          <button
+            type="button"
+            onClick={handleCopyLedgerText}
+            className="w-full rounded-lg border border-zinc-700 px-3 py-2 text-sm sm:w-auto text-zinc-200 hover:bg-zinc-800"
+          >
+            Copy as Text
+          </button>
         </div>
-      </div>
-      {shareMessage && (
-        <p className="mt-3 text-sm text-zinc-400">{shareMessage}</p>
-      )}
-      <div className="grid gap-3 md:grid-cols-3">
-        <div className="rounded-lg bg-zinc-950 p-4">
-          <p className="text-sm text-zinc-400">Total Charges</p>
-
-          <p className="mt-1 text-xl font-semibold">
-            {formatCurrency(ledger.totalCharges)}
-          </p>
-        </div>
-
-        <div className="rounded-lg bg-zinc-950 p-4">
-          <p className="text-sm text-zinc-400">Total Payments</p>
-
-          <p className="mt-1 text-xl font-semibold">
-            {formatCurrency(ledger.totalPayments)}
-          </p>
-        </div>
-
-        <div className="rounded-lg bg-zinc-950 p-4">
-          <p className="text-sm text-zinc-400">Balance</p>
-
-          <p className="mt-1 text-xl font-semibold">
-            {formatCurrency(ledger.balance)}
-          </p>
-
-          <p className="mt-1 text-xs text-zinc-500">
-            {getBalanceLabel(ledger.balance)}
-          </p>
-        </div>
-      </div>
+      </div>{" "}
       {showPaymentForm && (
         <form
           onSubmit={handlePaymentSubmit}
@@ -620,7 +599,38 @@ function ParticipantLedgerPanel({
           </div>
         </form>
       )}
+      {shareMessage && (
+        <p className="mt-3 text-sm text-zinc-400">{shareMessage}</p>
+      )}
+      <div className="grid gap-2 grid-cols-3">
+        <div className="rounded-lg bg-zinc-950 p-4 sm:p-5">
+          <p className="text-sm text-zinc-400">Total Charges</p>
 
+          <p className="mt-1 text-xl font-semibold">
+            {formatCurrency(ledger.totalCharges)}
+          </p>
+        </div>
+
+        <div className="rounded-lg bg-zinc-950 p-4">
+          <p className="text-sm text-zinc-400">Total Payments</p>
+
+          <p className="mt-1 text-xl font-semibold">
+            {formatCurrency(ledger.totalPayments)}
+          </p>
+        </div>
+
+        <div className="rounded-lg bg-zinc-950 p-4">
+          <p className="text-sm text-zinc-400">Balance</p>
+
+          <p className="mt-1 text-xl font-semibold">
+            {formatCurrency(ledger.balance)}
+          </p>
+
+          <p className="mt-1 text-xs text-zinc-500">
+            {getBalanceLabel(ledger.balance)}
+          </p>
+        </div>
+      </div>
       <div className="mt-6">
         <h3 className="mb-3 text-lg font-semibold">Charges</h3>
 
@@ -736,7 +746,6 @@ function ParticipantLedgerPanel({
           </div>
         </div>
       </div>
-
       <div className="mt-6">
         <h3 className="mb-3 text-lg font-semibold">Payments</h3>
 

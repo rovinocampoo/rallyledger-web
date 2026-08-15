@@ -34,7 +34,10 @@ function SessionParticipantsPanel({
           sessionParticipant.participantId === participant.id,
       ),
   );
-  const sessionIsFull = sessionParticipants.length >= session.maxPlayers;
+  const sessionMaxPlayers = session.maxPlayers ?? null;
+  const sessionIsFull =
+    sessionMaxPlayers !== null &&
+    sessionParticipants.length >= sessionMaxPlayers;
 
   useEffect(() => {
     let ignore = false;
@@ -107,13 +110,15 @@ function SessionParticipantsPanel({
   return (
     <div className="mb-6 rounded-xl border border-zinc-800 bg-zinc-900 p-4">
       <div className="flex items-start justify-between">
-        <div>
+        <div className="min-w-0 text-left">
           <p className="text-sm text-zinc-400">Session Players</p>
 
-          <h2 className="text-xl font-semibold">{session.name}</h2>
+          <h2 className="truncate text-xl font-semibold">{session.name}</h2>
 
           <p className="mt-1 text-sm text-zinc-500">
-            {sessionParticipants.length} / {session.maxPlayers} players
+            {session.maxPlayers === null
+              ? `${participants.length} players · Unlimited`
+              : `${participants.length} / ${session.maxPlayers} players`}
           </p>
         </div>
 
@@ -162,8 +167,8 @@ function SessionParticipantsPanel({
                 key={sessionParticipant.participantId}
                 className="flex items-center justify-between rounded-lg bg-zinc-950 px-4 py-3"
               >
-                <div>
-                  <p className="font-medium">
+                <div className="min-w-0 flex-1 text-left">
+                  <p className="truncate font-medium">
                     {sessionParticipant.nickname ||
                       (participant
                         ? formatFullName(
@@ -174,7 +179,7 @@ function SessionParticipantsPanel({
                   </p>
 
                   {participant && sessionParticipant.nickname && (
-                    <p className="text-xs text-zinc-500">
+                    <p className="truncate text-sm text-zinc-500">
                       {formatFullName(
                         participant.firstName,
                         participant.lastName,
