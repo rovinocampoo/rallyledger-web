@@ -376,7 +376,7 @@ function ParticipantLedgerPanel({
     });
   }
 
-  async function handleShareLedger() {
+  async function handleShareLedgerPng() {
     if (!ledger) {
       return;
     }
@@ -388,11 +388,14 @@ function ParticipantLedgerPanel({
 
       await waitForRender();
 
-      const text = buildLedgerStatement();
       const pngFile = await generateLedgerPng();
 
+      if (!pngFile) {
+        setShareMessage("Failed to generate ledger PNG.");
+        return;
+      }
+
       if (
-        pngFile &&
         navigator.share &&
         navigator.canShare?.({
           files: [pngFile],
@@ -410,44 +413,47 @@ function ParticipantLedgerPanel({
         return;
       }
 
-      if (navigator.share) {
-        await navigator.share({
-          title: "RallyLedger Participant Ledger",
-          text,
-        });
+      const url = URL.createObjectURL(pngFile);
 
-        return;
-      }
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = pngFile.name;
 
-      if (pngFile) {
-        const url = URL.createObjectURL(pngFile);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
 
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = pngFile.name;
+      URL.revokeObjectURL(url);
 
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-
-        URL.revokeObjectURL(url);
-      }
-
-      await navigator.clipboard.writeText(text);
-
-      setShareMessage("Ledger PNG downloaded and text copied to clipboard.");
+      setShareMessage("Ledger PNG saved.");
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") {
         return;
       }
 
       console.error(err);
-      setShareMessage("Failed to share ledger.");
+      setShareMessage("Failed to share ledger PNG.");
     } finally {
       setSharingLedger(false);
       setRenderStatement(false);
     }
   }
+
+  async function handleCopyLedgerText() {
+    try {
+      setShareMessage(null);
+
+      const text = buildLedgerStatement();
+
+      await navigator.clipboard.writeText(text);
+
+      setShareMessage("Ledger text copied.");
+    } catch (err) {
+      console.error(err);
+      setShareMessage("Failed to copy ledger text.");
+    }
+  }
+
   return (
     <div className="mb-6 rounded-xl border border-zinc-800 bg-zinc-900 p-4">
       <div className="mb-5 flex items-start justify-between">
@@ -463,12 +469,10 @@ function ParticipantLedgerPanel({
               <p className="mt-1 text-sm text-zinc-500">
                 {participant.nickname}
               </p>
+              
             )}
           </div>
         </div>
-        {shareMessage && (
-          <p className="mt-3 text-sm text-zinc-400">{shareMessage}</p>
-        )}
         <div className="flex gap-2">
           <button
             type="button"
@@ -479,11 +483,19 @@ function ParticipantLedgerPanel({
           </button>
           <button
             type="button"
-            onClick={handleShareLedger}
+            onClick={handleShareLedgerPng}
             disabled={sharingLedger}
             className="rounded-lg border border-zinc-700 px-4 py-2 text-sm font-medium text-zinc-200 hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {sharingLedger ? "Preparing..." : "Share Ledger"}
+            {sharingLedger ? "Preparing..." : "Share PNG"}
+          </button>
+
+          <button
+            type="button"
+            onClick={handleCopyLedgerText}
+            className="rounded-lg border border-zinc-700 px-4 py-2 text-sm font-medium text-zinc-200 hover:bg-zinc-800"
+          >
+            Copy Text
           </button>
           <button
             type="button"
@@ -494,7 +506,9 @@ function ParticipantLedgerPanel({
           </button>
         </div>
       </div>
-
+      {shareMessage && (
+        <p className="mt-3 text-sm text-zinc-400">{shareMessage}</p>
+      )}
       <div className="grid gap-3 md:grid-cols-3">
         <div className="rounded-lg bg-zinc-950 p-4">
           <p className="text-sm text-zinc-400">Total Charges</p>
