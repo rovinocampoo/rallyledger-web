@@ -82,8 +82,9 @@ function ParticipantCard({
       </div>
 
       {/* DESKTOP ROW */}
-      <div className="hidden grid-cols-[160px_minmax(0,1fr)_minmax(0,1fr)_auto] items-center gap-4 border-b border-zinc-800 px-4 py-3 md:grid">
-        <div>
+
+      <div className="hidden grid-cols-[160px_160px_minmax(0,1fr)_auto] items-center gap-4 border-b border-zinc-800 px-4 py-3 md:grid">
+        <div className="text-left">
           <span
             className={`inline-block max-w-full truncate rounded-full px-2.5 py-1 text-xs font-medium ${
               typeStyles[participant.participantType] ??
@@ -94,12 +95,12 @@ function ParticipantCard({
           </span>
         </div>
 
-        <p className="min-w-0 truncate font-medium" title={fullName}>
+        <p className="min-w-0 truncate font-medium text-left" title={fullName}>
           {fullName}
         </p>
 
         <p
-          className="min-w-0 truncate text-sm text-zinc-400"
+          className="min-w-0 truncate text-sm text-zinc-400 text-left"
           title={participant.nickname ?? ""}
         >
           {participant.nickname || "—"}

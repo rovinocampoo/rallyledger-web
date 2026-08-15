@@ -2,7 +2,7 @@ import { NavLink, Outlet } from "react-router-dom";
 
 function AppLayout() {
   const navItems = [
-    { to: "/", label: "Home", icon: "⌂", end: true },
+    { to: "/", label: "Home", icon: "🏠", end: true },
     { to: "/outstanding", label: "Balance", icon: "₱", end: true },
     { to: "/participants", label: "Players", icon: "👥" },
     { to: "/courts", label: "Courts", icon: "🎾" },
@@ -14,9 +14,9 @@ function AppLayout() {
     <div className="min-h-screen w-full overflow-x-hidden bg-zinc-950 text-white">
       <div className="flex min-h-screen w-full min-w-0">
         <aside className="hidden w-56 shrink-0 overflow-hidden border-r border-zinc-800 bg-zinc-950 px-5 py-6 md:block">
-          <h1 className="truncate text-lg font-semibold tracking-tight">
+          <h2 className="truncate text-base font-semibold text-zinc-100">
             RallyLedger
-          </h1>
+          </h2>
 
           <nav className="mt-8 flex flex-col gap-2">
             {navItems.map((item) => (

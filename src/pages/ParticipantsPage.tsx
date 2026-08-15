@@ -190,7 +190,7 @@ function ParticipantsPage() {
       )}
       <div>
         {/* DESKTOP HEADER */}
-        <div className="hidden grid-cols-[160px_minmax(0,1fr)_minmax(0,1fr)_auto] items-center gap-4 rounded-t-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-left text-sm text-zinc-400 md:grid">
+        <div className="hidden grid-cols-[160px_160px_minmax(0,1fr)_auto] items-center gap-4 rounded-t-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-left text-sm text-zinc-400 md:grid">
           <button
             type="button"
             onClick={() => handleSort("type")}
