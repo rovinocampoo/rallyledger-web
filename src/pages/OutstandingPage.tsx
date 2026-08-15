@@ -7,6 +7,7 @@ import type { Participant } from "../types/participant";
 
 import ParticipantLedgerPanel from "../components/ui/ParticipantLedgerPanel";
 import { formatCurrency, formatFullName } from "../utils/format";
+import { escapeCsvValue } from "../utils/csv";
 
 import { useSearchParams } from "react-router-dom";
 
@@ -32,6 +33,7 @@ function OutstandingPage() {
 
   const limit =
     limitParam && Number(limitParam) > 0 ? Number(limitParam) : undefined;
+  const [actionError, setActionError] = useState<string | null>(null);
 
   useEffect(() => {
     let ignore = false;
@@ -73,6 +75,59 @@ function OutstandingPage() {
     });
   }
 
+  async function handleExportCsv() {
+    try {
+      setActionError(null);
+
+      const exportData = await getOutstanding();
+
+      const headers = [
+        "First Name",
+        "Last Name",
+        "Nickname",
+        "Total Charges",
+        "Total Payments",
+        "Balance",
+      ];
+
+      const rows = exportData.map((participant) => [
+        participant.firstName,
+        participant.lastName,
+        participant.nickname,
+        participant.totalCharges,
+        participant.totalPayments,
+        participant.balance,
+      ]);
+
+      const csv = [headers, ...rows]
+        .map((row) => row.map(escapeCsvValue).join(","))
+        .join("\n");
+
+      const csvWithBom = "\uFEFF" + csv;
+
+      const blob = new Blob([csvWithBom], {
+        type: "text/csv;charset=utf-8;",
+      });
+
+      const url = URL.createObjectURL(blob);
+
+      const link = document.createElement("a");
+
+      link.href = url;
+      const today = new Date().toISOString().slice(0, 10);
+      link.download = `outstanding-balances-${today}.csv`;
+
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error(err);
+      setActionError("Failed to export outstanding balances");
+    }
+  }
+
   if (loading) {
     return <p>Loading outstanding balances...</p>;
   }
@@ -91,6 +146,9 @@ function OutstandingPage() {
             Participants with unpaid balances.
           </p>
         </div>
+        {actionError && (
+          <p className="mb-4 text-sm text-red-400">{actionError}</p>
+        )}
 
         <label className="text-sm">
           <span className="mb-1 block text-xs text-zinc-500">Show</span>
@@ -108,6 +166,15 @@ function OutstandingPage() {
             <option value="100">100</option>
           </select>
         </label>
+
+        <button
+          type="button"
+          onClick={handleExportCsv}
+          disabled={outstanding.length === 0}
+          className="rounded-lg border border-zinc-700 px-3 py-2 text-sm text-zinc-300 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Export CSV
+        </button>
       </div>
 
       <div className="mb-6 rounded-xl border border-zinc-800 bg-zinc-900 p-5">
