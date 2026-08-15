@@ -1,5 +1,5 @@
 import type { Participant } from "../../types/participant";
-import { formatFullName } from "../../utils/format";
+import { formatFullName, formatLabel } from "../../utils/format";
 
 type ParticipantCardProps = {
   participant: Participant;
@@ -22,6 +22,28 @@ function ParticipantCard({
     MMSU_VARSITY: "bg-cyan-500/10 text-cyan-400",
   };
 
+  function getMembershipStatusStyle(status: string) {
+    switch (status) {
+      case "ACTIVE":
+        return "bg-emerald-500/10 text-emerald-400";
+
+      case "INACTIVE":
+        return "bg-zinc-800 text-zinc-400";
+
+      case "EXPIRED":
+        return "bg-amber-500/10 text-amber-400";
+
+      case "SUSPENDED":
+        return "bg-orange-500/10 text-orange-400";
+
+      case "REVOKED":
+        return "bg-red-500/10 text-red-400";
+
+      default:
+        return "bg-zinc-800 text-zinc-400";
+    }
+  }
+
   const fullName = formatFullName(participant.firstName, participant.lastName);
 
   return (
@@ -42,14 +64,21 @@ function ParticipantCard({
             </p>
           )}
 
-          <div className="mt-3">
+          <div className="mt-3 flex flex-row flex-wrap gap-2 md:flex-col md:items-start md:gap-1.5">
             <span
-              className={`inline-block max-w-full truncate rounded-full px-2.5 py-1 text-xs font-medium ${
+              className={`rounded-full px-2 py-0.5 text-[13px] font-medium ${getMembershipStatusStyle(
+                participant.membershipStatus,
+              )}`}
+            >
+              {formatLabel(participant.membershipStatus)}
+            </span>
+            <span
+              className={`rounded-full px-2 py-0.5 text-[13px] font-medium ${
                 typeStyles[participant.participantType] ??
                 "bg-zinc-800 text-zinc-400"
               }`}
             >
-              {participant.participantType}
+              {formatLabel(participant.participantType)}
             </span>
           </div>
         </div>
@@ -84,17 +113,23 @@ function ParticipantCard({
       {/* DESKTOP ROW */}
 
       <div className="hidden grid-cols-[160px_160px_minmax(0,1fr)_auto] items-center gap-4 border-b border-zinc-800 px-4 py-3 md:grid">
-        <div className="text-left">
+        <div className="flex flex-row flex-wrap gap-2 md:flex-col md:items-start md:gap-1.5">
           <span
-            className={`inline-block max-w-full truncate rounded-full px-2.5 py-1 text-xs font-medium ${
+            className={`rounded-full px-2 py-0.5 text-[13px] font-medium ${getMembershipStatusStyle(
+              participant.membershipStatus,
+            )}`}
+          >
+            {formatLabel(participant.membershipStatus)}
+          </span>
+          <span
+            className={`rounded-full px-2 py-0.5 text-[13px] font-medium ${
               typeStyles[participant.participantType] ??
               "bg-zinc-800 text-zinc-400"
             }`}
           >
-            {participant.participantType}
+            {formatLabel(participant.participantType)}
           </span>
         </div>
-
         <p className="min-w-0 truncate font-medium text-left" title={fullName}>
           {fullName}
         </p>
