@@ -8,6 +8,8 @@ import type { Participant } from "../types/participant";
 import ParticipantLedgerPanel from "../components/ui/ParticipantLedgerPanel";
 import { formatCurrency, formatFullName } from "../utils/format";
 
+import { useSearchParams } from "react-router-dom";
+
 function OutstandingPage() {
   const [outstanding, setOutstanding] = useState<OutstandingParticipant[]>([]);
 
@@ -25,10 +27,16 @@ function OutstandingPage() {
       (participant) => participant.id === ledgerParticipantId,
     ) ?? null;
 
+  const [searchParams, setSearchParams] = useSearchParams();
+  const limitParam = searchParams.get("limit");
+
+  const limit =
+    limitParam && Number(limitParam) > 0 ? Number(limitParam) : undefined;
+
   useEffect(() => {
     let ignore = false;
 
-    Promise.all([getOutstanding(), getParticipants()])
+    Promise.all([getOutstanding(limit), getParticipants()])
       .then(([outstandingData, participantData]) => {
         if (!ignore) {
           setOutstanding(outstandingData);
@@ -47,12 +55,23 @@ function OutstandingPage() {
     return () => {
       ignore = true;
     };
-  }, []);
+  }, [limit]);
 
   const totalOutstanding = outstanding.reduce(
     (sum, participant) => sum + participant.balance,
     0,
   );
+
+  function handleLimitChange(value: string) {
+    if (value === "ALL") {
+      setSearchParams({});
+      return;
+    }
+
+    setSearchParams({
+      limit: value,
+    });
+  }
 
   if (loading) {
     return <p>Loading outstanding balances...</p>;
@@ -64,20 +83,44 @@ function OutstandingPage() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">Outstanding Balances</h1>
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold">Outstanding Balances</h1>
 
-        <p className="mt-1 text-sm text-zinc-400">
-          Participants with unpaid balances.
-        </p>
+          <p className="mt-1 text-sm text-zinc-400">
+            Participants with unpaid balances.
+          </p>
+        </div>
+
+        <label className="text-sm">
+          <span className="mb-1 block text-xs text-zinc-500">Show</span>
+
+          <select
+            value={limit?.toString() ?? "ALL"}
+            onChange={(event) => handleLimitChange(event.target.value)}
+            className="rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2"
+          >
+            <option value="ALL">All</option>
+            <option value="5">5</option>
+            <option value="10">10</option>
+            <option value="20">20</option>
+            <option value="50">50</option>
+          </select>
+        </label>
       </div>
 
       <div className="mb-6 rounded-xl border border-zinc-800 bg-zinc-900 p-5">
-        <p className="text-sm text-zinc-400">Total Outstanding</p>
-
+        <p className="text-sm text-zinc-400">
+          {limit ? "Shown Outstanding" : "Total Outstanding"}
+        </p>
         <p className="mt-2 text-3xl font-bold">
           {formatCurrency(totalOutstanding)}
         </p>
+        {limit && (
+          <p className="mt-1 text-xs text-zinc-500">
+            Top {outstanding.length} participants shown.
+          </p>
+        )}
       </div>
 
       {ledgerParticipant && (

@@ -6,6 +6,7 @@ import {
   formatCurrency,
   formatFullName,
   formatLabel,
+  formatDate,
 } from "../../utils/format";
 import { createPayment, deletePayment } from "../../api/payments";
 
@@ -28,6 +29,10 @@ function ParticipantLedgerPanel({
   const [paymentDate, setPaymentDate] = useState("");
   const [submittingPayment, setSubmittingPayment] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [expandedChargeDate, setExpandedChargeDate] = useState<string | null>(
+    null,
+  );
+  
 
   async function loadLedger() {
     try {
@@ -334,7 +339,7 @@ function ParticipantLedgerPanel({
                 <div>
                   <p className="font-medium">{formatLabel(charge.feeType)}</p>
 
-                  <p className="text-xs text-zinc-500">{charge.chargeDate}</p>
+                  <p className="text-xs text-zinc-500">{formatDate(charge.chargeDate)}</p>
                 </div>
 
                 <p className="font-semibold">{formatCurrency(charge.amount)}</p>
@@ -373,18 +378,56 @@ function ParticipantLedgerPanel({
             ) : (
               Object.entries(chargesByDate)
                 .sort(([dateA], [dateB]) => dateB.localeCompare(dateA))
-                .map(([date, amount]) => (
-                  <div
-                    key={date}
-                    className="flex items-center justify-between text-sm"
-                  >
-                    <span className="text-zinc-400">{date}</span>
+                .map(([date, amount]) => {
+                  const dateCharges = ledger.charges.filter(
+                    (charge) => charge.chargeDate === date,
+                  );
 
-                    <span className="font-medium">
-                      {formatCurrency(amount)}
-                    </span>
-                  </div>
-                ))
+                  const isExpanded = expandedChargeDate === date;
+
+                  return (
+                    <div key={formatDate(date)} className="rounded-lg bg-zinc-900">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setExpandedChargeDate(isExpanded ? null : date)
+                        }
+                        className="flex w-full items-center justify-between px-3 py-2 text-left text-sm"
+                      >
+                        <span className="text-zinc-400">{formatDate(date)}</span>
+
+                        <div className="flex items-center gap-3">
+                          <span className="font-medium">
+                            {formatCurrency(amount)}
+                          </span>
+
+                          <span className="text-xs text-zinc-500">
+                            {isExpanded ? "▲" : "▼"}
+                          </span>
+                        </div>
+                      </button>
+
+                      {isExpanded && (
+                        <div className="border-t border-zinc-800 px-3 py-2">
+                          <div className="space-y-2">
+                            {dateCharges.map((charge) => (
+                              <div
+                                key={charge.id}
+                                className="flex items-center justify-between text-xs"
+                              >
+                                <span className="text-zinc-500">
+                                  {formatLabel(charge.feeType)}
+                                </span>
+
+                                <span>{formatCurrency(charge.amount)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
             )}
           </div>
         </div>
@@ -407,7 +450,7 @@ function ParticipantLedgerPanel({
                     {formatLabel(payment.paymentMethod)}
                   </p>
 
-                  <p className="text-xs text-zinc-500">{payment.paymentDate}</p>
+                  <p className="text-xs text-zinc-500">{formatDate(payment.paymentDate)}</p>
                   {payment.reference && (
                     <p className="mt-1 text-xs text-zinc-600">
                       Ref: {payment.reference}
