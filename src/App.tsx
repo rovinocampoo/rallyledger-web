@@ -5,6 +5,8 @@ import ParticipantsPage from "./pages/ParticipantsPage";
 import SessionsPage from "./pages/SessionsPage";
 import OutstandingPage from "./pages/OutstandingPage";
 import CourtsPage from "./pages/CourtsPage";
+import FeeRulesPage from "./pages/FeeRulesPage";
+
 
 function App() {
   return (
@@ -15,6 +17,7 @@ function App() {
         <Route path="/participants" element={<ParticipantsPage />} />
         <Route path="/courts" element={<CourtsPage />} />
         <Route path="/sessions" element={<SessionsPage />} />
+        <Route path="/fee-rules" element={<FeeRulesPage />} />
       </Route>
     </Routes>
   );

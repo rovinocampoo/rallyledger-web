@@ -7,14 +7,16 @@ function AppLayout() {
     { to: "/participants", label: "Players", icon: "👥" },
     { to: "/courts", label: "Courts", icon: "🎾" },
     { to: "/sessions", label: "Sessions", icon: "📅" },
+    { to: "/fee-rules", label: "Fees", icon: "🧾" },
   ];
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-zinc-950 text-white">
-      <div className="flex min-h-screen min-w-0">
-        {/* Desktop sidebar */}
-        <aside className="hidden w-64 shrink-0 border-r border-zinc-800 p-6 md:block">
-          <h1 className="text-2xl font-bold">RallyLedger</h1>
+    <div className="min-h-screen w-full overflow-x-hidden bg-zinc-950 text-white">
+      <div className="flex min-h-screen w-full min-w-0">
+        <aside className="hidden w-56 shrink-0 overflow-hidden border-r border-zinc-800 bg-zinc-950 px-5 py-6 md:block">
+          <h1 className="truncate text-lg font-semibold tracking-tight">
+            RallyLedger
+          </h1>
 
           <nav className="mt-8 flex flex-col gap-2">
             {navItems.map((item) => (
@@ -34,28 +36,28 @@ function AppLayout() {
           </nav>
         </aside>
 
-        {/* Page content */}
-        <main className="min-w-0 flex-1 p-4 pb-24 md:p-8 md:pb-8">
-          <Outlet />
+        <main className="min-w-0 flex-1 overflow-x-hidden p-4 pb-24 md:p-6 md:pb-6 lg:p-8">
+          <div className="w-full max-w-none">
+            <Outlet />
+          </div>
         </main>
       </div>
 
-      {/* Mobile bottom navigation */}
       <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-zinc-800 bg-zinc-950 md:hidden">
-        <div className="grid grid-cols-5">
+        <div className="grid grid-cols-6">
           {navItems.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
               end={item.end}
               className={({ isActive }) =>
-                `flex flex-col items-center justify-center gap-1 py-3 text-xs ${
+                `flex min-w-0 flex-col items-center justify-center gap-1 px-1 py-3 text-[11px] ${
                   isActive ? "text-white" : "text-zinc-500"
                 }`
               }
             >
-              <span className="text-xl">{item.icon}</span>
-              <span>{item.label}</span>
+              <span className="text-lg leading-none">{item.icon}</span>
+              <span className="w-full truncate text-center">{item.label}</span>
             </NavLink>
           ))}
         </div>
