@@ -43,6 +43,16 @@ function AppLayout() {
                 Participants
               </NavLink>
               <NavLink
+                to="/courts"
+                className={({ isActive }) =>
+                  isActive
+                    ? "rounded-lg bg-zinc-800 px-3 py-2 text-white"
+                    : "rounded-lg px-3 py-2 text-zinc-400 hover:bg-zinc-900 hover:text-white"
+                }
+              >
+                Courts
+              </NavLink>
+              <NavLink
                 to="/sessions"
                 className={({ isActive }) =>
                   isActive
