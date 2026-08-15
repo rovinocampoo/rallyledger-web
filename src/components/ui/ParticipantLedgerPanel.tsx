@@ -2,7 +2,11 @@ import { useEffect, useState, type SubmitEvent } from "react";
 import { getParticipantLedger } from "../../api/ledger";
 import type { Participant } from "../../types/participant";
 import type { ParticipantLedger } from "../../types/ledger";
-import { formatCurrency, formatFullName, formatLabel } from "../../utils/format";
+import {
+  formatCurrency,
+  formatFullName,
+  formatLabel,
+} from "../../utils/format";
 import { createPayment, deletePayment } from "../../api/payments";
 
 type ParticipantLedgerPanelProps = {
@@ -134,6 +138,25 @@ function ParticipantLedgerPanel({
     return null;
   }
 
+  const chargesByType = ledger.charges.reduce<Record<string, number>>(
+    (totals, charge) => {
+      totals[charge.feeType] = (totals[charge.feeType] ?? 0) + charge.amount;
+
+      return totals;
+    },
+    {},
+  );
+
+  const chargesByDate = ledger.charges.reduce<Record<string, number>>(
+    (totals, charge) => {
+      totals[charge.chargeDate] =
+        (totals[charge.chargeDate] ?? 0) + charge.amount;
+
+      return totals;
+    },
+    {},
+  );
+
   function getBalanceLabel(balance: number) {
     if (balance > 0) {
       return "Owes";
@@ -188,19 +211,25 @@ function ParticipantLedgerPanel({
         <div className="rounded-lg bg-zinc-950 p-4">
           <p className="text-sm text-zinc-400">Total Charges</p>
 
-          <p className="mt-1 text-xl font-semibold">{formatCurrency(ledger.totalCharges)}</p>
+          <p className="mt-1 text-xl font-semibold">
+            {formatCurrency(ledger.totalCharges)}
+          </p>
         </div>
 
         <div className="rounded-lg bg-zinc-950 p-4">
           <p className="text-sm text-zinc-400">Total Payments</p>
 
-          <p className="mt-1 text-xl font-semibold">{formatCurrency(ledger.totalPayments)}</p>
+          <p className="mt-1 text-xl font-semibold">
+            {formatCurrency(ledger.totalPayments)}
+          </p>
         </div>
 
         <div className="rounded-lg bg-zinc-950 p-4">
           <p className="text-sm text-zinc-400">Balance</p>
 
-          <p className="mt-1 text-xl font-semibold">{formatCurrency(ledger.balance)}</p>
+          <p className="mt-1 text-xl font-semibold">
+            {formatCurrency(ledger.balance)}
+          </p>
 
           <p className="mt-1 text-xs text-zinc-500">
             {getBalanceLabel(ledger.balance)}
@@ -314,6 +343,53 @@ function ParticipantLedgerPanel({
           </div>
         )}
       </div>
+      <div className="mt-6 grid gap-4 md:grid-cols-2">
+        <div className="rounded-lg bg-zinc-950 p-4">
+          <h3 className="font-semibold">Charges by Type</h3>
+
+          <div className="mt-3 space-y-2">
+            {Object.entries(chargesByType).length === 0 ? (
+              <p className="text-sm text-zinc-500">No charges yet.</p>
+            ) : (
+              Object.entries(chargesByType).map(([feeType, amount]) => (
+                <div
+                  key={feeType}
+                  className="flex items-center justify-between text-sm"
+                >
+                  <span className="text-zinc-400">{formatLabel(feeType)}</span>
+
+                  <span className="font-medium">{formatCurrency(amount)}</span>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+        <div className="rounded-lg bg-zinc-950 p-4">
+          <h3 className="font-semibold">Charges by Date</h3>
+
+          <div className="mt-3 space-y-2">
+            {Object.entries(chargesByDate).length === 0 ? (
+              <p className="text-sm text-zinc-500">No charges yet.</p>
+            ) : (
+              Object.entries(chargesByDate)
+                .sort(([dateA], [dateB]) => dateB.localeCompare(dateA))
+                .map(([date, amount]) => (
+                  <div
+                    key={date}
+                    className="flex items-center justify-between text-sm"
+                  >
+                    <span className="text-zinc-400">{date}</span>
+
+                    <span className="font-medium">
+                      {formatCurrency(amount)}
+                    </span>
+                  </div>
+                ))
+            )}
+          </div>
+        </div>
+      </div>
+
       <div className="mt-6">
         <h3 className="mb-3 text-lg font-semibold">Payments</h3>
 
@@ -340,7 +416,9 @@ function ParticipantLedgerPanel({
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <p className="font-semibold">{formatCurrency(payment.amount)}</p>
+                  <p className="font-semibold">
+                    {formatCurrency(payment.amount)}
+                  </p>
 
                   <button
                     type="button"

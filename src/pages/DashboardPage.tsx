@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   getReportSummary,
-  getTopOutstanding,
+  getOutstanding,
   getPaymentReport,
   type ReportDateRange,
 } from "../api/reports";
@@ -98,7 +98,7 @@ function DashboardPage() {
 
     Promise.all([
       getReportSummary(appliedDateRange),
-      getTopOutstanding(),
+      getOutstanding(5),
       getPaymentReport(appliedDateRange),
     ])
       .then(([summaryData, outstandingData, paymentData]) => {

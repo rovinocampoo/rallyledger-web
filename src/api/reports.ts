@@ -24,9 +24,17 @@ export function getReportSummary(dateRange?: ReportDateRange) {
   );
 }
 
-export function getTopOutstanding() {
+export function getOutstanding(limit?: number) {
+  const params = new URLSearchParams();
+
+  if (limit !== undefined) {
+    params.set("limit", String(limit));
+  }
+
+  const query = params.toString();
+
   return apiFetch<OutstandingParticipant[]>(
-    "/reports/outstanding",
+    `/reports/outstanding${query ? `?${query}` : ""}`,
   );
 }
 

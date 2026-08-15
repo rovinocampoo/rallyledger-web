@@ -22,6 +22,17 @@ function AppLayout() {
               </NavLink>
 
               <NavLink
+                to="/outstanding"
+                end
+                className={({ isActive }) =>
+                  isActive
+                    ? "rounded-lg bg-zinc-800 px-3 py-2 text-white"
+                    : "rounded-lg px-3 py-2 text-zinc-400 hover:bg-zinc-900 hover:text-white"
+                }
+              >
+                Outstanding
+              </NavLink>
+              <NavLink
                 to="/participants"
                 className={({ isActive }) =>
                   isActive

@@ -12,6 +12,8 @@ export type OutstandingParticipant = {
   firstName: string;
   lastName: string;
   nickname: string;
+  totalCharges: number;
+  totalPayments: number;
   balance: number;
 };
 
