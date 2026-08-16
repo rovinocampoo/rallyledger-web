@@ -362,38 +362,11 @@ function SessionMatchesPanel({ session, onClose }: SessionMatchesPanelProps) {
         </form>
       )}
 
-      {selectedMatch && (
-        <MatchParticipantsPanel
-          key={selectedMatch.id}
-          match={selectedMatch}
-          session={session}
-          onClose={async () => {
-            setSelectedMatch(null);
-            await loadMatchParticipants(matches);
-          }}
-        />
-      )}
-      {scoreMatch && (
-        <MatchSetsPanel
-          key={scoreMatch.id}
-          match={scoreMatch}
-          onClose={() => setScoreMatch(null)}
-          onMatchUpdated={handleMatchUpdated}
-        />
-      )}
-      {chargeMatch && (
-        <MatchChargesPanel
-          key={chargeMatch.id}
-          match={chargeMatch}
-          onClose={() => setChargeMatch(null)}
-        />
-      )}
-
       <div className="mt-6 space-y-2">
         {matches.length === 0 ? (
           <p className="text-sm text-zinc-500">No matches yet.</p>
         ) : (
-          matches.map((match) => {
+          matches.map((match, index) => {
             const court = courts.find((court) => court.id === match.courtId);
             const hasCharges = chargedMatchIds.includes(match.id);
             const matchParticipants = participantsByMatch[match.id] ?? [];
@@ -415,135 +388,179 @@ function SessionMatchesPanel({ session, onClose }: SessionMatchesPanelProps) {
             ].includes(match.result);
 
             return (
-              <div key={match.id} className="rounded-lg bg-zinc-950 px-4 py-3">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0 flex-1 text-left">
-                    <p className="text-lg font-semibold">Match #{match.id}</p>
+              <div key={match.id} className="space-y-3">
+                <div className="rounded-lg bg-zinc-950 px-4 py-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1 text-left">
+                      <p className="text-lg font-semibold">
+                        Match #{index + 1}
+                      </p>
 
-                    <p className="mt-1 truncate text-sm text-zinc-400">
-                      {court?.name ?? `Court ${match.courtId}`} ·{" "}
-                      {court?.location}
-                    </p>
-                  </div>
+                      <p className="mt-1 truncate text-sm text-zinc-400">
+                        {court?.name ?? `Court ${match.courtId}`} ·{" "}
+                        {court?.location}
+                      </p>
+                    </div>
 
-                  <span className="shrink-0 rounded-full bg-zinc-800 px-3 py-1 text-sm">
-                    {formatLabel(match.result)}
-                  </span>
-                </div>
-
-                <div className="mt-3 flex flex-wrap gap-2 text-xs">
-                  <span className="rounded-full bg-zinc-800 px-2.5 py-1">
-                    {formatLabel(match.matchType)}
-                  </span>
-
-                  {match.lightsOn && (
-                    <span className="rounded-full bg-zinc-800 px-2.5 py-1">
-                      Lights On
+                    <span className="shrink-0 rounded-full bg-zinc-800 px-3 py-1 text-sm">
+                      {formatLabel(match.result)}
                     </span>
-                  )}
-                </div>
-                <div className="mt-4 grid grid-cols-2 gap-3">
-                  <div className="w-fit max-w-full justify-self-start rounded-lg bg-zinc-900 px-3 py-2 text-left">
-                    <p className="text-xs font-medium uppercase text-zinc-500">
-                      Team A
-                    </p>
-
-                    <div className="mt-2 space-y-1">
-                      {teamA.length === 0 ? (
-                        <p className="text-sm text-zinc-600">Empty</p>
-                      ) : (
-                        teamA.map((participant) => (
-                          <p
-                            key={participant.participantId}
-                            className="truncate text-sm font-medium"
-                            title={participant.nickname}
-                          >
-                            {participant.nickname}
-                          </p>
-                        ))
-                      )}
-                    </div>
                   </div>
 
-                  <div className="w-fit max-w-full justify-self-start rounded-lg bg-zinc-900 px-3 py-2 text-left">
-                    <p className="text-xs font-medium uppercase text-zinc-500">
-                      Team B
-                    </p>
+                  <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                    <span className="rounded-full bg-zinc-800 px-2.5 py-1">
+                      {formatLabel(match.matchType)}
+                    </span>
 
-                    <div className="mt-2 space-y-1">
-                      {teamB.length === 0 ? (
-                        <p className="text-sm text-zinc-600">Empty</p>
-                      ) : (
-                        teamB.map((participant) => (
-                          <p
-                            key={participant.participantId}
-                            className="truncate text-sm font-medium"
-                            title={participant.nickname}
-                          >
-                            {participant.nickname}
-                          </p>
-                        ))
-                      )}
+                    {match.lightsOn && (
+                      <span className="rounded-full bg-zinc-800 px-2.5 py-1">
+                        Lights On
+                      </span>
+                    )}
+                  </div>
+                  <div className="mt-4 grid grid-cols-2 gap-3">
+                    <div className="w-fit max-w-full justify-self-start rounded-lg bg-zinc-900 px-3 py-2 text-left">
+                      <p className="text-xs font-medium uppercase text-zinc-500">
+                        Team A
+                      </p>
+
+                      <div className="mt-2 space-y-1">
+                        {teamA.length === 0 ? (
+                          <p className="text-sm text-zinc-600">Empty</p>
+                        ) : (
+                          teamA.map((participant) => (
+                            <p
+                              key={participant.participantId}
+                              className="truncate text-sm font-medium"
+                              title={participant.nickname}
+                            >
+                              {participant.nickname}
+                            </p>
+                          ))
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="w-fit max-w-full justify-self-start rounded-lg bg-zinc-900 px-3 py-2 text-left">
+                      <p className="text-xs font-medium uppercase text-zinc-500">
+                        Team B
+                      </p>
+
+                      <div className="mt-2 space-y-1">
+                        {teamB.length === 0 ? (
+                          <p className="text-sm text-zinc-600">Empty</p>
+                        ) : (
+                          teamB.map((participant) => (
+                            <p
+                              key={participant.participantId}
+                              className="truncate text-sm font-medium"
+                              title={participant.nickname}
+                            >
+                              {participant.nickname}
+                            </p>
+                          ))
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div className="mt-4 grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedMatch(match)}
-                    disabled={hasCharges}
-                    className="rounded-lg border border-zinc-700 px-3 py-2 text-sm disabled:opacity-40"
-                  >
-                    Manage Players
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setScoreMatch(match)}
-                    disabled={hasCharges}
-                    className="rounded-lg border border-zinc-700 px-3 py-2 text-sm disabled:opacity-40"
-                  >
-                    Manage Score
-                  </button>
-                </div>
-                <div className="mt-4 grid grid-cols-2 gap-2 border-t border-zinc-800 pt-4 sm:grid-cols-3">
-                  <button
-                    type="button"
-                    onClick={() => handleEditMatch(match)}
-                    disabled={hasCharges}
-                    className="rounded-lg border border-zinc-700 px-3 py-2 text-sm text-zinc-300 transition hover:bg-zinc-900 disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    Edit Match
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteMatch(match)}
-                    disabled={hasCharges}
-                    className="rounded-lg border border-red-900/60 px-3 py-2 text-sm text-red-400 transition hover:bg-red-950/30 disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    Delete
-                  </button>
-
-                  {!hasCharges ? (
+                  <div className="mt-4 grid grid-cols-2 gap-2">
                     <button
                       type="button"
-                      onClick={() => handleGenerateCharges(match)}
-                      disabled={!canGenerateCharges}
-                      className="col-span-2 rounded-lg bg-white px-3 py-2 text-sm font-medium text-black transition disabled:cursor-not-allowed disabled:opacity-40 sm:col-span-1"
+                      onClick={() => {
+                        setSelectedMatch(match);
+                        setScoreMatch(null);
+                        setChargeMatch(null);
+                      }}
+                      disabled={hasCharges}
+                      className="rounded-lg border border-zinc-700 px-3 py-2 text-sm disabled:opacity-40"
                     >
-                      Generate Charges
+                      Manage Players
                     </button>
-                  ) : (
+
                     <button
                       type="button"
-                      onClick={() => setChargeMatch(match)}
-                      className="col-span-2 rounded-lg bg-white px-3 py-2 text-sm font-medium text-black transition hover:bg-zinc-200 sm:col-span-1"
+                      onClick={() => {
+                        setScoreMatch(match);
+                        setSelectedMatch(null);
+                        setChargeMatch(null);
+                      }}
+                      disabled={hasCharges}
+                      className="rounded-lg border border-zinc-700 px-3 py-2 text-sm disabled:opacity-40"
                     >
-                      View Charges
+                      Manage Score
                     </button>
-                  )}
+                  </div>
+                  <div className="mt-4 grid grid-cols-2 gap-2 border-t border-zinc-800 pt-4 sm:grid-cols-3">
+                    <button
+                      type="button"
+                      onClick={() => handleEditMatch(match)}
+                      disabled={hasCharges}
+                      className="rounded-lg border border-zinc-700 px-3 py-2 text-sm text-zinc-300 transition hover:bg-zinc-900 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      Edit Match
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteMatch(match)}
+                      disabled={hasCharges}
+                      className="rounded-lg border border-red-900/60 px-3 py-2 text-sm text-red-400 transition hover:bg-red-950/30 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      Delete
+                    </button>
+
+                    {!hasCharges ? (
+                      <button
+                        type="button"
+                        onClick={() => handleGenerateCharges(match)}
+                        disabled={!canGenerateCharges}
+                        className="col-span-2 rounded-lg bg-white px-3 py-2 text-sm font-medium text-black transition disabled:cursor-not-allowed disabled:opacity-40 sm:col-span-1"
+                      >
+                        Generate Charges
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setChargeMatch(match);
+                          setSelectedMatch(null);
+                          setScoreMatch(null);
+                        }}
+                        className="col-span-2 rounded-lg bg-white px-3 py-2 text-sm font-medium text-black transition hover:bg-zinc-200 sm:col-span-1"
+                      >
+                        View Charges
+                      </button>
+                    )}
+                  </div>
                 </div>
+                {selectedMatch?.id === match.id && (
+                  <MatchParticipantsPanel
+                    key={match.id}
+                    match={match}
+                    session={session}
+                    onClose={async () => {
+                      setSelectedMatch(null);
+                      await loadMatchParticipants(matches);
+                    }}
+                  />
+                )}
+
+                {scoreMatch?.id === match.id && (
+                  <MatchSetsPanel
+                    key={match.id}
+                    match={match}
+                    onClose={() => setScoreMatch(null)}
+                    onMatchUpdated={handleMatchUpdated}
+                  />
+                )}
+
+                {chargeMatch?.id === match.id && (
+                  <MatchChargesPanel
+                    key={match.id}
+                    match={match}
+                    onClose={() => setChargeMatch(null)}
+                  />
+                )}
               </div>
             );
           })

@@ -5,8 +5,8 @@ function AppLayout() {
     { to: "/", label: "Home", icon: "🏠", end: true },
     { to: "/outstanding", label: "Balance", icon: "₱", end: true },
     { to: "/participants", label: "Players", icon: "👥" },
-    { to: "/courts", label: "Courts", icon: "🎾" },
     { to: "/sessions", label: "Sessions", icon: "📅" },
+    { to: "/courts", label: "Courts", icon: "🎾" },
     { to: "/fee-rules", label: "Fees", icon: "🧾" },
   ];
 

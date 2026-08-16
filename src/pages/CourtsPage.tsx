@@ -32,6 +32,23 @@ function CourtsPage() {
     loadCourts();
   }, []);
 
+  useEffect(() => {
+    if (!editingCourt || loading) {
+      return;
+    }
+
+    const element = document.getElementById(`court-${editingCourt.id}`);
+
+    if (!element) {
+      return;
+    }
+
+    element.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest",
+    });
+  }, [editingCourt, loading]);
+
   function handleCourtSaved(savedCourt: Court) {
     setCourts((current) => {
       const exists = current.some((court) => court.id === savedCourt.id);
@@ -83,7 +100,10 @@ function CourtsPage() {
 
         <button
           type="button"
-          onClick={() => setShowForm(true)}
+          onClick={() => {
+            setEditingCourt(null);
+            setShowForm(true);
+          }}
           className="w-full rounded-lg bg-white px-4 py-3 text-sm font-medium text-black sm:w-auto sm:py-2"
         >
           Add Court
@@ -92,7 +112,7 @@ function CourtsPage() {
       {actionError && (
         <p className="mb-4 text-sm text-red-400">{actionError}</p>
       )}
-      {showForm && (
+      {showForm && editingCourt === null && (
         <CourtForm
           court={editingCourt ?? undefined}
           onSaved={handleCourtSaved}
@@ -107,15 +127,29 @@ function CourtsPage() {
           <p className="text-sm text-zinc-500">No courts yet.</p>
         ) : (
           courts.map((court) => (
-            <CourtCard
-              key={court.id}
-              court={court}
-              onEdit={(court) => {
-                setEditingCourt(court);
-                setShowForm(true);
-              }}
-              onDelete={handleCourtDelete}
-            />
+            <div key={court.id} id={`court-${court.id}`} className="space-y-3">
+              <CourtCard
+                court={court}
+                onEdit={(court) => {
+                  setEditingCourt(court);
+                  setShowForm(true);
+                }}
+                onDelete={handleCourtDelete}
+              />
+
+              {showForm && editingCourt?.id === court.id && (
+                <div className="p-3">
+                  <CourtForm
+                    court={editingCourt}
+                    onSaved={handleCourtSaved}
+                    onCancel={() => {
+                      setShowForm(false);
+                      setEditingCourt(null);
+                    }}
+                  />
+                </div>
+              )}
+            </div>
           ))
         )}
       </div>

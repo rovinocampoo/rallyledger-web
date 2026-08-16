@@ -27,10 +27,6 @@ function ParticipantsPage() {
   const [ledgerParticipantId, setLedgerParticipantId] = useState<number | null>(
     navigationState?.ledgerParticipantId ?? null,
   );
-  const ledgerParticipant =
-    participants.find(
-      (participant) => participant.id === ledgerParticipantId,
-    ) ?? null;
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [searchQuery, setSearchQuery] = useState("");
@@ -75,6 +71,31 @@ function ParticipantsPage() {
       state: null,
     });
   }, [location.state, location.pathname, navigate]);
+
+  useEffect(() => {
+    if (loading) {
+      return;
+    }
+
+    const targetParticipantId = editingParticipant?.id ?? ledgerParticipantId;
+
+    if (targetParticipantId === null) {
+      return;
+    }
+
+    const element = document.getElementById(
+      `participant-${targetParticipantId}`,
+    );
+
+    if (!element) {
+      return;
+    }
+
+    element.scrollIntoView({
+      behavior: "smooth",
+      block: ledgerParticipantId !== null ? "start" : "nearest",
+    });
+  }, [editingParticipant, ledgerParticipantId, loading]);
 
   function handleParticipantSaved(savedParticipant: Participant) {
     setParticipants((current) => {
@@ -190,40 +211,29 @@ function ParticipantsPage() {
           Add Participant
         </button>
       </div>
-      {showForm && (
-        <ParticipantForm
-          participant={editingParticipant ?? undefined}
-          onSaved={handleParticipantSaved}
-          onCancel={() => {
-            setShowForm(false);
-            setEditingParticipant(null);
-          }}
-        />
+      {showForm && editingParticipant === null && (
+        <div className="mb-6">
+          <ParticipantForm
+            onSaved={handleParticipantSaved}
+            onCancel={() => {
+              setShowForm(false);
+              setEditingParticipant(null);
+            }}
+          />
+        </div>
       )}
 
-      {ledgerParticipant && (
-        <ParticipantLedgerPanel
-          key={ledgerParticipant.id}
-          participant={ledgerParticipant}
-          onClose={() => setLedgerParticipantId(null)}
-        />
-      )}
       <div>
         {/* DESKTOP HEADER */}
-        <div className="mb-4">
+        <div className="mb-3 flex justify-start">
           <input
             type="search"
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
             placeholder="Search players..."
-            className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-4 py-2.5 text-sm text-white outline-none placeholder:text-zinc-600 focus:border-zinc-600 sm:max-w-sm"
+            className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-4 py-2.5 text-sm text-white outline-none placeholder:text-zinc-600 focus:border-zinc-600 md:max-w-md"
           />
         </div>
-        {sortedParticipants.length === 0 && (
-          <p className="py-8 text-center text-sm text-zinc-500">
-            No players found.
-          </p>
-        )}
         <div className="hidden grid-cols-[160px_160px_minmax(0,1fr)_auto] items-center gap-4 rounded-t-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-left text-sm text-zinc-400 md:grid">
           <button
             type="button"
@@ -254,23 +264,53 @@ function ParticipantsPage() {
 
           <span>Actions</span>
         </div>
-
         <div className="space-y-3 md:space-y-0 md:rounded-b-xl md:border-x md:border-b md:border-zinc-800 md:bg-zinc-900">
           {sortedParticipants.map((participant) => (
-            <ParticipantCard
-              key={participant.id}
-              participant={participant}
-              onEdit={(participant) => {
-                setEditingParticipant(participant);
-                setShowForm(true);
-              }}
-              onDelete={handleParticipantDelete}
-              onViewLedger={(participant) =>
-                setLedgerParticipantId(participant.id)
-              }
-            />
+            <div key={participant.id} id={`participant-${participant.id}`}>
+              <ParticipantCard
+                participant={participant}
+                onEdit={(participant) => {
+                  setEditingParticipant(participant);
+                  setShowForm(true);
+                  setLedgerParticipantId(null);
+                }}
+                onDelete={handleParticipantDelete}
+                onViewLedger={(participant) => {
+                  setLedgerParticipantId(participant.id);
+                  setEditingParticipant(null);
+                  setShowForm(false);
+                }}
+              />
+
+              {showForm && editingParticipant?.id === participant.id && (
+                <div className="p-3">
+                  <ParticipantForm
+                    participant={editingParticipant}
+                    onSaved={handleParticipantSaved}
+                    onCancel={() => {
+                      setShowForm(false);
+                      setEditingParticipant(null);
+                    }}
+                  />
+                </div>
+              )}
+
+              {ledgerParticipantId === participant.id && (
+                <div className="p-3">
+                  <ParticipantLedgerPanel
+                    participant={participant}
+                    onClose={() => setLedgerParticipantId(null)}
+                  />
+                </div>
+              )}
+            </div>
           ))}
         </div>
+        {sortedParticipants.length === 0 && (
+          <p className="py-8 text-center text-sm text-zinc-500">
+            No players found.
+          </p>
+        )}
       </div>
     </div>
   );

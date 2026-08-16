@@ -488,6 +488,22 @@ function ParticipantLedgerPanel({
         <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-center">
           <button
             type="button"
+            onClick={handleShareLedgerPng}
+            disabled={sharingLedger}
+            className="w-full rounded-lg border border-zinc-700 px-3 py-2 text-sm sm:w-auto text-zinc-200 hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {sharingLedger ? "Preparing..." : "Share as PNG"}
+          </button>
+
+          <button
+            type="button"
+            onClick={handleCopyLedgerText}
+            className="w-full rounded-lg border border-zinc-700 px-3 py-2 text-sm sm:w-auto text-zinc-200 hover:bg-zinc-800"
+          >
+            Copy as Text
+          </button>
+          <button
+            type="button"
             onClick={() => setShowPaymentForm(true)}
             className="w-full rounded-lg bg-white px-3 py-2 text-sm sm:w-auto text-black"
           >
@@ -495,25 +511,10 @@ function ParticipantLedgerPanel({
           </button>
           <button
             type="button"
-            onClick={handleShareLedgerPng}
-            disabled={sharingLedger}
-            className="w-full rounded-lg border border-zinc-700 px-3 py-2 text-sm sm:w-auto text-zinc-200 hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {sharingLedger ? "Preparing..." : "Share as PNG"}
-          </button>
-          <button
-            type="button"
             onClick={onClose}
-            className="w-full rounded-lg border border-zinc-700 px-3 py-2 text-sm sm:w-auto text-zinc-400"
+            className="rounded-lg border border-red-900 px-3 py-2 text-sm text-red-400"
           >
             Close
-          </button>
-          <button
-            type="button"
-            onClick={handleCopyLedgerText}
-            className="w-full rounded-lg border border-zinc-700 px-3 py-2 text-sm sm:w-auto text-zinc-200 hover:bg-zinc-800"
-          >
-            Copy as Text
           </button>
         </div>
       </div>{" "}

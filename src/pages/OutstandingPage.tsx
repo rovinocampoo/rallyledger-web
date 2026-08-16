@@ -23,11 +23,6 @@ function OutstandingPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const ledgerParticipant =
-    participants.find(
-      (participant) => participant.id === ledgerParticipantId,
-    ) ?? null;
-
   const [searchParams, setSearchParams] = useSearchParams();
   const limitParam = searchParams.get("limit");
 
@@ -58,6 +53,23 @@ function OutstandingPage() {
       ignore = true;
     };
   }, [limit]);
+
+  useEffect(() => {
+    if (loading || ledgerParticipantId === null) {
+      return;
+    }
+
+    requestAnimationFrame(() => {
+      const element = document.getElementById(
+        `participant-${ledgerParticipantId}`,
+      );
+
+      element?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    });
+  }, [ledgerParticipantId, loading]);
 
   const totalOutstanding = outstanding.reduce(
     (sum, participant) => sum + participant.balance,
@@ -194,48 +206,66 @@ function OutstandingPage() {
         )}
       </div>
 
-      {ledgerParticipant && (
-        <ParticipantLedgerPanel
-          key={ledgerParticipant.id}
-          participant={ledgerParticipant}
-          onClose={() => setLedgerParticipantId(null)}
-        />
-      )}
-
       <div className="space-y-3">
         {outstanding.length === 0 ? (
           <p className="text-sm text-zinc-500">No outstanding balances.</p>
         ) : (
-          outstanding.map((item) => (
-            <button
-              key={item.participantId}
-              type="button"
-              onClick={() => setLedgerParticipantId(item.participantId)}
-              className="flex w-full items-center justify-between rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-4 text-left hover:bg-zinc-800"
-            >
-              <div>
-                <p className="font-medium">
-                  {formatFullName(item.firstName, item.lastName)}
-                </p>
+          outstanding.map((item) => {
+            const participant = participants.find(
+              (participant) => participant.id === item.participantId,
+            );
 
-                {item.nickname && (
-                  <p className="text-xs text-zinc-500">{item.nickname}</p>
+            return (
+              <div
+                key={item.participantId}
+                id={`participant-${item.participantId}`}
+                className="space-y-3"
+              >
+                <button
+                  type="button"
+                  onClick={() =>
+                    setLedgerParticipantId((current) =>
+                      current === item.participantId
+                        ? null
+                        : item.participantId,
+                    )
+                  }
+                  className="flex w-full items-center justify-between rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-4 text-left hover:bg-zinc-800"
+                >
+                  <div>
+                    <p className="font-medium">
+                      {formatFullName(item.firstName, item.lastName)}
+                    </p>
+
+                    {item.nickname && (
+                      <p className="text-xs text-zinc-500">{item.nickname}</p>
+                    )}
+
+                    <p className="mt-2 text-xs text-zinc-500">
+                      Charges: {formatCurrency(item.totalCharges)}
+                      {" · "}
+                      Payments: {formatCurrency(item.totalPayments)}
+                    </p>
+                  </div>
+
+                  <div className="text-right">
+                    <p className="text-xs text-zinc-500">Balance</p>
+
+                    <p className="font-semibold">
+                      {formatCurrency(item.balance)}
+                    </p>
+                  </div>
+                </button>
+
+                {ledgerParticipantId === item.participantId && participant && (
+                  <ParticipantLedgerPanel
+                    participant={participant}
+                    onClose={() => setLedgerParticipantId(null)}
+                  />
                 )}
-
-                <p className="mt-2 text-xs text-zinc-500">
-                  Charges: {formatCurrency(item.totalCharges)}
-                  {" · "}
-                  Payments: {formatCurrency(item.totalPayments)}
-                </p>
               </div>
-
-              <div className="text-right">
-                <p className="text-xs text-zinc-500">Balance</p>
-
-                <p className="font-semibold">{formatCurrency(item.balance)}</p>
-              </div>
-            </button>
-          ))
+            );
+          })
         )}
       </div>
     </div>

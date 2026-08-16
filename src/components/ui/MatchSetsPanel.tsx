@@ -32,6 +32,9 @@ function MatchSetsPanel({
   const [savedResult, setSavedResult] = useState<MatchStatus>(match.result);
   const [manualStatus, setManualStatus] = useState<MatchStatus>(match.result);
   const [editingSetNumber, setEditingSetNumber] = useState<number | null>(null);
+  const latestSetNumber =
+    sets.length > 0 ? Math.max(...sets.map((set) => set.setNumber)) : 0;
+  const nextSetNumber = latestSetNumber + 1;
 
   useEffect(() => {
     let ignore = false;
@@ -76,7 +79,7 @@ function MatchSetsPanel({
         });
       } else {
         await addMatchSet(match.id, {
-          setNumber: Number(setNumber),
+          setNumber: nextSetNumber,
           teamAScore: Number(teamAScore),
           teamBScore: Number(teamBScore),
         });
@@ -84,7 +87,6 @@ function MatchSetsPanel({
 
       await loadSets();
 
-      setSetNumber("");
       setTeamAScore("");
       setTeamBScore("");
     } catch (err) {
@@ -239,10 +241,9 @@ function MatchSetsPanel({
         <input
           type="number"
           min="1"
-          placeholder="Set #"
-          value={setNumber}
-          onChange={(event) => setSetNumber(event.target.value)}
-          className="w-24 rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2"
+          value={editingSetNumber !== null ? setNumber : nextSetNumber}
+          readOnly
+          className="w-24 cursor-not-allowed rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-zinc-400"
         />
 
         <input
@@ -313,7 +314,8 @@ function MatchSetsPanel({
               <button
                 type="button"
                 onClick={() => handleDelete(set.setNumber)}
-                className="text-xs text-red-400 hover:text-red-300"
+                disabled={set.setNumber !== latestSetNumber}
+                className="text-red-400 hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-30"
               >
                 Delete
               </button>

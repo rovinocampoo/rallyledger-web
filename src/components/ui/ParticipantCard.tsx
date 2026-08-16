@@ -113,16 +113,17 @@ function ParticipantCard({
       {/* DESKTOP ROW */}
 
       <div className="hidden grid-cols-[160px_160px_minmax(0,1fr)_auto] items-center gap-4 border-b border-zinc-800 px-4 py-3 md:grid">
-        <div className="flex flex-row flex-wrap gap-2 md:flex-col md:items-start md:gap-1.5">
+        <div className="flex items-center gap-1.5 whitespace-nowrap">
           <span
-            className={`rounded-full px-2 py-0.5 text-[13px] font-medium ${getMembershipStatusStyle(
+            className={`rounded-full px-2 py-0.5 text-[11px] font-medium sm:text-[12px] ${getMembershipStatusStyle(
               participant.membershipStatus,
             )}`}
           >
             {formatLabel(participant.membershipStatus)}
           </span>
+
           <span
-            className={`rounded-full px-2 py-0.5 text-[13px] font-medium ${
+            className={`rounded-full px-2 py-0.5 text-[11px] font-medium sm:text-[12px] ${
               typeStyles[participant.participantType] ??
               "bg-zinc-800 text-zinc-400"
             }`}
@@ -130,12 +131,12 @@ function ParticipantCard({
             {formatLabel(participant.participantType)}
           </span>
         </div>
-        <p className="min-w-0 truncate font-medium text-left" title={fullName}>
+        <p className="min-w-0 truncate  text-[14px] text-left" title={fullName}>
           {fullName}
         </p>
 
         <p
-          className="min-w-0 truncate text-sm text-zinc-400 text-left"
+          className="min-w-0 truncate  text-[13px] text-zinc-400 text-left"
           title={participant.nickname ?? ""}
         >
           {participant.nickname || "—"}
