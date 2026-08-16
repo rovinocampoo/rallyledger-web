@@ -58,6 +58,23 @@ function FeeRulesPage() {
     };
   }, []);
 
+    useEffect(() => {
+    if (!editingRule || loading) {
+      return;
+    }
+
+    const element = document.getElementById(`fee-${editingRule.id}`);
+
+    if (!element) {
+      return;
+    }
+
+    element.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest",
+    });
+  }, [editingRule, loading]);
+
   const sortedRules = useMemo(() => {
     return [...rules].sort((a, b) => {
       const aKey = `${a.feeType}-${a.participantType ?? ""}-${a.matchType ?? ""}`;
@@ -179,7 +196,7 @@ function FeeRulesPage() {
                   </p>
                 ) : (
                   typeRules.map((rule) => (
-                    <div key={rule.id} className="space-y-3">
+                    <div key={rule.id}  id={`fee-${rule.id}`} className="space-y-3">
                       <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4">
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0 text-left">
