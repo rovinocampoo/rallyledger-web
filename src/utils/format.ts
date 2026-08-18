@@ -23,7 +23,7 @@ export function formatFullName(
 
 export function formatDate(date: string) {
   return new Intl.DateTimeFormat("en-US", {
-    month: "short",
+    month: "long",
     day: "numeric",
     year: "numeric",
     timeZone: "UTC",

@@ -330,7 +330,7 @@ function DashboardPage() {
             </div>
           </div>
 
-          <div className="mt-5 space-y-2">
+          <div className="mt-5 space-y-2 text-left">
             {paymentReport.byMethod.length === 0 ? (
               <p className="text-sm text-zinc-500">No payments recorded yet.</p>
             ) : (

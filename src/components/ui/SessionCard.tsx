@@ -1,4 +1,5 @@
 import type { Session } from "../../types/session";
+import { formatDate } from "../../utils/format";
 
 type SessionCardProps = {
   session: Session;
@@ -22,7 +23,9 @@ function SessionCard({
       <div className="min-w-0 text-left">
         <h2 className="truncate text-xl font-semibold">{session.name}</h2>
 
-        <p className="mt-2 text-sm text-zinc-400">{session.sessionDate}</p>
+        <p className="mt-2 text-sm text-zinc-400">
+          {formatDate(session.sessionDate)}
+        </p>
 
         <p className="mt-1 text-sm text-zinc-500">
           {session.startTime} - {session.endTime}
