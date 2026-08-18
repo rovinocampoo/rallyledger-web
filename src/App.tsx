@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import { Route, Routes } from "react-router-dom"
+import { Analytics } from "@vercel/analytics/react"
 
 import {
   getCurrentAdmin,
@@ -68,23 +69,26 @@ function App() {
   }
 
   return (
-    <Routes>
-      <Route
-        element={
-          <AppLayout
-            admin={admin}
-            onLogout={handleLogout}
-          />
-        }
-      >
-        <Route path="/" element={<DashboardPage />} />
-        <Route path="/outstanding" element={<OutstandingPage />} />
-        <Route path="/participants" element={<ParticipantsPage />} />
-        <Route path="/courts" element={<CourtsPage />} />
-        <Route path="/sessions" element={<SessionsPage />} />
-        <Route path="/fee-rules" element={<FeeRulesPage />} />
-      </Route>
-    </Routes>
+    <>
+      <Routes>
+        <Route
+          element={
+            <AppLayout
+              admin={admin}
+              onLogout={handleLogout}
+            />
+          }
+        >
+          <Route path="/" element={<DashboardPage />} />
+          <Route path="/outstanding" element={<OutstandingPage />} />
+          <Route path="/participants" element={<ParticipantsPage />} />
+          <Route path="/courts" element={<CourtsPage />} />
+          <Route path="/sessions" element={<SessionsPage />} />
+          <Route path="/fee-rules" element={<FeeRulesPage />} />
+        </Route>
+      </Routes>
+      <Analytics />
+    </>
   )
 }
 
