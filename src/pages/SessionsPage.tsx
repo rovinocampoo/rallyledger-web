@@ -83,17 +83,33 @@ function SessionsPage() {
     setLedgerParticipant(participant);
   }
 
+  function sortSessions(items: Session[]) {
+    return [...items].sort((a, b) => {
+      if (a.sessionDate !== b.sessionDate) {
+        return b.sessionDate.localeCompare(a.sessionDate);
+      }
+
+      if (a.startTime !== b.startTime) {
+        return b.startTime.localeCompare(a.startTime);
+      }
+
+      return b.id - a.id;
+    });
+  }
+
   function handleSessionSaved(savedSession: Session) {
     setSessions((current) => {
       const exists = current.some((session) => session.id === savedSession.id);
 
       if (exists) {
-        return current.map((session) =>
-          session.id === savedSession.id ? savedSession : session,
+        return sortSessions(
+          current.map((session) =>
+            session.id === savedSession.id ? savedSession : session,
+          ),
         );
       }
 
-      return [...current, savedSession];
+      return sortSessions([...current, savedSession]);
     });
 
     setShowForm(false);

@@ -2,6 +2,7 @@ export type Session = {
   id: number;
   name: string;
   description: string;
+  sessionType: SessionType;
   sessionDate: string;
   startTime: string;
   endTime: string;
@@ -11,3 +12,9 @@ export type Session = {
   createdAt: string;
   updatedAt: string;
 };
+
+export type SessionType =
+  | "REGULAR_PLAY"
+  | "TRAINING"
+  | "OUTSIDER_PLAY"
+  | "EVENT";

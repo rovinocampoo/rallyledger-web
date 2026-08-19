@@ -1,5 +1,5 @@
 import type { Session } from "../../types/session";
-import { formatDate } from "../../utils/format";
+import { formatDate, formatLabel } from "../../utils/format";
 
 type SessionCardProps = {
   session: Session;
@@ -31,9 +31,11 @@ function SessionCard({
           {session.startTime} - {session.endTime}
         </p>
       </div>
-
       <div className="mt-3 flex flex-wrap gap-2 text-xs">
-        <span className="rounded-full bg-zinc-800 px-3 py-1 text-sm">
+        <span className="rounded-full bg-zinc-800 px-3 py-1">
+          {formatLabel(session.sessionType)}
+        </span>
+        <span className="rounded-full bg-zinc-800 px-3 py-1">
           {session.maxPlayers === null
             ? "Unlimited players"
             : `Max ${session.maxPlayers} players`}
@@ -53,7 +55,7 @@ function SessionCard({
       <div className="mt-4 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-center">
         <button
           type="button"
-          onClick={() => onEdit(session)}
+          onClick={() => onEdit(session)} 
           className="w-full rounded-lg border border-zinc-700 px-3 py-2 text-sm sm:w-auto"
         >
           Edit

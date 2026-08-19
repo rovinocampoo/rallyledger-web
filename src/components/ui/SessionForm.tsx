@@ -1,6 +1,6 @@
 import { useState, type SubmitEvent } from "react";
 import { createSession, updateSession } from "../../api/sessions";
-import type { Session } from "../../types/session";
+import type { Session, SessionType } from "../../types/session";
 
 type SessionFormProps = {
   session?: Session;
@@ -21,6 +21,9 @@ function getTodayDate() {
 function SessionForm({ session, onSaved, onCancel }: SessionFormProps) {
   const [name, setName] = useState(session?.name ?? "");
   const [description, setDescription] = useState(session?.description ?? "");
+  const [sessionType, setSessionType] = useState<SessionType>(
+    session?.sessionType ?? "REGULAR_PLAY",
+  );
   const [sessionDate, setSessionDate] = useState(
     session?.sessionDate.slice(0, 10) ?? getTodayDate(),
   );
@@ -46,6 +49,7 @@ function SessionForm({ session, onSaved, onCancel }: SessionFormProps) {
       const data = {
         name,
         description,
+        sessionType,
         sessionDate,
         startTime,
         endTime,
@@ -87,6 +91,22 @@ function SessionForm({ session, onSaved, onCancel }: SessionFormProps) {
               required
               className="mt-2 w-full min-w-0 rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-3"
             />
+            <label className="block text-left">
+              <span className="text-sm text-zinc-400">Activity Type</span>
+
+              <select
+                value={sessionType}
+                onChange={(event) =>
+                  setSessionType(event.target.value as SessionType)
+                }
+                className="mt-2 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-3"
+              >
+                <option value="REGULAR_PLAY">Regular Play</option>
+                <option value="TRAINING">Training</option>
+                <option value="OUTSIDER_PLAY">Outsider Play</option>
+                <option value="EVENT">Event</option>
+              </select>
+            </label>
           </label>
           <label className="block text-left">
             <div className="flex items-center justify-between">
