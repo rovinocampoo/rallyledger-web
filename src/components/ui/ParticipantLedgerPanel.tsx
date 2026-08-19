@@ -18,8 +18,21 @@ type ParticipantLedgerPanelProps = {
 
 type LedgerStatementProps = {
   participant: Participant;
-  ledger: ParticipantLedger;
+  periodLabel: string;
+  openingBalance: number;
+  charges: ParticipantLedger["charges"];
+  payments: ParticipantLedger["payments"];
+  chargeTotal: number;
+  paymentTotal: number;
+  closingBalance: number;
 };
+
+type StatementPeriod =
+  | "THIS_WEEK"
+  | "LAST_7_DAYS"
+  | "THIS_MONTH"
+  | "LAST_30_DAYS"
+  | "FULL_HISTORY";
 
 function getBalanceLabel(balance: number) {
   if (balance > 0) {
@@ -33,6 +46,82 @@ function getBalanceLabel(balance: number) {
   return "Settled";
 }
 
+function getTodayDate() {
+  const today = new Date();
+
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function getStatementRange(period: StatementPeriod) {
+  const today = new Date();
+
+  if (period === "FULL_HISTORY") {
+    return {
+      startDate: null,
+      endDate: today,
+    };
+  }
+
+  if (period === "LAST_30_DAYS") {
+    const startDate = new Date(today);
+    startDate.setDate(startDate.getDate() - 29);
+
+    return {
+      startDate,
+      endDate: today,
+    };
+  }
+
+  if (period === "LAST_7_DAYS") {
+    const startDate = new Date(today);
+    startDate.setDate(startDate.getDate() - 6);
+
+    return {
+      startDate,
+      endDate: today,
+    };
+  }
+  if (period === "THIS_WEEK") {
+    return {
+      startDate: new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        today.getDate() - today.getDay(),
+      ),
+      endDate: today,
+    };
+  }
+
+  return {
+    startDate: new Date(today.getFullYear(), today.getMonth(), 1),
+    endDate: today,
+  };
+}
+
+function getStatementPeriodLabel(period: StatementPeriod) {
+  if (period === "THIS_WEEK") {
+    return "This Week";
+  }
+
+  if (period === "LAST_7_DAYS") {
+    return "Last 7 Days";
+  }
+
+  if (period === "LAST_30_DAYS") {
+    return "Last 30 Days";
+  }
+
+  if (period === "FULL_HISTORY") {
+    return "Full History";
+  }
+
+  return "This Month";
+}
+
 function waitForRender() {
   return new Promise<void>((resolve) => {
     requestAnimationFrame(() => {
@@ -41,7 +130,16 @@ function waitForRender() {
   });
 }
 
-function LedgerStatement({ participant, ledger }: LedgerStatementProps) {
+function LedgerStatement({
+  participant,
+  periodLabel,
+  openingBalance,
+  charges,
+  payments,
+  chargeTotal,
+  paymentTotal,
+  closingBalance,
+}: LedgerStatementProps) {
   return (
     <div className="w-[700px] bg-zinc-950 p-10 text-white">
       <div className="border-b border-zinc-800 pb-6">
@@ -59,37 +157,51 @@ function LedgerStatement({ participant, ledger }: LedgerStatementProps) {
           <p className="mt-1 text-zinc-400">{participant.nickname}</p>
         )}
 
-        <p className="mt-3 text-xs text-zinc-500">
+        <p className="mt-3 text-sm text-zinc-400">Period: {periodLabel}</p>
+
+        <p className="mt-1 text-xs text-zinc-500">
           Generated {formatDate(new Date().toISOString().slice(0, 10))}
         </p>
       </div>
 
-      <div className="mt-6 grid grid-cols-3 gap-3">
-        <div className="rounded-xl bg-zinc-900 p-4">
-          <p className="text-sm text-zinc-400">Total Charges</p>
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+        <div className="rounded-lg bg-zinc-950 p-4">
+          <p className="text-sm text-zinc-400">Opening Balance</p>
 
-          <p className="mt-2 text-2xl font-semibold">
-            {formatCurrency(ledger.totalCharges)}
-          </p>
-        </div>
-
-        <div className="rounded-xl bg-zinc-900 p-4">
-          <p className="text-sm text-zinc-400">Total Payments</p>
-
-          <p className="mt-2 text-2xl font-semibold">
-            {formatCurrency(ledger.totalPayments)}
-          </p>
-        </div>
-
-        <div className="rounded-xl bg-zinc-900 p-4">
-          <p className="text-sm text-zinc-400">Balance</p>
-
-          <p className="mt-2 text-2xl font-semibold">
-            {formatCurrency(ledger.balance)}
+          <p className="mt-1 text-xl font-semibold">
+            {formatCurrency(openingBalance)}
           </p>
 
           <p className="mt-1 text-xs text-zinc-500">
-            {getBalanceLabel(ledger.balance)}
+            {getBalanceLabel(openingBalance)}
+          </p>
+        </div>
+
+        <div className="rounded-lg bg-zinc-950 p-4">
+          <p className="text-sm text-zinc-400">Charges</p>
+
+          <p className="mt-1 text-xl font-semibold">
+            {formatCurrency(chargeTotal)}
+          </p>
+        </div>
+
+        <div className="rounded-lg bg-zinc-950 p-4">
+          <p className="text-sm text-zinc-400">Payments</p>
+
+          <p className="mt-1 text-xl font-semibold">
+            {formatCurrency(paymentTotal)}
+          </p>
+        </div>
+
+        <div className="rounded-lg bg-zinc-950 p-4">
+          <p className="text-sm text-zinc-400">Closing Balance</p>
+
+          <p className="mt-1 text-xl font-semibold">
+            {formatCurrency(closingBalance)}
+          </p>
+
+          <p className="mt-1 text-xs text-zinc-500">
+            {getBalanceLabel(closingBalance)}
           </p>
         </div>
       </div>
@@ -98,10 +210,10 @@ function LedgerStatement({ participant, ledger }: LedgerStatementProps) {
         <h3 className="text-lg font-semibold">Charges</h3>
 
         <div className="mt-3 space-y-2">
-          {ledger.charges.length === 0 ? (
+          {charges.length === 0 ? (
             <p className="text-sm text-zinc-500">No charges recorded.</p>
           ) : (
-            ledger.charges.map((charge) => (
+            charges.map((charge) => (
               <div
                 key={charge.id}
                 className="flex items-center justify-between rounded-lg bg-zinc-900 px-4 py-3"
@@ -125,10 +237,10 @@ function LedgerStatement({ participant, ledger }: LedgerStatementProps) {
         <h3 className="text-lg font-semibold">Payments</h3>
 
         <div className="mt-3 space-y-2">
-          {ledger.payments.length === 0 ? (
+          {payments.length === 0 ? (
             <p className="text-sm text-zinc-500">No payments recorded.</p>
           ) : (
-            ledger.payments.map((payment) => (
+            payments.map((payment) => (
               <div
                 key={payment.id}
                 className="flex items-center justify-between rounded-lg bg-zinc-900 px-4 py-3"
@@ -165,15 +277,6 @@ function LedgerStatement({ participant, ledger }: LedgerStatementProps) {
   );
 }
 
-function getTodayDate() {
-  const today = new Date();
-
-  const year = today.getFullYear();
-  const month = String(today.getMonth() + 1).padStart(2, "0");
-  const day = String(today.getDate()).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
-}
 function ParticipantLedgerPanel({
   participant,
   onClose,
@@ -191,10 +294,14 @@ function ParticipantLedgerPanel({
   const [expandedChargeDate, setExpandedChargeDate] = useState<string | null>(
     null,
   );
-  const statementRef = useRef<HTMLDivElement | null>(null);
   const [sharingLedger, setSharingLedger] = useState(false);
   const [shareMessage, setShareMessage] = useState<string | null>(null);
   const [renderStatement, setRenderStatement] = useState(false);
+  const [statementPeriod, setStatementPeriod] =
+    useState<StatementPeriod>("THIS_MONTH");
+  const statementPeriodLabel = getStatementPeriodLabel(statementPeriod);
+
+  const statementRef = useRef<HTMLDivElement | null>(null);
 
   async function loadLedger() {
     try {
@@ -205,6 +312,30 @@ function ParticipantLedgerPanel({
       setPaymentError("Failed to refresh ledger");
     }
   }
+
+  useEffect(() => {
+    let ignore = false;
+
+    getParticipantLedger(participant.id)
+      .then((data) => {
+        if (!ignore) {
+          setLedger(data);
+          setError(null);
+          setLoading(false);
+        }
+      })
+      .catch((err) => {
+        if (!ignore) {
+          console.error(err);
+          setError("Failed to load ledger");
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [participant.id]);
 
   async function handlePaymentSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -253,88 +384,17 @@ function ParticipantLedgerPanel({
     }
   }
 
-  useEffect(() => {
-    let ignore = false;
-
-    getParticipantLedger(participant.id)
-      .then((data) => {
-        if (!ignore) {
-          setLedger(data);
-          setError(null);
-          setLoading(false);
-        }
-      })
-      .catch((err) => {
-        if (!ignore) {
-          console.error(err);
-          setError("Failed to load ledger");
-          setLoading(false);
-        }
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, [participant.id]);
-
-  if (loading) {
-    return (
-      <div className="mb-6 rounded-xl border border-zinc-800 bg-zinc-900 p-4">
-        <p className="text-zinc-400">Loading ledger...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="mb-6 rounded-xl border border-zinc-800 bg-zinc-900 p-4">
-        <p className="text-red-400">{error}</p>
-
-        <button
-          type="button"
-          onClick={onClose}
-          className="mt-3 text-sm text-zinc-400"
-        >
-          Close
-        </button>
-      </div>
-    );
-  }
-
-  if (!ledger) {
-    return null;
-  }
-
-  const chargesByType = ledger.charges.reduce<Record<string, number>>(
-    (totals, charge) => {
-      totals[charge.feeType] = (totals[charge.feeType] ?? 0) + charge.amount;
-
-      return totals;
-    },
-    {},
-  );
-
-  const chargesByDate = ledger.charges.reduce<Record<string, number>>(
-    (totals, charge) => {
-      totals[charge.chargeDate] =
-        (totals[charge.chargeDate] ?? 0) + charge.amount;
-
-      return totals;
-    },
-    {},
-  );
-
   function buildLedgerStatement() {
     if (!ledger) {
       return "";
     }
 
-    const chargeLines = ledger.charges.map(
+    const chargeLines = statementCharges.map(
       (charge) =>
         `${formatDate(charge.chargeDate)} — ${formatLabel(charge.feeType)}: ${formatCurrency(charge.amount)}`,
     );
 
-    const paymentLines = ledger.payments.map((payment) => {
+    const paymentLines = statementPayments.map((payment) => {
       const reference = payment.reference ? ` (${payment.reference})` : "";
 
       return `${formatDate(payment.paymentDate)} — ${formatLabel(payment.paymentMethod)}: ${formatCurrency(payment.amount)}${reference}`;
@@ -345,10 +405,12 @@ function ParticipantLedgerPanel({
       "",
       `Participant: ${formatFullName(participant.firstName, participant.lastName)}`,
       participant.nickname ? `Nickname: ${participant.nickname}` : null,
+      `Period: ${statementPeriodLabel}`,
       "",
-      `Total Charges: ${formatCurrency(ledger.totalCharges)}`,
-      `Total Payments: ${formatCurrency(ledger.totalPayments)}`,
-      `Balance: ${formatCurrency(ledger.balance)} (${getBalanceLabel(ledger.balance)})`,
+      `Opening Balance: ${formatCurrency(openingBalance)} (${getBalanceLabel(openingBalance)})`,
+      `Charges This Period: ${formatCurrency(statementChargeTotal)}`,
+      `Payments This Period: ${formatCurrency(statementPaymentTotal)}`,
+      `Closing Balance: ${formatCurrency(closingBalance)} (${getBalanceLabel(closingBalance)})`,
       "",
       "CHARGES",
       ...(chargeLines.length > 0 ? chargeLines : ["No charges recorded."]),
@@ -404,6 +466,17 @@ function ParticipantLedgerPanel({
         return;
       }
 
+      console.log("PNG sharing debug:", {
+        hasShare: typeof navigator.share === "function",
+        hasCanShare: typeof navigator.canShare === "function",
+        canShareFile:
+          typeof navigator.canShare === "function"
+            ? navigator.canShare({ files: [pngFile] })
+            : false,
+        protocol: window.location.protocol,
+        hostname: window.location.hostname,
+      });
+
       if (
         navigator.share &&
         navigator.canShare?.({
@@ -454,7 +527,32 @@ function ParticipantLedgerPanel({
 
       const text = buildLedgerStatement();
 
-      await navigator.clipboard.writeText(text);
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+
+        setShareMessage("Ledger text copied.");
+        return;
+      }
+
+      const textArea = document.createElement("textarea");
+
+      textArea.value = text;
+      textArea.style.position = "fixed";
+      textArea.style.left = "-9999px";
+      textArea.style.top = "0";
+
+      document.body.appendChild(textArea);
+
+      textArea.focus();
+      textArea.select();
+
+      const copied = document.execCommand("copy");
+
+      document.body.removeChild(textArea);
+
+      if (!copied) {
+        throw new Error("Clipboard copy failed");
+      }
 
       setShareMessage("Ledger text copied.");
     } catch (err) {
@@ -463,8 +561,106 @@ function ParticipantLedgerPanel({
     }
   }
 
+  if (loading) {
+    return (
+      <div className="mb-6 rounded-xl border border-zinc-800 bg-zinc-900 p-4">
+        <p className="text-zinc-400">Loading ledger...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="mb-6 rounded-xl border border-zinc-800 bg-zinc-900 p-4">
+        <p className="text-red-400">{error}</p>
+
+        <button
+          type="button"
+          onClick={onClose}
+          className="mt-3 text-sm text-zinc-400"
+        >
+          Close
+        </button>
+      </div>
+    );
+  }
+
+  if (!ledger) {
+    return null;
+  }
+
+  const { startDate, endDate } = getStatementRange(statementPeriod);
+
+  function isBeforeStart(dateValue: string) {
+    if (!startDate) {
+      return false;
+    }
+
+    return new Date(dateValue) < startDate;
+  }
+
+  function isWithinStatementPeriod(dateValue: string) {
+    const date = new Date(dateValue);
+
+    if (!startDate) {
+      return date <= endDate;
+    }
+
+    return date >= startDate && date <= endDate;
+  }
+
+  const openingCharges = ledger.charges
+    .filter((charge) => isBeforeStart(charge.chargeDate))
+    .reduce((total, charge) => total + charge.amount, 0);
+
+  const openingPayments = ledger.payments
+    .filter((payment) => isBeforeStart(payment.paymentDate))
+    .reduce((total, payment) => total + payment.amount, 0);
+
+  const openingBalance = openingCharges - openingPayments;
+
+  const statementCharges = ledger.charges.filter((charge) =>
+    isWithinStatementPeriod(charge.chargeDate),
+  );
+
+  const statementPayments = ledger.payments.filter((payment) =>
+    isWithinStatementPeriod(payment.paymentDate),
+  );
+
+  const statementChargeTotal = statementCharges.reduce(
+    (total, charge) => total + charge.amount,
+    0,
+  );
+
+  const statementPaymentTotal = statementPayments.reduce(
+    (total, payment) => total + payment.amount,
+    0,
+  );
+
+  const closingBalance =
+    openingBalance + statementChargeTotal - statementPaymentTotal;
+
+  const chargesByType = statementCharges.reduce<Record<string, number>>(
+    (totals, charge) => {
+      totals[charge.feeType] = (totals[charge.feeType] ?? 0) + charge.amount;
+
+      return totals;
+    },
+    {},
+  );
+
+  const chargesByDate = statementCharges.reduce<Record<string, number>>(
+    (totals, charge) => {
+      totals[charge.chargeDate] =
+        (totals[charge.chargeDate] ?? 0) + charge.amount;
+
+      return totals;
+    },
+    {},
+  );
+
   return (
-    <div className="mb-6 rounded-xl border border-zinc-800 bg-zinc-900 p-4 sm:p-5">
+    <div className="mx-auto mb-6 max-w-6xl rounded-xl border border-zinc-800 bg-zinc-900 p-4 sm:p-5">
       <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 flex-1">
           <p className="text-sm text-zinc-400">Ledger</p>
@@ -484,13 +680,34 @@ function ParticipantLedgerPanel({
               {participant.nickname}
             </p>
           )}
+
+          <div className="mt-4">
+            <label className="block text-xs font-medium uppercase tracking-wide text-zinc-500">
+              Period
+            </label>
+
+            <select
+              value={statementPeriod}
+              onChange={(event) =>
+                setStatementPeriod(event.target.value as StatementPeriod)
+              }
+              className="mt-1 rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-200"
+            >
+              <option value="THIS_WEEK">This Week</option>
+              <option value="LAST_7_DAYS">Last 7 Days</option>
+              <option value="THIS_MONTH">This Month</option>
+              <option value="LAST_30_DAYS">Last 30 Days</option>
+              <option value="FULL_HISTORY">Full History</option>
+            </select>
+          </div>
         </div>
-        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-center">
+
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-end">
           <button
             type="button"
             onClick={handleShareLedgerPng}
             disabled={sharingLedger}
-            className="w-full rounded-lg border border-zinc-700 px-3 py-2 text-sm sm:w-auto text-zinc-200 hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-lg border border-zinc-700 px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {sharingLedger ? "Preparing..." : "Share as PNG"}
           </button>
@@ -498,17 +715,19 @@ function ParticipantLedgerPanel({
           <button
             type="button"
             onClick={handleCopyLedgerText}
-            className="w-full rounded-lg border border-zinc-700 px-3 py-2 text-sm sm:w-auto text-zinc-200 hover:bg-zinc-800"
+            className="rounded-lg border border-zinc-700 px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-800"
           >
             Copy as Text
           </button>
+
           <button
             type="button"
             onClick={() => setShowPaymentForm(true)}
-            className="w-full rounded-lg bg-white px-3 py-2 text-sm sm:w-auto text-black"
+            className="rounded-lg bg-white px-3 py-2 text-sm text-black"
           >
             Add Payment
           </button>
+
           <button
             type="button"
             onClick={onClose}
@@ -517,7 +736,7 @@ function ParticipantLedgerPanel({
             Close
           </button>
         </div>
-      </div>{" "}
+      </div>
       {showPaymentForm && (
         <form
           onSubmit={handlePaymentSubmit}
@@ -603,43 +822,55 @@ function ParticipantLedgerPanel({
       {shareMessage && (
         <p className="mt-3 text-sm text-zinc-400">{shareMessage}</p>
       )}
-      <div className="grid gap-2 grid-cols-3">
-        <div className="rounded-lg bg-zinc-950 p-4 sm:p-5">
-          <p className="text-sm text-zinc-400">Total Charges</p>
-
-          <p className="mt-1 text-xl font-semibold">
-            {formatCurrency(ledger.totalCharges)}
-          </p>
-        </div>
-
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
         <div className="rounded-lg bg-zinc-950 p-4">
-          <p className="text-sm text-zinc-400">Total Payments</p>
+          <p className="text-sm text-zinc-400">Opening Balance</p>
 
           <p className="mt-1 text-xl font-semibold">
-            {formatCurrency(ledger.totalPayments)}
-          </p>
-        </div>
-
-        <div className="rounded-lg bg-zinc-950 p-4">
-          <p className="text-sm text-zinc-400">Balance</p>
-
-          <p className="mt-1 text-xl font-semibold">
-            {formatCurrency(ledger.balance)}
+            {formatCurrency(openingBalance)}
           </p>
 
           <p className="mt-1 text-xs text-zinc-500">
-            {getBalanceLabel(ledger.balance)}
+            {getBalanceLabel(openingBalance)}
+          </p>
+        </div>
+
+        <div className="rounded-lg bg-zinc-950 p-4">
+          <p className="text-sm text-zinc-400">Charges</p>
+
+          <p className="mt-1 text-xl font-semibold">
+            {formatCurrency(statementChargeTotal)}
+          </p>
+        </div>
+
+        <div className="rounded-lg bg-zinc-950 p-4">
+          <p className="text-sm text-zinc-400">Payments</p>
+
+          <p className="mt-1 text-xl font-semibold">
+            {formatCurrency(statementPaymentTotal)}
+          </p>
+        </div>
+
+        <div className="rounded-lg bg-zinc-950 p-4">
+          <p className="text-sm text-zinc-400">Closing Balance</p>
+
+          <p className="mt-1 text-xl font-semibold">
+            {formatCurrency(closingBalance)}
+          </p>
+
+          <p className="mt-1 text-xs text-zinc-500">
+            {getBalanceLabel(closingBalance)}
           </p>
         </div>
       </div>
       <div className="mt-6">
         <h3 className="mb-3 text-lg font-semibold">Charges</h3>
 
-        {ledger.charges.length === 0 ? (
+        {statementCharges.length === 0 ? (
           <p className="text-sm text-zinc-500">No charges yet.</p>
         ) : (
           <div className="space-y-2">
-            {ledger.charges.map((charge) => (
+            {statementCharges.map((charge) => (
               <div
                 key={charge.id}
                 className="flex items-center justify-between rounded-lg bg-zinc-950 px-4 py-3"
@@ -689,7 +920,7 @@ function ParticipantLedgerPanel({
               Object.entries(chargesByDate)
                 .sort(([dateA], [dateB]) => dateB.localeCompare(dateA))
                 .map(([date, amount]) => {
-                  const dateCharges = ledger.charges.filter(
+                  const dateCharges = statementCharges.filter(
                     (charge) => charge.chargeDate === date,
                   );
 
@@ -750,11 +981,11 @@ function ParticipantLedgerPanel({
       <div className="mt-6">
         <h3 className="mb-3 text-lg font-semibold">Payments</h3>
 
-        {ledger.payments.length === 0 ? (
+        {statementPayments.length === 0 ? (
           <p className="text-sm text-zinc-500">No payments yet.</p>
         ) : (
           <div className="space-y-2">
-            {ledger.payments.map((payment) => (
+            {statementPayments.map((payment) => (
               <div
                 key={payment.id}
                 className="flex items-center justify-between rounded-lg bg-zinc-950 px-4 py-3"
@@ -795,7 +1026,16 @@ function ParticipantLedgerPanel({
       {renderStatement && (
         <div className="fixed left-[-10000px] top-0" aria-hidden="true">
           <div ref={statementRef}>
-            <LedgerStatement participant={participant} ledger={ledger} />
+            <LedgerStatement
+              participant={participant}
+              periodLabel={statementPeriodLabel}
+              openingBalance={openingBalance}
+              charges={statementCharges}
+              payments={statementPayments}
+              chargeTotal={statementChargeTotal}
+              paymentTotal={statementPaymentTotal}
+              closingBalance={closingBalance}
+            />
           </div>
         </div>
       )}

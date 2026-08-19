@@ -1,4 +1,5 @@
 const API_URL = import.meta.env.VITE_API_URL.replace(/\/$/, "")
+export const AUTH_EXPIRED_EVENT = "rallyledger:auth-expired"
 
 export class ApiError extends Error {
   status: number
@@ -26,23 +27,27 @@ export async function apiFetch<T>(
     },
   })
 
-  if (!response.ok) {
-    const errorText = await response.text()
-
-    let message = errorText || `API request failed: ${response.status}`
-
-    try {
-      const errorData = JSON.parse(errorText)
-
-      if (typeof errorData.error === "string") {
-        message = errorData.error
-      }
-    } catch {
-      // Response was not JSON.
-    }
-
-    throw new ApiError(response.status, message)
+if (!response.ok) {
+  if (response.status === 401) {
+    window.dispatchEvent(new Event(AUTH_EXPIRED_EVENT))
   }
+
+  const errorText = await response.text()
+
+  let message = errorText || `API request failed: ${response.status}`
+
+  try {
+    const errorData = JSON.parse(errorText)
+
+    if (typeof errorData.error === "string") {
+      message = errorData.error
+    }
+  } catch {
+    // Response was not JSON.
+  }
+
+  throw new ApiError(response.status, message)
+}
 
   if (response.status === 204) {
     return undefined as T
