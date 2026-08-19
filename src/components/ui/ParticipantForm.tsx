@@ -140,6 +140,7 @@ function ParticipantForm({
               >
                 <option value="ACTIVE">Active</option>
                 <option value="INACTIVE">Inactive</option>
+                <option value="HONORARY">Honorary</option>
                 <option value="EXPIRED">Expired</option>
                 <option value="SUSPENDED">Suspended</option>
                 <option value="REVOKED">Revoked</option>
