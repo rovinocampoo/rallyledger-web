@@ -1,75 +1,266 @@
-# React + TypeScript + Vite
+# RallyLedger Web
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+**Version:** v0.5.0
 
-Currently, two official plugins are available:
+Frontend admin application for **RallyLedger**, a tennis club management and ledger system.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+RallyLedger provides a responsive interface for managing participants, courts, sessions, matches, configurable fees, charges, payments, balances, and reports.
 
-## React Compiler
+## Tech Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- React
+- TypeScript
+- Vite
+- Tailwind CSS v4
+- React Router
+- Fetch API
+- html-to-image
+- Vercel
+- Git / GitHub
 
-## Expanding the ESLint configuration
+Backend services:
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- Go
+- chi
+- PostgreSQL
+- Render
+- Neon
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## Current Features
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+### Authentication
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+- Admin email/password login
+- Session restoration on page refresh
+- HttpOnly cookie authentication
+- Logout
+- Protected application interface
 
+Authentication tokens are not stored in `localStorage`.
+
+Authenticated requests use:
+
+```ts
+credentials: "include";
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### Participants
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+- View participants
+- Add participants
+- Edit participants
+- Delete participants
+- Participant classification
+- Membership status
+- Participant ledger
+- Record payments
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### Courts
 
+- View courts
+- Add courts
+- Edit courts
+- Active/inactive court support
+
+### Sessions
+
+- Create sessions
+- Edit sessions
+- Delete sessions
+- Manage session participants
+- Manage matches within sessions
+- View generated charges
+
+### Matches
+
+- Singles
+- Doubles
+- Mixed doubles
+- Court selection
+- Team A / Team B
+- Player assignment
+- Match scoring
+- Match sets
+- Lights-used option
+- Automatic charge generation
+
+### Fee Rules
+
+Administrators can manage configurable fee rules for:
+
+- Ball
+- Court
+- Light
+
+Rules may vary by participant classification and match type.
+
+### Participant Ledger
+
+Participant ledgers display:
+
+- Total charges
+- Total payments
+- Current balance
+- Charge history
+- Payment history
+
+Balance is calculated using:
+
+```text
+Total Charges - Total Payments
 ```
+
+A negative balance represents participant credit.
+
+Ledger information can currently be shared as text or PNG.
+
+### Reports
+
+The frontend includes reporting and participant balance views backed by the RallyLedger API.
+
+## API Configuration
+
+The frontend communicates with the Go backend through the shared API client.
+
+Local development:
+
+```env
+VITE_API_URL=http://localhost:8080
+```
+
+Production:
+
+```env
+VITE_API_URL=/api
+```
+
+Production requests use paths such as:
+
+```text
+/api/auth/me
+/api/participants
+/api/sessions
+/api/reports/...
+```
+
+Vercel forwards `/api/*` requests to the deployed Render API.
+
+## Running Locally
+
+Install dependencies:
+
+```bash
+npm install
+```
+
+Start Vite:
+
+```bash
+npm run dev
+```
+
+To expose the frontend to other devices on the local network:
+
+```bash
+npm run dev -- --host
+```
+
+## Validation
+
+Before pushing changes:
+
+```bash
+npm run lint
+npm run build
+```
+
+## Environment Files
+
+Local environment files should not be committed.
+
+Example:
+
+```gitignore
+.env
+.env.*
+```
+
+## Deployment
+
+Current production architecture:
+
+```text
+User
+    ↓
+Vercel
+React + Vite
+    ↓
+/api/*
+    ↓
+Vercel Rewrite
+    ↓
+Render
+Go API
+    ↓
+Neon PostgreSQL
+```
+
+The frontend is deployed on **Vercel**.
+
+The backend API is deployed on **Render**.
+
+PostgreSQL is hosted on **Neon**.
+
+## Project Status
+
+### v0.5.0
+
+Current deployed functionality includes:
+
+- Admin authentication
+- Dashboard
+- Participants
+- Courts
+- Sessions
+- Match management
+- Match participants
+- Match sets
+- Fee rules
+- Charge generation
+- Payments
+- Participant ledger
+- Outstanding balances
+- Reports
+- Responsive desktop/mobile interface
+- Production deployment
+
+## Planned v0.6
+
+The next version will focus on improving the real tennis-club workflow.
+
+Planned features include:
+
+- Period-based PNG ledger statements
+- Period-based Copy as Text statements
+- Global 401 handling
+- Session-centered workflow
+- Regular Play
+- Training
+- Outsider Play
+- Quick Add Guest
+- Training fees
+- Ball rental
+- Racket rental
+- Google admin login
+- Multi-tenant isolation testing
+- CSRF / Origin protection
+- Mobile workflow improvements
+
+The goal is to move away from separate CRUD-style workflows and make a Session the main operational workspace.
+
+## Author
+
+**Kharl Rovin Ocampo**
+
+Bachelor of Science in Computer Science  
+Mariano Marcos State University
