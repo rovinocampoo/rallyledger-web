@@ -5,7 +5,10 @@ import {
   removeMatchParticipant,
   updateMatchParticipantTeam,
 } from "../../api/matchParticipants";
-import { getSessionParticipants } from "../../api/sessionParticipants";
+import {
+  addSessionParticipant,
+  getSessionParticipants,
+} from "../../api/sessionParticipants";
 import type { Match } from "../../types/match";
 import type { Session } from "../../types/session";
 import type { MatchParticipant } from "../../types/matchParticipant";
@@ -50,16 +53,11 @@ function MatchParticipantsPanel({
   );
 
   const availableParticipants = participants.filter((participant) => {
-    const belongsToSession = sessionParticipants.some(
-      (sessionParticipant) =>
-        sessionParticipant.participantId === participant.id,
-    );
-
     const alreadyInMatch = matchParticipants.some(
       (matchParticipant) => matchParticipant.participantId === participant.id,
     );
 
-    return belongsToSession && !alreadyInMatch;
+    return !alreadyInMatch && !participant.isTemporary;
   });
 
   useEffect(() => {
@@ -99,11 +97,23 @@ function MatchParticipantsPanel({
     try {
       setError(null);
 
-      await addMatchParticipant(
-        match.id,
-        Number(selectedParticipantId),
-        teamSide,
+      const participantId = Number(selectedParticipantId);
+
+      const alreadyInSession = sessionParticipants.some(
+        (sessionParticipant) =>
+          sessionParticipant.participantId === participantId,
       );
+
+      if (!alreadyInSession) {
+        await addSessionParticipant(session.id, participantId);
+
+        const updatedSessionParticipants = await getSessionParticipants(
+          session.id,
+        );
+        setSessionParticipants(updatedSessionParticipants);
+      }
+
+      await addMatchParticipant(match.id, participantId, teamSide);
 
       await loadMatchParticipants();
 
@@ -233,7 +243,9 @@ function MatchParticipantsPanel({
 
       <div className="mt-6 grid gap-4 md:grid-cols-2">
         <div>
-          <h4 className="mb-2 text-left text-sm font-semibold uppercase tracking-wide text-zinc-500">Team A</h4>
+          <h4 className="mb-2 text-left text-sm font-semibold uppercase tracking-wide text-zinc-500">
+            Team A
+          </h4>
 
           <div className="space-y-2">
             {teamA.length === 0 ? (
@@ -305,7 +317,9 @@ function MatchParticipantsPanel({
         </div>
 
         <div>
-          <h4 className="mb-2 text-left text-sm font-semibold uppercase tracking-wide text-zinc-500">Team B</h4>
+          <h4 className="mb-2 text-left text-sm font-semibold uppercase tracking-wide text-zinc-500">
+            Team B
+          </h4>
 
           <div className="space-y-2">
             {teamB.length === 0 ? (
