@@ -16,6 +16,14 @@ import { generateMatchCharges, getMatchCharges } from "../../api/charges";
 import MatchChargesPanel from "./MatchChargesPanel";
 import { getMatchParticipants } from "../../api/matchParticipants";
 import type { MatchParticipant } from "../../types/matchParticipant";
+import { createParticipant, getParticipants } from "../../api/participants";
+import type { Participant } from "../../types/participant";
+import { addMatchParticipant } from "../../api/matchParticipants";
+import {
+  addSessionParticipant,
+  getSessionParticipants,
+} from "../../api/sessionParticipants";
+import ParticipantPicker from "../ui/ParticipantPicker";
 
 type SessionMatchesPanelProps = {
   session: Session;
@@ -43,53 +51,69 @@ function SessionMatchesPanel({ session, onClose }: SessionMatchesPanelProps) {
     Record<number, MatchParticipant[]>
   >({});
 
+  const [teamAPlayer1, setTeamAPlayer1] = useState("");
+  const [teamAPlayer2, setTeamAPlayer2] = useState("");
+  const [teamBPlayer1, setTeamBPlayer1] = useState("");
+  const [teamBPlayer2, setTeamBPlayer2] = useState("");
+  const [participants, setParticipants] = useState<Participant[]>([]);
+
+  const [showQuickGuest, setShowQuickGuest] = useState(false);
+  const [quickGuestName, setQuickGuestName] = useState("");
+  const [quickGuestTarget, setQuickGuestTarget] = useState<
+    "A1" | "A2" | "B1" | "B2" | null
+  >(null);
+  const [creatingGuest, setCreatingGuest] = useState(false);
+
   useEffect(() => {
     let ignore = false;
 
-    Promise.all([getSessionMatches(session.id), getCourts()]).then(
-      async ([matchData, courtData]) => {
-        const chargeResults = await Promise.all(
-          matchData.map(async (match) => {
-            const charges = await getMatchCharges(match.id);
+    Promise.all([
+      getSessionMatches(session.id),
+      getCourts(),
+      getParticipants(),
+    ]).then(async ([matchData, courtData, participantData]) => {
+      const chargeResults = await Promise.all(
+        matchData.map(async (match) => {
+          const charges = await getMatchCharges(match.id);
 
-            return {
-              matchId: match.id,
-              hasCharges: charges.length > 0,
-            };
-          }),
+          return {
+            matchId: match.id,
+            hasCharges: charges.length > 0,
+          };
+        }),
+      );
+
+      const participantResults = await Promise.all(
+        matchData.map(async (match) => {
+          const participants = await getMatchParticipants(match.id);
+
+          return {
+            matchId: match.id,
+            participants,
+          };
+        }),
+      );
+
+      if (!ignore) {
+        setParticipants(participantData);
+        setMatches(matchData);
+        setCourts(courtData);
+
+        setChargedMatchIds(
+          chargeResults
+            .filter((result) => result.hasCharges)
+            .map((result) => result.matchId),
         );
+        const groupedParticipants: Record<number, MatchParticipant[]> = {};
 
-        const participantResults = await Promise.all(
-          matchData.map(async (match) => {
-            const participants = await getMatchParticipants(match.id);
+        participantResults.forEach((result) => {
+          groupedParticipants[result.matchId] = result.participants;
+        });
 
-            return {
-              matchId: match.id,
-              participants,
-            };
-          }),
-        );
-
-        if (!ignore) {
-          setMatches(matchData);
-          setCourts(courtData);
-
-          setChargedMatchIds(
-            chargeResults
-              .filter((result) => result.hasCharges)
-              .map((result) => result.matchId),
-          );
-          const groupedParticipants: Record<number, MatchParticipant[]> = {};
-
-          participantResults.forEach((result) => {
-            groupedParticipants[result.matchId] = result.participants;
-          });
-
-          setParticipantsByMatch(groupedParticipants);
-          setLoading(false);
-        }
-      },
-    );
+        setParticipantsByMatch(groupedParticipants);
+        setLoading(false);
+      }
+    });
 
     return () => {
       ignore = true;
@@ -132,6 +156,29 @@ function SessionMatchesPanel({ session, onClose }: SessionMatchesPanelProps) {
       return;
     }
 
+    if (!editingMatch) {
+      if (!teamAPlayer1 || !teamBPlayer1) {
+        setError("Please select players for both teams");
+        return;
+      }
+
+      if (matchType !== "SINGLES" && (!teamAPlayer2 || !teamBPlayer2)) {
+        setError("Please select 2 players for each team");
+        return;
+      }
+
+      const selectedPlayerIds = [
+        teamAPlayer1,
+        teamBPlayer1,
+        ...(matchType !== "SINGLES" ? [teamAPlayer2, teamBPlayer2] : []),
+      ];
+
+      if (new Set(selectedPlayerIds).size !== selectedPlayerIds.length) {
+        setError("A player cannot be selected more than once");
+        return;
+      }
+    }
+
     try {
       setSubmitting(true);
       setError(null);
@@ -151,12 +198,46 @@ function SessionMatchesPanel({ session, onClose }: SessionMatchesPanelProps) {
           ),
         );
       } else {
-        await createMatch({
+        const newMatch = await createMatch({
           sessionId: session.id,
           courtId: Number(courtId),
           matchType,
           lightsOn,
         });
+
+        const teamAIds = [
+          Number(teamAPlayer1),
+          ...(matchType !== "SINGLES" ? [Number(teamAPlayer2)] : []),
+        ];
+
+        const teamBIds = [
+          Number(teamBPlayer1),
+          ...(matchType !== "SINGLES" ? [Number(teamBPlayer2)] : []),
+        ];
+
+        const selectedParticipantIds = [...teamAIds, ...teamBIds];
+
+        const sessionParticipants = await getSessionParticipants(session.id);
+
+        const existingSessionParticipantIds = new Set(
+          sessionParticipants.map(
+            (sessionParticipant) => sessionParticipant.participantId,
+          ),
+        );
+
+        for (const participantId of selectedParticipantIds) {
+          if (!existingSessionParticipantIds.has(participantId)) {
+            await addSessionParticipant(session.id, participantId);
+          }
+        }
+
+        for (const participantId of teamAIds) {
+          await addMatchParticipant(newMatch.id, participantId, "A");
+        }
+
+        for (const participantId of teamBIds) {
+          await addMatchParticipant(newMatch.id, participantId, "B");
+        }
       }
 
       await loadMatches();
@@ -164,13 +245,75 @@ function SessionMatchesPanel({ session, onClose }: SessionMatchesPanelProps) {
       setCourtId("");
       setMatchType("DOUBLES");
       setLightsOn(false);
+
+      setTeamAPlayer1("");
+      setTeamAPlayer2("");
+      setTeamBPlayer1("");
+      setTeamBPlayer2("");
+
       setEditingMatch(null);
       setShowForm(false);
     } catch (err) {
       console.error(err);
-      setError("Failed to create match");
+      setError(
+        editingMatch ? "Failed to update match" : "Failed to create match",
+      );
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handleQuickGuest() {
+    const name = quickGuestName.trim();
+
+    if (!name || !quickGuestTarget) {
+      return;
+    }
+
+    try {
+      setCreatingGuest(true);
+      setError(null);
+
+      const guest = await createParticipant({
+        firstName: name,
+        lastName: "Guest",
+        nickname: name,
+        birthday: "1970-01-01T00:00:00Z",
+        membershipStatus: "ACTIVE",
+        participantType: "NONMEMBER",
+        isTemporary: true,
+      });
+
+      setParticipants((current) => [...current, guest]);
+
+      const guestId = String(guest.id);
+
+      if (quickGuestTarget === "A1") {
+        setTeamAPlayer1(guestId);
+      }
+
+      if (quickGuestTarget === "A2") {
+        setTeamAPlayer2(guestId);
+      }
+
+      if (quickGuestTarget === "B1") {
+        setTeamBPlayer1(guestId);
+      }
+
+      if (quickGuestTarget === "B2") {
+        setTeamBPlayer2(guestId);
+      }
+
+      setQuickGuestName("");
+      setQuickGuestTarget(null);
+      setShowQuickGuest(false);
+    } catch (err) {
+      console.error(err);
+      setError(
+        err instanceof Error ? err.message : "Failed to create quick guest",
+      );
+    } finally {
+      setCreatingGuest(false);
     }
   }
 
@@ -237,6 +380,19 @@ function SessionMatchesPanel({ session, onClose }: SessionMatchesPanelProps) {
         setError("Failed to generate charges");
       }
     }
+  }
+
+  function availableForPicker(currentValue: string) {
+    const selectedIds = [
+      teamAPlayer1,
+      teamAPlayer2,
+      teamBPlayer1,
+      teamBPlayer2,
+    ].filter((id) => id && id !== currentValue);
+
+    return participants.filter(
+      (participant) => !selectedIds.includes(String(participant.id)),
+    );
   }
 
   if (loading) {
@@ -309,7 +465,16 @@ function SessionMatchesPanel({ session, onClose }: SessionMatchesPanelProps) {
 
               <select
                 value={matchType}
-                onChange={(event) => setMatchType(event.target.value)}
+                onChange={(event) => {
+                  const value = event.target.value;
+
+                  setMatchType(value);
+
+                  if (value === "SINGLES") {
+                    setTeamAPlayer2("");
+                    setTeamBPlayer2("");
+                  }
+                }}
                 className="mt-2 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2"
               >
                 <option value="SINGLES">Singles</option>
@@ -319,6 +484,127 @@ function SessionMatchesPanel({ session, onClose }: SessionMatchesPanelProps) {
                 <option value="MIXED_DOUBLES">Mixed Doubles</option>
               </select>
             </label>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <p className="mb-2 text-sm font-medium">Team A</p>
+
+                <ParticipantPicker
+                  participants={availableForPicker(teamAPlayer1)}
+                  selectedParticipantId={teamAPlayer1}
+                  onSelect={setTeamAPlayer1}
+                  placeholder="Search Team A player..."
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setQuickGuestTarget("A1");
+                    setShowQuickGuest(true);
+                  }}
+                  className="mt-1 text-sm text-zinc-400 hover:text-white"
+                >
+                  + Quick Guest
+                </button>
+
+                {matchType !== "SINGLES" && (
+                  <div className="mt-2">
+                    <ParticipantPicker
+                      participants={availableForPicker(teamAPlayer2)}
+                      selectedParticipantId={teamAPlayer2}
+                      onSelect={setTeamAPlayer2}
+                      placeholder="Search Team A player..."
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setQuickGuestTarget("A2");
+                        setShowQuickGuest(true);
+                      }}
+                      className="mt-1 text-sm text-zinc-400 hover:text-white"
+                    >
+                      + Quick Guest
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <p className="mb-2 text-sm font-medium">Team B</p>
+
+                <ParticipantPicker
+                  participants={availableForPicker(teamBPlayer1)}
+                  selectedParticipantId={teamBPlayer1}
+                  onSelect={setTeamBPlayer1}
+                  placeholder="Search Team B player..."
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setQuickGuestTarget("B1");
+                    setShowQuickGuest(true);
+                  }}
+                  className="mt-1 text-sm text-zinc-400 hover:text-white"
+                >
+                  + Quick Guest
+                </button>
+
+                {matchType !== "SINGLES" && (
+                  <div className="mt-2">
+                    <ParticipantPicker
+                      participants={availableForPicker(teamBPlayer2)}
+                      selectedParticipantId={teamBPlayer2}
+                      onSelect={setTeamBPlayer2}
+                      placeholder="Search Team B player..."
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setQuickGuestTarget("B2");
+                        setShowQuickGuest(true);
+                      }}
+                      className="mt-1 text-sm text-zinc-400 hover:text-white"
+                    >
+                      + Quick Guest
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+            {showQuickGuest && (
+              <div className="mt-4 rounded-lg border border-zinc-700 bg-zinc-950 p-4">
+                <p className="text-sm font-medium">Quick Guest</p>
+
+                <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                  <input
+                    type="text"
+                    value={quickGuestName}
+                    onChange={(event) => setQuickGuestName(event.target.value)}
+                    placeholder="Guest name or nickname"
+                    className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2"
+                  />
+
+                  <button
+                    type="button"
+                    onClick={handleQuickGuest}
+                    disabled={!quickGuestName.trim() || creatingGuest}
+                    className="rounded-lg bg-white px-4 py-2 font-medium text-black disabled:opacity-50"
+                  >
+                    {creatingGuest ? "Adding..." : "Add Guest"}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowQuickGuest(false);
+                      setQuickGuestTarget(null);
+                      setQuickGuestName("");
+                    }}
+                    className="rounded-lg border border-zinc-700 px-4 py-2"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           <label className="mt-4 flex items-center gap-2">
