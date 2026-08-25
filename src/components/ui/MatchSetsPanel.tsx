@@ -17,7 +17,6 @@ type MatchSetsPanelProps = {
 
 function MatchSetsPanel({
   match,
-  onClose,
   onMatchUpdated,
 }: MatchSetsPanelProps) {
   const [sets, setSets] = useState<MatchSet[]>([]);
@@ -137,7 +136,7 @@ function MatchSetsPanel({
         courtId: match.courtId,
         matchType: match.matchType,
         result,
-        lightsOn: match.lightsOn,
+        lightUsage: match.lightUsage,
       });
 
       setSavedResult(result);
@@ -164,7 +163,7 @@ function MatchSetsPanel({
         courtId: match.courtId,
         matchType: match.matchType,
         result: manualStatus,
-        lightsOn: match.lightsOn,
+        lightUsage: match.lightUsage,
       });
 
       setSavedResult(manualStatus);
@@ -225,14 +224,6 @@ function MatchSetsPanel({
 
           <h3 className="font-semibold">Match #{match.id}</h3>
         </div>
-
-        <button
-          type="button"
-          onClick={onClose}
-          className="text-sm text-zinc-400 hover:text-white"
-        >
-          Close
-        </button>
       </div>
 
       {error && <p className="mt-4 text-sm text-red-400">{error}</p>}

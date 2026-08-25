@@ -8,6 +8,7 @@ type SessionCardProps = {
   onManagePlayers: (session: Session) => void;
   onManageMatches: (session: Session) => void;
   onViewCharges: () => void;
+  onManageTraining: (session: Session) => void;
 };
 
 function SessionCard({
@@ -16,6 +17,7 @@ function SessionCard({
   onDelete,
   onManagePlayers,
   onManageMatches,
+  onManageTraining,
   onViewCharges,
 }: SessionCardProps) {
   return (
@@ -55,7 +57,7 @@ function SessionCard({
       <div className="mt-4 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-center">
         <button
           type="button"
-          onClick={() => onEdit(session)} 
+          onClick={() => onEdit(session)}
           className="w-full rounded-lg border border-zinc-700 px-3 py-2 text-sm sm:w-auto"
         >
           Edit
@@ -68,20 +70,45 @@ function SessionCard({
         >
           Delete
         </button>
-        <button
-          type="button"
-          onClick={() => onManagePlayers(session)}
-          className="w-full rounded-lg border border-zinc-700 px-3 py-2 text-sm sm:w-auto"
-        >
-          Manage Players
-        </button>
-        <button
-          type="button"
-          onClick={() => onManageMatches(session)}
-          className="w-full rounded-lg border border-zinc-700 px-3 py-2 text-sm sm:w-auto"
-        >
-          Manage Matches
-        </button>
+        {session.sessionType === "REGULAR_PLAY" && (
+          <button
+            type="button"
+            onClick={() => onManageMatches(session)}
+            className="w-full rounded-lg border border-zinc-700 px-3 py-2 text-sm sm:w-auto"
+          >
+            Manage Matches
+          </button>
+        )}
+
+        {session.sessionType === "TRAINING" && (
+          <button
+            type="button"
+            onClick={() => onManageTraining(session)}
+            className="w-full rounded-lg border border-zinc-700 px-3 py-2 text-sm sm:w-auto"
+          >
+            Manage Training
+          </button>
+        )}
+
+        {session.sessionType === "OUTSIDER_PLAY" && (
+          <button
+            type="button"
+            onClick={() => onManagePlayers(session)}
+            className="w-full rounded-lg border border-zinc-700 px-3 py-2 text-sm sm:w-auto"
+          >
+            Manage Activity
+          </button>
+        )}
+
+        {session.sessionType === "EVENT" && (
+          <button
+            type="button"
+            onClick={() => onManagePlayers(session)}
+            className="w-full rounded-lg border border-zinc-700 px-3 py-2 text-sm sm:w-auto"
+          >
+            Manage Event
+          </button>
+        )}
         <button
           type="button"
           onClick={onViewCharges}

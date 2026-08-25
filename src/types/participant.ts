@@ -3,7 +3,7 @@ export type Participant = {
   firstName: string
   lastName: string
   nickname: string
-  birthday: string
+  birthday: string | null;
   membershipStatus: string
   participantType: string
   isTemporary: boolean

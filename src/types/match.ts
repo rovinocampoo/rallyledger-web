@@ -16,7 +16,6 @@ export type Match = {
   courtId: number;
   matchType: string;
   result: MatchStatus;
-  lightsOn: boolean;
-  createdAt: string;
+  lightUsage: "NONE" | "HALF" | "FULL";  createdAt: string;
   updatedAt: string;
 };

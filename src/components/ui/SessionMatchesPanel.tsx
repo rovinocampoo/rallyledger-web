@@ -1,4 +1,4 @@
-import { useEffect, useState, type SubmitEvent } from "react";
+import { useEffect, useRef, useState, type SubmitEvent } from "react";
 import {
   createMatch,
   deleteMatch,
@@ -9,7 +9,6 @@ import { getCourts } from "../../api/courts";
 import type { Session } from "../../types/session";
 import type { Match } from "../../types/match";
 import type { Court } from "../../types/court";
-import MatchSetsPanel from "./MatchSetsPanel";
 import { formatLabel } from "../../utils/format";
 import { generateMatchCharges, getMatchCharges } from "../../api/charges";
 import MatchChargesPanel from "./MatchChargesPanel";
@@ -25,7 +24,8 @@ import {
   addSessionParticipant,
   getSessionParticipants,
 } from "../../api/sessionParticipants";
-import ParticipantPicker from "../ui/ParticipantPicker";
+import MatchDetailsForm from "./MatchDetailsForm";
+import MatchSetsPanel from "./MatchSetsPanel";
 
 type SessionMatchesPanelProps = {
   session: Session;
@@ -40,12 +40,12 @@ function SessionMatchesPanel({ session, onClose }: SessionMatchesPanelProps) {
   const [showForm, setShowForm] = useState(false);
   const [courtId, setCourtId] = useState("");
   const [matchType, setMatchType] = useState("DOUBLES");
-  const [lightsOn, setLightsOn] = useState(false);
-
+  const [lightUsage, setLightUsage] = useState<"NONE" | "HALF" | "FULL">(
+    "NONE",
+  );
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [manageTab, setManageTab] = useState<"MATCH" | "SCORE">("MATCH");
   const [chargeMatch, setChargeMatch] = useState<Match | null>(null);
   const [chargedMatchIds, setChargedMatchIds] = useState<number[]>([]);
   const [participantsByMatch, setParticipantsByMatch] = useState<
@@ -67,6 +67,27 @@ function SessionMatchesPanel({ session, onClose }: SessionMatchesPanelProps) {
   const [sessionParticipantIds, setSessionParticipantIds] = useState<number[]>(
     [],
   );
+  const [manageTab, setManageTab] = useState<"MATCH" | "SCORE">("MATCH");
+  const createFormRef = useRef<HTMLDivElement | null>(null);
+  const manageMatchRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (showForm && !editingMatch) {
+      createFormRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    }
+  }, [showForm, editingMatch]);
+
+  useEffect(() => {
+    if (editingMatch) {
+      manageMatchRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    }
+  }, [editingMatch]);
 
   useEffect(() => {
     let ignore = false;
@@ -203,7 +224,7 @@ function SessionMatchesPanel({ session, onClose }: SessionMatchesPanelProps) {
           courtId: Number(courtId),
           matchType,
           result: editingMatch.result,
-          lightsOn,
+          lightUsage,
         });
 
         const teamAIds = [
@@ -308,7 +329,7 @@ function SessionMatchesPanel({ session, onClose }: SessionMatchesPanelProps) {
           sessionId: session.id,
           courtId: Number(courtId),
           matchType,
-          lightsOn,
+          lightUsage,
         });
 
         const teamAIds = [
@@ -348,17 +369,10 @@ function SessionMatchesPanel({ session, onClose }: SessionMatchesPanelProps) {
 
       await loadMatches();
 
-      setCourtId("");
-      setMatchType("DOUBLES");
-      setLightsOn(false);
-
-      setTeamAPlayer1("");
-      setTeamAPlayer2("");
-      setTeamBPlayer1("");
-      setTeamBPlayer2("");
-
+      resetMatchForm();
       setEditingMatch(null);
       setShowForm(false);
+      setManageTab("SCORE");
     } catch (err) {
       console.error(err);
       setError(
@@ -382,9 +396,9 @@ function SessionMatchesPanel({ session, onClose }: SessionMatchesPanelProps) {
 
       const guest = await createParticipant({
         firstName: name,
-        lastName: "Guest",
+        lastName: "",
         nickname: name,
-        birthday: "1970-01-01T00:00:00Z",
+        birthday: null,
         membershipStatus: "ACTIVE",
         participantType: "NONMEMBER",
         isTemporary: true,
@@ -441,7 +455,7 @@ function SessionMatchesPanel({ session, onClose }: SessionMatchesPanelProps) {
 
     setCourtId(String(match.courtId));
     setMatchType(match.matchType);
-    setLightsOn(match.lightsOn);
+    setLightUsage(match.lightUsage);
 
     setTeamAPlayer1(teamA[0] ? String(teamA[0].participantId) : "");
 
@@ -451,19 +465,10 @@ function SessionMatchesPanel({ session, onClose }: SessionMatchesPanelProps) {
 
     setTeamBPlayer2(teamB[1] ? String(teamB[1].participantId) : "");
 
-    setManageTab("MATCH");
+    setManageTab("SCORE");
     setChargeMatch(null);
 
-    setShowForm(true);
     setError(null);
-  }
-
-  function handleMatchUpdated(updatedMatch: Match) {
-    setMatches((current) =>
-      current.map((match) =>
-        match.id === updatedMatch.id ? updatedMatch : match,
-      ),
-    );
   }
 
   async function handleDeleteMatch(match: Match) {
@@ -533,6 +538,23 @@ function SessionMatchesPanel({ session, onClose }: SessionMatchesPanelProps) {
     });
   }
 
+  function resetMatchForm() {
+    setCourtId("");
+    setMatchType("DOUBLES");
+    setLightUsage("NONE");
+
+    setTeamAPlayer1("");
+    setTeamAPlayer2("");
+    setTeamBPlayer1("");
+    setTeamBPlayer2("");
+
+    setShowQuickGuest(false);
+    setQuickGuestTarget(null);
+    setQuickGuestName("");
+
+    setError(null);
+  }
+
   if (loading) {
     return <p>Loading matches...</p>;
   }
@@ -567,299 +589,48 @@ function SessionMatchesPanel({ session, onClose }: SessionMatchesPanelProps) {
         </div>
       </div>
 
-      {showForm && (
-        <div className="mt-5 rounded-xl border border-zinc-800 bg-zinc-950 p-4">
-          <h3 className="mb-6 text-lg font-semibold text-left">
-            {editingMatch ? "Manage Match" : "Create Match"}
-          </h3>
-          {editingMatch && (
-            <div className="mb-4 grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => setManageTab("MATCH")}
-                className={`rounded-lg px-3 py-2 text-sm font-medium ${
-                  manageTab === "MATCH"
-                    ? "bg-white text-black"
-                    : "border border-zinc-700 text-zinc-300"
-                }`}
-              >
-                Details & Players
-              </button>
+      {showForm && !editingMatch && (
+        <div
+          ref={createFormRef}
+          className="mt-5 rounded-xl border border-zinc-800 bg-zinc-950 p-4"
+        >
+          <h3 className="mb-6 text-left text-lg font-semibold">Create Match</h3>
 
-              <button
-                type="button"
-                onClick={() => setManageTab("SCORE")}
-                className={`rounded-lg px-3 py-2 text-sm font-medium ${
-                  manageTab === "SCORE"
-                    ? "bg-white text-black"
-                    : "border border-zinc-700 text-zinc-300"
-                }`}
-              >
-                Score
-              </button>
-            </div>
-          )}
-          {(!editingMatch || manageTab === "MATCH") && (
-            <form onSubmit={handleSubmit}>
-              <>
-                <div className="grid gap-4 md:grid-cols-2 text-left">
-                  <label>
-                    <span className="text-sm text-zinc-400">Court</span>
+          <MatchDetailsForm
+            editingMatch={false}
+            courtId={courtId}
+            setCourtId={setCourtId}
+            matchType={matchType}
+            setMatchType={setMatchType}
+            lightUsage={lightUsage}
+            setLightUsage={setLightUsage}
+            activeCourts={activeCourts}
+            teamAPlayer1={teamAPlayer1}
+            setTeamAPlayer1={setTeamAPlayer1}
+            teamAPlayer2={teamAPlayer2}
+            setTeamAPlayer2={setTeamAPlayer2}
+            teamBPlayer1={teamBPlayer1}
+            setTeamBPlayer1={setTeamBPlayer1}
+            teamBPlayer2={teamBPlayer2}
+            setTeamBPlayer2={setTeamBPlayer2}
+            availableForPicker={availableForPicker}
+            showQuickGuest={showQuickGuest}
+            setShowQuickGuest={setShowQuickGuest}
+            quickGuestName={quickGuestName}
+            setQuickGuestName={setQuickGuestName}
+            setQuickGuestTarget={setQuickGuestTarget}
+            creatingGuest={creatingGuest}
+            handleQuickGuest={handleQuickGuest}
+            error={error}
+            submitting={submitting}
+            handleSubmit={handleSubmit}
+            onCancel={() => {
+              setShowForm(false);
 
-                    <select
-                      value={courtId}
-                      onChange={(event) => setCourtId(event.target.value)}
-                      className="mt-2 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2"
-                    >
-                      <option value="">
-                        {activeCourts.length === 0
-                          ? "No active courts available"
-                          : "Select court"}
-                      </option>
-                      {activeCourts.map((court) => (
-                        <option key={court.id} value={court.id}>
-                          {court.name} - {formatLabel(court.surface)} -{" "}
-                          {court.location}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-
-                  <label>
-                    <span className="text-sm text-zinc-400">Match Type</span>
-
-                    <select
-                      value={matchType}
-                      onChange={(event) => {
-                        const value = event.target.value;
-
-                        setMatchType(value);
-
-                        if (value === "SINGLES") {
-                          setTeamAPlayer2("");
-                          setTeamBPlayer2("");
-                        }
-                      }}
-                      className="mt-2 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2"
-                    >
-                      <option value="SINGLES">Singles</option>
-
-                      <option value="DOUBLES">Doubles</option>
-
-                      <option value="MIXED_DOUBLES">Mixed Doubles</option>
-                    </select>
-                  </label>
-                </div>
-
-                <div className="mt-6 text-left">
-                  <div className="mb-3">
-                    <p className="text-sm font-medium text-zinc-400">Players</p>
-                  </div>
-
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-4">
-                      <p className="text-sm font-semibold">Team A</p>
-
-                      <div className="mt-4">
-                        <ParticipantPicker
-                          participants={availableForPicker(teamAPlayer1)}
-                          selectedParticipantId={teamAPlayer1}
-                          onSelect={setTeamAPlayer1}
-                          placeholder="Search player..."
-                        />
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setQuickGuestTarget("A1");
-                          setShowQuickGuest(true);
-                        }}
-                        className="mt-1.5 text-sm text-zinc-400 hover:text-white"
-                      >
-                        + Quick Guest
-                      </button>
-
-                      {matchType !== "SINGLES" && (
-                        <div className="mt-3">
-                          <ParticipantPicker
-                            participants={availableForPicker(teamAPlayer2)}
-                            selectedParticipantId={teamAPlayer2}
-                            onSelect={setTeamAPlayer2}
-                            placeholder="Search second player..."
-                          />
-
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setQuickGuestTarget("A2");
-                              setShowQuickGuest(true);
-                            }}
-                            className="mt-1.5 text-sm text-zinc-400 hover:text-white"
-                          >
-                            + Quick Guest
-                          </button>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-4">
-                      <p className="text-sm font-semibold">Team B</p>
-
-                      <div className="mt-4">
-                        <ParticipantPicker
-                          participants={availableForPicker(teamBPlayer1)}
-                          selectedParticipantId={teamBPlayer1}
-                          onSelect={setTeamBPlayer1}
-                          placeholder="Search player..."
-                        />
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setQuickGuestTarget("B1");
-                          setShowQuickGuest(true);
-                        }}
-                        className="mt-1.5 text-sm text-zinc-400 hover:text-white"
-                      >
-                        + Quick Guest
-                      </button>
-
-                      {matchType !== "SINGLES" && (
-                        <div className="mt-3">
-                          <ParticipantPicker
-                            participants={availableForPicker(teamBPlayer2)}
-                            selectedParticipantId={teamBPlayer2}
-                            onSelect={setTeamBPlayer2}
-                            placeholder="Search second player..."
-                          />
-
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setQuickGuestTarget("B2");
-                              setShowQuickGuest(true);
-                            }}
-                            className="mt-1.5 text-sm text-zinc-400 hover:text-white"
-                          >
-                            + Quick Guest
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                {showQuickGuest && (
-                  <div className="mt-4 rounded-lg border border-zinc-700 bg-zinc-900 p-4">
-                    <div className="mb-3">
-                      <p className="font-medium">Quick Guest</p>
-                      <p className="text-sm text-zinc-500">
-                        Add a temporary nonmember to this session.
-                      </p>
-                    </div>
-
-                    <div className="flex flex-col gap-2 sm:flex-row">
-                      <input
-                        type="text"
-                        value={quickGuestName}
-                        onChange={(event) =>
-                          setQuickGuestName(event.target.value)
-                        }
-                        placeholder="Guest name or nickname"
-                        className="min-w-0 flex-1 rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2"
-                      />
-
-                      <button
-                        type="button"
-                        onClick={handleQuickGuest}
-                        disabled={!quickGuestName.trim() || creatingGuest}
-                        className="rounded-lg bg-white px-4 py-2 font-medium text-black disabled:opacity-50"
-                      >
-                        {creatingGuest ? "Adding..." : "Add Guest"}
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowQuickGuest(false);
-                          setQuickGuestTarget(null);
-                          setQuickGuestName("");
-                        }}
-                        className="rounded-lg border border-zinc-700 px-4 py-2"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </>
-
-              {editingMatch && manageTab === "SCORE" && (
-                <MatchSetsPanel
-                  key={editingMatch.id}
-                  match={editingMatch}
-                  onClose={() => setManageTab("MATCH")}
-                  onMatchUpdated={(updatedMatch) => {
-                    handleMatchUpdated(updatedMatch);
-                    setEditingMatch(updatedMatch);
-                  }}
-                />
-              )}
-              <label className="mt-4 flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={lightsOn}
-                  onChange={(event) => setLightsOn(event.target.checked)}
-                />
-
-                <span className="text-sm">Lights On</span>
-              </label>
-              {error && (
-                <div className="mt-4 rounded-lg border border-red-900/50 bg-red-950/20 px-3 py-2">
-                  <p className="text-sm text-red-400">{error}</p>
-                </div>
-              )}
-              <div className="mt-4 flex gap-2">
-                <button
-                  type="submit"
-                  disabled={submitting || activeCourts.length === 0}
-                  className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-black disabled:opacity-50"
-                >
-                  {submitting
-                    ? "Saving..."
-                    : editingMatch
-                      ? "Update Match"
-                      : "Create Match"}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowForm(false);
-                    setEditingMatch(null);
-                    setCourtId("");
-                    setMatchType("DOUBLES");
-                    setLightsOn(false);
-
-                    setTeamAPlayer1("");
-                    setTeamAPlayer2("");
-                    setTeamBPlayer1("");
-                    setTeamBPlayer2("");
-
-                    setShowQuickGuest(false);
-                    setQuickGuestTarget(null);
-                    setQuickGuestName("");
-
-                    setError(null);
-                  }}
-                  className="rounded-lg border border-zinc-700 px-4 py-2 text-sm"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          )}
+              resetMatchForm();
+              setError(null);
+            }}
+          />
         </div>
       )}
 
@@ -894,7 +665,7 @@ function SessionMatchesPanel({ session, onClose }: SessionMatchesPanelProps) {
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1 text-left">
                       <p className="text-lg font-semibold">
-                        Match #{index + 1}
+                        Match #{matches.length - index}
                       </p>
 
                       <p className="mt-1 truncate text-sm text-zinc-400">
@@ -913,7 +684,7 @@ function SessionMatchesPanel({ session, onClose }: SessionMatchesPanelProps) {
                       {formatLabel(match.matchType)}
                     </span>
 
-                    {match.lightsOn && (
+                    {match.lightUsage && (
                       <span className="rounded-full bg-zinc-800 px-2.5 py-1">
                         Lights On
                       </span>
@@ -1006,6 +777,116 @@ function SessionMatchesPanel({ session, onClose }: SessionMatchesPanelProps) {
                     )}
                   </div>
                 </div>
+
+                {editingMatch?.id === match.id && (
+                  <div
+                    ref={manageMatchRef}
+                    className="rounded-xl border border-zinc-800 bg-zinc-950 p-4 sm:p-5"
+                  >
+                    <div className="mb-4 flex items-center justify-between gap-3">
+                      <h3 className="text-left text-lg font-semibold">
+                        Manage Match #{matches.length - index}
+                      </h3>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingMatch(null);
+                          setManageTab("SCORE");
+                          resetMatchForm();
+                        }}
+                        className="text-sm text-zinc-400 hover:text-white"
+                      >
+                        Close
+                      </button>
+                    </div>
+
+                    <div className="mb-5 grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setManageTab("MATCH")}
+                        className={`rounded-lg px-3 py-2 text-sm font-medium ${
+                          manageTab === "MATCH"
+                            ? "bg-white text-black"
+                            : "border border-zinc-700 text-zinc-300"
+                        }`}
+                      >
+                        Details & Players
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setManageTab("SCORE")}
+                        className={`rounded-lg px-3 py-2 text-sm font-medium ${
+                          manageTab === "SCORE"
+                            ? "bg-white text-black"
+                            : "border border-zinc-700 text-zinc-300"
+                        }`}
+                      >
+                        Score
+                      </button>
+                    </div>
+
+                    {manageTab === "MATCH" && (
+                      <MatchDetailsForm
+                        editingMatch={true}
+                        courtId={courtId}
+                        setCourtId={setCourtId}
+                        matchType={matchType}
+                        setMatchType={setMatchType}
+                        lightUsage={lightUsage}
+                        setLightUsage={setLightUsage}
+                        activeCourts={activeCourts}
+                        teamAPlayer1={teamAPlayer1}
+                        setTeamAPlayer1={setTeamAPlayer1}
+                        teamAPlayer2={teamAPlayer2}
+                        setTeamAPlayer2={setTeamAPlayer2}
+                        teamBPlayer1={teamBPlayer1}
+                        setTeamBPlayer1={setTeamBPlayer1}
+                        teamBPlayer2={teamBPlayer2}
+                        setTeamBPlayer2={setTeamBPlayer2}
+                        availableForPicker={availableForPicker}
+                        showQuickGuest={showQuickGuest}
+                        setShowQuickGuest={setShowQuickGuest}
+                        quickGuestName={quickGuestName}
+                        setQuickGuestName={setQuickGuestName}
+                        setQuickGuestTarget={setQuickGuestTarget}
+                        creatingGuest={creatingGuest}
+                        handleQuickGuest={handleQuickGuest}
+                        error={error}
+                        submitting={submitting}
+                        handleSubmit={handleSubmit}
+                        onCancel={() => {
+                          setEditingMatch(null);
+                          setManageTab("MATCH");
+
+                          resetMatchForm();
+                        }}
+                      />
+                    )}
+
+                    {manageTab === "SCORE" && editingMatch && (
+                      <MatchSetsPanel
+                        key={editingMatch.id}
+                        match={editingMatch}
+                        onClose={() => {
+                          setEditingMatch(null);
+                          setManageTab("SCORE");
+                          resetMatchForm();
+                        }}
+                        onMatchUpdated={(updatedMatch) => {
+                          setMatches((current) =>
+                            current.map((item) =>
+                              item.id === updatedMatch.id ? updatedMatch : item,
+                            ),
+                          );
+
+                          setEditingMatch(updatedMatch);
+                        }}
+                      />
+                    )}
+                  </div>
+                )}
 
                 {chargeMatch?.id === match.id && (
                   <MatchChargesPanel

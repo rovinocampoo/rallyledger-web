@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getSessions, deleteSession } from "../api/sessions";
 import type { Session } from "../types/session";
 import SessionCard from "../components/ui/SessionCard";
@@ -9,6 +9,7 @@ import SessionChargesPanel from "../components/ui/SessionChargesPanel";
 import ParticipantLedgerPanel from "../components/ui/ParticipantLedgerPanel";
 import type { Participant } from "../types/participant";
 import { getParticipants } from "../api/participants";
+import SessionTrainingPanel from "../components/ui/SessionTrainingPanel";
 
 function SessionsPage() {
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -18,13 +19,23 @@ function SessionsPage() {
   const [editingSession, setEditingSession] = useState<Session | null>(null);
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
   const [matchSession, setMatchSession] = useState<Session | null>(null);
+  const [trainingSession, setTrainingSession] = useState<Session | null>(null);
   const [chargeSession, setChargeSession] = useState<Session | null>(null);
   const [ledgerParticipant, setLedgerParticipant] =
     useState<Participant | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [returnToChargeSession, setReturnToChargeSession] =
     useState<Session | null>(null);
+  const matchPanelRef = useRef<HTMLDivElement | null>(null);
 
+  useEffect(() => {
+    if (matchSession) {
+      matchPanelRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }
+  }, [matchSession]);
   useEffect(() => {
     let ignore = false;
 
@@ -188,6 +199,7 @@ function SessionsPage() {
                 setChargeSession(session);
                 setSelectedSession(null);
                 setMatchSession(null);
+                setTrainingSession(null);
                 setLedgerParticipant(null);
                 setEditingSession(null);
                 setShowForm(false);
@@ -196,6 +208,7 @@ function SessionsPage() {
               onManagePlayers={(session) => {
                 setSelectedSession(session);
                 setMatchSession(null);
+                setTrainingSession(null);
                 setChargeSession(null);
                 setLedgerParticipant(null);
                 setEditingSession(null);
@@ -203,7 +216,18 @@ function SessionsPage() {
               }}
               onManageMatches={(session) => {
                 setMatchSession(session);
+                setTrainingSession(null);
                 setSelectedSession(null);
+                setChargeSession(null);
+                setLedgerParticipant(null);
+                setEditingSession(null);
+                setShowForm(false);
+              }}
+              onManageTraining={(session) => {
+                setTrainingSession(session);
+
+                setSelectedSession(null);
+                setMatchSession(null);
                 setChargeSession(null);
                 setLedgerParticipant(null);
                 setEditingSession(null);
@@ -232,9 +256,17 @@ function SessionsPage() {
             )}
 
             {matchSession?.id === session.id && (
-              <SessionMatchesPanel
+              <div ref={matchPanelRef}>
+                <SessionMatchesPanel
+                  session={session}
+                  onClose={() => setMatchSession(null)}
+                />
+              </div>
+            )}
+            {trainingSession?.id === session.id && (
+              <SessionTrainingPanel
                 session={session}
-                onClose={() => setMatchSession(null)}
+                onClose={() => setTrainingSession(null)}
               />
             )}
 

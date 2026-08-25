@@ -5,7 +5,7 @@ export type CreateMatchInput = {
   sessionId: number;
   courtId: number;
   matchType: string;
-  lightsOn: boolean;
+  lightUsage: "NONE" | "HALF" | "FULL";
 };
 
 export function getSessionMatches(sessionId: number) {
@@ -32,7 +32,7 @@ export type UpdateMatchInput = {
   courtId: number;
   matchType: string;
   result: string | null;
-  lightsOn: boolean;
+  lightUsage: "NONE" | "HALF" | "FULL";
 };
 
 export function updateMatch(

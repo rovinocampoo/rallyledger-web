@@ -17,7 +17,7 @@ function ParticipantForm({
   const [lastName, setLastName] = useState(participant?.lastName ?? "");
   const [nickname, setNickname] = useState(participant?.nickname ?? "");
   const [birthday, setBirthday] = useState(
-    participant?.birthday.slice(0, 10) ?? "",
+    participant?.birthday?.slice(0, 10) ?? "",
   );
   const [participantType, setParticipantType] = useState(
     participant?.participantType ?? "MEMBER",
