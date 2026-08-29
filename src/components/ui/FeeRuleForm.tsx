@@ -5,7 +5,7 @@ import { formatLabel } from "../../utils/format";
 
 type FeeRuleFormProps = {
   rule?: FeeRule | null;
-  onSaved: () => void;
+  onSaved: (savedRule: FeeRule) => void;
   onCancel: () => void;
 };
 
@@ -26,6 +26,9 @@ function FeeRuleForm({ rule, onSaved, onCancel }: FeeRuleFormProps) {
   const [participantType, setParticipantType] = useState(
     rule?.participantType ?? "",
   );
+  const usesParticipantType = feeType === "COURT" || feeType === "LIGHT";
+
+  const usesMatchType = feeType === "LIGHT";
   const [matchType, setMatchType] = useState(rule?.matchType ?? "");
   const [amount, setAmount] = useState(rule ? String(rule.amount) : "");
   const [isActive, setIsActive] = useState(rule?.isActive ?? true);
@@ -42,10 +45,20 @@ function FeeRuleForm({ rule, onSaved, onCancel }: FeeRuleFormProps) {
       return;
     }
 
+    if (feeType === "LIGHT" && !participantType) {
+      setFormError("Participant type is required for light fees.");
+      return;
+    }
+
     const input: FeeRuleInput = {
       feeType,
-      participantType: participantType || null,
-      matchType: matchType || null,
+      participantType:
+        feeType === "COURT"
+          ? "NONMEMBER"
+          : usesParticipantType
+            ? participantType || null
+            : null,
+      matchType: usesMatchType ? matchType || null : null,
       amount: parsedAmount,
       isActive,
     };
@@ -54,13 +67,15 @@ function FeeRuleForm({ rule, onSaved, onCancel }: FeeRuleFormProps) {
       setSubmitting(true);
       setFormError(null);
 
+      let savedRule: FeeRule;
+
       if (rule) {
-        await updateFeeRule(rule.id, input);
+       savedRule = await updateFeeRule(rule.id, input);
       } else {
-        await createFeeRule(input);
+       savedRule = await createFeeRule(input);
       }
 
-      onSaved();
+      onSaved(savedRule);
     } catch (err) {
       console.error(err);
 
@@ -75,7 +90,7 @@ function FeeRuleForm({ rule, onSaved, onCancel }: FeeRuleFormProps) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="mb-6 rounded-xl border border-zinc-800 bg-zinc-900 p-4 sm:p-6"
+      className="mb-6 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4 sm:p-6"
     >
       <div className="text-left">
         <h2 className="text-lg font-semibold">
@@ -93,28 +108,44 @@ function FeeRuleForm({ rule, onSaved, onCancel }: FeeRuleFormProps) {
 
       <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         <label className="block min-w-0 text-left">
-          <span className="text-sm text-zinc-400">Fee Type</span>
+          <span className="text-sm text-zinc-600 dark:text-zinc-400">
+            Fee Type
+          </span>
 
           <select
             value={feeType}
-            onChange={(event) =>
-              setFeeType(event.target.value as FeeRuleInput["feeType"])
-            }
-            className="mt-2 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2"
+            onChange={(event) => {
+              const value = event.target.value as FeeRuleInput["feeType"];
+
+              setFeeType(value);
+              setMatchType("");
+
+              if (value === "COURT") {
+                setParticipantType("NONMEMBER");
+              } else {
+                setParticipantType("");
+              }
+            }}
+            className="mt-2 w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 px-3 py-2"
           >
             <option value="BALL">Ball</option>
             <option value="COURT">Court</option>
             <option value="LIGHT">Light</option>
+            <option value="TRAINING">Training</option>
+            <option value="BALL_RENTAL">Ball Rental</option>
+            <option value="RACKET_RENTAL">Racket Rental</option>
           </select>
         </label>
 
         <label className="block min-w-0 text-left">
-          <span className="text-sm text-zinc-400">Participant Type</span>
+          <span className="text-sm text-zinc-600 dark:text-zinc-400">
+            Participant Type
+          </span>
 
           <select
             value={participantType}
             onChange={(event) => setParticipantType(event.target.value)}
-            className="mt-2 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2"
+            className="mt-2 w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 px-3 py-2"
           >
             <option value="">Any / not applicable</option>
 
@@ -127,12 +158,14 @@ function FeeRuleForm({ rule, onSaved, onCancel }: FeeRuleFormProps) {
         </label>
 
         <label className="block min-w-0 text-left">
-          <span className="text-sm text-zinc-400">Match Type</span>
+          <span className="text-sm text-zinc-600 dark:text-zinc-400">
+            Match Type
+          </span>
 
           <select
             value={matchType}
             onChange={(event) => setMatchType(event.target.value)}
-            className="mt-2 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2"
+            className="mt-2 w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 px-3 py-2"
           >
             <option value="">Any / not applicable</option>
 
@@ -145,7 +178,9 @@ function FeeRuleForm({ rule, onSaved, onCancel }: FeeRuleFormProps) {
         </label>
 
         <label className="block min-w-0 text-left">
-          <span className="text-sm text-zinc-400">Amount (PHP)</span>
+          <span className="text-sm text-zinc-600 dark:text-zinc-400">
+            Amount (PHP)
+          </span>
 
           <input
             type="number"
@@ -154,7 +189,7 @@ function FeeRuleForm({ rule, onSaved, onCancel }: FeeRuleFormProps) {
             required
             value={amount}
             onChange={(event) => setAmount(event.target.value)}
-            className="mt-2 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2"
+            className="mt-2 w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 px-3 py-2"
           />
         </label>
       </div>
@@ -173,7 +208,7 @@ function FeeRuleForm({ rule, onSaved, onCancel }: FeeRuleFormProps) {
         <button
           type="submit"
           disabled={submitting}
-          className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-black disabled:cursor-not-allowed disabled:opacity-50"
+          className="primary-action rounded-lg px-4 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
         >
           {submitting ? "Saving..." : rule ? "Update Rule" : "Create Rule"}
         </button>
@@ -182,7 +217,7 @@ function FeeRuleForm({ rule, onSaved, onCancel }: FeeRuleFormProps) {
           type="button"
           onClick={onCancel}
           disabled={submitting}
-          className="rounded-lg border border-zinc-700 px-4 py-2 text-sm text-zinc-300 disabled:opacity-50"
+          className="transition-colors rounded-lg border border-zinc-300 dark:border-zinc-700 px-4 py-2 text-sm text-zinc-700 dark:text-zinc-300 disabled:opacity-50 hover:bg-zinc-100 dark:hover:bg-zinc-800"
         >
           Cancel
         </button>

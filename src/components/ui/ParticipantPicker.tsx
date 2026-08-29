@@ -67,11 +67,11 @@ function ParticipantPicker({
         }}
         disabled={disabled}
         placeholder={placeholder}
-        className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 disabled:cursor-not-allowed disabled:opacity-50"
+        className="w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 px-3 py-2 disabled:cursor-not-allowed disabled:opacity-50"
       />
 
       {!selectedParticipant && searchTerm && !disabled && (
-        <div className="absolute z-20 mt-1 max-h-64 w-full overflow-y-auto rounded-lg border border-zinc-700 bg-zinc-950 shadow-xl">
+        <div className="absolute z-20 mt-1 max-h-64 w-full overflow-y-auto rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 shadow-xl">
           {filteredParticipants.length === 0 ? (
             <p className="px-3 py-3 text-sm text-zinc-500">
               No participants found.
@@ -85,7 +85,7 @@ function ParticipantPicker({
                   onSelect(String(participant.id));
                   setSearchTerm("");
                 }}
-                className="block w-full px-3 py-2 text-left hover:bg-zinc-900"
+                className="block w-full bg-zinc-50 px-3 py-2 text-left text-zinc-900 transition-colors hover:bg-zinc-200 dark:bg-zinc-950 dark:text-white dark:hover:bg-zinc-800"
               >
                 <p className="text-sm font-medium">
                   {participant.nickname ||

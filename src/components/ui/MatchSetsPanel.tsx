@@ -17,6 +17,7 @@ type MatchSetsPanelProps = {
 
 function MatchSetsPanel({
   match,
+  onClose,
   onMatchUpdated,
 }: MatchSetsPanelProps) {
   const [sets, setSets] = useState<MatchSet[]>([]);
@@ -25,6 +26,7 @@ function MatchSetsPanel({
   const [teamBScore, setTeamBScore] = useState("");
 
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const calculatedResult = sets.length > 0 ? calculateResult(sets) : null;
@@ -41,14 +43,14 @@ function MatchSetsPanel({
     getMatchSets(match.id)
       .then((data) => {
         if (!ignore) {
-          setSets(data);
+          setSets([...data].sort((a, b) => a.setNumber - b.setNumber));
           setLoading(false);
         }
       })
       .catch((err) => {
         if (!ignore) {
           console.error(err);
-          setError("Failed to load sets");
+          setLoadError("Failed to load sets");
           setLoading(false);
         }
       });
@@ -60,11 +62,30 @@ function MatchSetsPanel({
 
   async function loadSets() {
     const data = await getMatchSets(match.id);
-    setSets(data);
+
+    setSets([...data].sort((a, b) => a.setNumber - b.setNumber));
   }
 
   async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    if (teamAScore === "" || teamBScore === "") {
+      setError("Enter a score for both teams.");
+      return;
+    }
+
+    const parsedTeamAScore = Number(teamAScore);
+    const parsedTeamBScore = Number(teamBScore);
+
+    if (
+      !Number.isInteger(parsedTeamAScore) ||
+      !Number.isInteger(parsedTeamBScore) ||
+      parsedTeamAScore < 0 ||
+      parsedTeamBScore < 0
+    ) {
+      setError("Scores must be positive whole numbers or zero.");
+      return;
+    }
 
     try {
       setSubmitting(true);
@@ -73,19 +94,21 @@ function MatchSetsPanel({
       if (editingSetNumber !== null) {
         await updateMatchSet(match.id, editingSetNumber, {
           setNumber: editingSetNumber,
-          teamAScore: Number(teamAScore),
-          teamBScore: Number(teamBScore),
+          teamAScore: parsedTeamAScore,
+          teamBScore: parsedTeamBScore,
         });
       } else {
         await addMatchSet(match.id, {
           setNumber: nextSetNumber,
-          teamAScore: Number(teamAScore),
-          teamBScore: Number(teamBScore),
+          teamAScore: parsedTeamAScore,
+          teamBScore: parsedTeamBScore,
         });
       }
 
       await loadSets();
 
+      setEditingSetNumber(null);
+      setSetNumber("");
       setTeamAScore("");
       setTeamBScore("");
     } catch (err) {
@@ -112,7 +135,12 @@ function MatchSetsPanel({
       setError(null);
 
       await deleteMatchSet(match.id, setNumber);
-
+      if (editingSetNumber === setNumber) {
+        setEditingSetNumber(null);
+        setSetNumber("");
+        setTeamAScore("");
+        setTeamBScore("");
+      }
       await loadSets();
     } catch (err) {
       console.error(err);
@@ -216,49 +244,74 @@ function MatchSetsPanel({
     return <p>Loading sets...</p>;
   }
 
+  if (loadError) {
+    return (
+      <div className="mt-5 rounded-lg border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-950">
+        <p className="text-sm text-red-600 dark:text-red-400">{loadError}</p>
+
+        <button
+          type="button"
+          onClick={onClose}
+          className="secondary-action mt-3 rounded-lg px-3 py-2 text-sm"
+        >
+          Close
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <div className="mt-5 rounded-lg border border-zinc-800 bg-zinc-950 p-4">
+    <div className="mt-5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 p-4">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm text-zinc-400">Match Score</p>
-
-          <h3 className="font-semibold">Match #{match.id}</h3>
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+            Match Score
+          </p>
         </div>
       </div>
 
       {error && <p className="mt-4 text-sm text-red-400">{error}</p>}
 
-      <form onSubmit={handleSubmit} className="mt-5 flex flex-wrap gap-2">
-        <input
-          type="number"
-          min="1"
-          value={editingSetNumber !== null ? setNumber : nextSetNumber}
-          readOnly
-          className="w-24 cursor-not-allowed rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-zinc-400"
-        />
+      <form
+        onSubmit={handleSubmit}
+        className="mt-5 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center"
+      >
+        <p className="col-span-2 flex h-10 items-center text-sm font-medium sm:col-span-1">
+          Set {editingSetNumber !== null ? setNumber : nextSetNumber}:
+        </p>
 
         <input
           type="number"
           min="0"
+          step="1"
+          inputMode="numeric"
+          aria-label="Team A score"
           placeholder="Team A"
           value={teamAScore}
+          required
           onChange={(event) => setTeamAScore(event.target.value)}
-          className="w-28 rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2"
+          className="min-w-0 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900 sm:w-28"
         />
 
         <input
           type="number"
           min="0"
+          step="1"
+          inputMode="numeric"
+          aria-label="Team B score"
           placeholder="Team B"
           value={teamBScore}
+          required
           onChange={(event) => setTeamBScore(event.target.value)}
-          className="w-28 rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2"
+          className="min-w-0 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900 sm:w-28"
         />
 
         <button
           type="submit"
           disabled={submitting}
-          className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-black disabled:opacity-50"
+          className={`primary-action w-full rounded-lg px-4 py-2 text-sm sm:w-auto ${
+            editingSetNumber === null ? "col-span-2" : ""
+          }`}
         >
           {submitting
             ? "Saving..."
@@ -266,6 +319,7 @@ function MatchSetsPanel({
               ? "Update Set"
               : "Add Set"}
         </button>
+
         {editingSetNumber !== null && (
           <button
             type="button"
@@ -275,13 +329,13 @@ function MatchSetsPanel({
               setTeamAScore("");
               setTeamBScore("");
             }}
-            className="rounded-lg border border-zinc-700 px-4 py-2 text-sm"
+            className="secondary-action w-full rounded-lg px-4 py-2 text-sm sm:w-auto"
           >
             Cancel Edit
           </button>
         )}
       </form>
-
+      
       <div className="mt-5 space-y-2">
         {sets.length === 0 ? (
           <p className="text-sm text-zinc-500">No sets recorded yet.</p>
@@ -289,7 +343,7 @@ function MatchSetsPanel({
           sets.map((set) => (
             <div
               key={set.setNumber}
-              className="flex items-center justify-between rounded-lg bg-zinc-900 px-3 py-2"
+              className="flex items-center justify-between rounded-lg bg-white dark:bg-zinc-900 px-3 py-2"
             >
               <span>
                 Set {set.setNumber}: {set.teamAScore}–{set.teamBScore}
@@ -297,7 +351,7 @@ function MatchSetsPanel({
               <button
                 type="button"
                 onClick={() => handleEdit(set)}
-                className="text-xs text-zinc-400 hover:text-white"
+                className="text-xs text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white"
               >
                 Edit
               </button>
@@ -306,7 +360,7 @@ function MatchSetsPanel({
                 type="button"
                 onClick={() => handleDelete(set.setNumber)}
                 disabled={set.setNumber !== latestSetNumber}
-                className="text-red-400 hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-30"
+                className="danger-text text-sm disabled:cursor-not-allowed disabled:opacity-30"
               >
                 Delete
               </button>
@@ -315,8 +369,10 @@ function MatchSetsPanel({
         )}
       </div>
       {calculatedResult && (
-        <div className="mt-5 rounded-lg border border-zinc-800 bg-zinc-900 p-4">
-          <p className="text-sm text-zinc-400">Calculated Result</p>
+        <div className="mt-5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4">
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+            Calculated Result
+          </p>
 
           <p className="mt-1 font-semibold">
             {calculatedResult === "TEAM_A_WIN"
@@ -332,7 +388,7 @@ function MatchSetsPanel({
             <button
               type="button"
               onClick={handleSaveResult}
-              className="mt-3 rounded-lg bg-white px-4 py-2 text-sm font-medium text-black"
+              className="mt-3 primary-action rounded-lg px-4 py-2 text-sm"
             >
               Save Result
             </button>
@@ -340,14 +396,16 @@ function MatchSetsPanel({
         </div>
       )}
       <div className="mt-5">
-        <label className="text-sm text-zinc-400">Match Status</label>
+        <label className="text-sm text-zinc-600 dark:text-zinc-400">
+          Match Status
+        </label>
 
         <select
           value={manualStatus}
           onChange={(event) =>
             setManualStatus(event.target.value as MatchStatus)
           }
-          className="mt-2 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2"
+          className="mt-2 w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2"
         >
           <option value="SCHEDULED">Scheduled</option>
           <option value="IN_PROGRESS">In Progress</option>
@@ -367,7 +425,7 @@ function MatchSetsPanel({
         <button
           type="button"
           onClick={handleSaveStatus}
-          className="mt-3 rounded-lg bg-white px-4 py-2 text-sm font-medium text-black"
+          className="mt-3 primary-action rounded-lg px-4 py-2 text-sm"
         >
           Save Status
         </button>

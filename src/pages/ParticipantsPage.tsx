@@ -10,6 +10,14 @@ import { formatFullName } from "../utils/format";
 type SortKey = "type" | "name" | "nickname";
 type SortDirection = "asc" | "desc";
 
+function normalizeSearchText(value: string | null | undefined) {
+  return (value ?? "")
+    .toLowerCase()
+    .replaceAll("_", " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function ParticipantsPage() {
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [editingParticipant, setEditingParticipant] =
@@ -30,6 +38,7 @@ function ParticipantsPage() {
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [searchQuery, setSearchQuery] = useState("");
+  const [actionError, setActionError] = useState<string | null>(null);
 
   function handleSort(key: SortKey) {
     if (sortKey === key) {
@@ -43,22 +52,32 @@ function ParticipantsPage() {
   }
 
   useEffect(() => {
+    let ignore = false;
+
     async function loadParticipants() {
       try {
-        setError(null);
-        setLoading(true);
         const data = await getParticipants();
-        console.log("participants:", data);
-        setParticipants(data);
+
+        if (!ignore) {
+          setParticipants(data);
+        }
       } catch (err) {
-        console.error(err);
-        setError("Failed to load participants");
+        if (!ignore) {
+          console.error(err);
+          setError("Failed to load participants");
+        }
       } finally {
-        setLoading(false);
+        if (!ignore) {
+          setLoading(false);
+        }
       }
     }
 
-    loadParticipants();
+    void loadParticipants();
+
+    return () => {
+      ignore = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -136,34 +155,45 @@ function ParticipantsPage() {
     }
 
     try {
+      setActionError(null);
+
       await deleteParticipant(participant.id);
 
       setParticipants((current) =>
         current.filter((item) => item.id !== participant.id),
       );
+
+      setLedgerParticipantId((current) =>
+        current === participant.id ? null : current,
+      );
     } catch (err) {
       console.error(err);
+
+      setActionError(
+        err instanceof Error ? err.message : "Failed to delete participant",
+      );
     }
   }
+
   const filteredParticipants = participants.filter((participant) => {
-    const query = searchQuery.trim().toLowerCase();
+    const query = normalizeSearchText(searchQuery);
 
     if (!query) {
       return true;
     }
 
-    const fullName = formatFullName(
-      participant.firstName,
-      participant.lastName,
-    ).toLowerCase();
-
-    return (
-      fullName.includes(query) ||
-      participant.firstName.toLowerCase().includes(query) ||
-      participant.lastName.toLowerCase().includes(query) ||
-      participant.nickname?.toLowerCase().includes(query) ||
-      participant.participantType.toLowerCase().includes(query)
+    const searchableText = normalizeSearchText(
+      [
+        participant.firstName,
+        participant.lastName,
+        participant.nickname,
+        formatFullName(participant.firstName, participant.lastName),
+        participant.participantType,
+        participant.membershipStatus,
+      ].join(" "),
     );
+
+    return searchableText.includes(query);
   });
   const sortedParticipants = [...filteredParticipants].sort((a, b) => {
     let aValue = "";
@@ -195,8 +225,10 @@ function ParticipantsPage() {
     <div>
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="text-left">
-          <h1 className="text-2xl font-bold sm:text-3xl">Participants</h1>
-          <p className="mt-1 text-sm text-zinc-400">
+          <h1 className="text-2xl font-bold text-zinc-950 dark:text-white sm:text-3xl">
+            Participants
+          </h1>
+          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
             Manage club members and guests.
           </p>
         </div>
@@ -206,11 +238,16 @@ function ParticipantsPage() {
             setEditingParticipant(null);
             setShowForm(true);
           }}
-          className="w-full rounded-lg bg-white px-4 py-2 text-sm font-medium text-black sm:w-auto"
+          className="primary-action w-full rounded-lg px-4 py-2 text-sm font-medium sm:w-auto"
         >
           Add Participant
         </button>
       </div>
+      {actionError && (
+        <p className="mb-4 text-sm text-red-600 dark:text-red-400">
+          {actionError}
+        </p>
+      )}
       {showForm && editingParticipant === null && (
         <div className="mb-6">
           <ParticipantForm
@@ -231,14 +268,14 @@ function ParticipantsPage() {
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
             placeholder="Search players..."
-            className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-4 py-2.5 text-sm text-white outline-none placeholder:text-zinc-600 focus:border-zinc-600 md:max-w-md"
+            className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-zinc-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-white dark:placeholder:text-zinc-600 dark:focus:border-zinc-600 md:max-w-md"
           />
         </div>
-        <div className="hidden grid-cols-[160px_160px_minmax(0,1fr)_auto] items-center gap-4 rounded-t-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-left text-sm text-zinc-400 md:grid">
+        <div className="hidden grid-cols-[160px_160px_minmax(0,1fr)_auto] items-center gap-4 rounded-t-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-left text-sm text-zinc-600 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-400 md:grid">
           <button
             type="button"
             onClick={() => handleSort("type")}
-            className="text-left hover:text-white"
+            className="text-left hover:text-zinc-950 dark:hover:text-white"
           >
             Type
             {sortKey === "type" && (sortDirection === "asc" ? " ↑" : " ↓")}
@@ -247,7 +284,7 @@ function ParticipantsPage() {
           <button
             type="button"
             onClick={() => handleSort("name")}
-            className="text-left hover:text-white"
+            className="text-left hover:text-zinc-950 dark:hover:text-white"
           >
             Full Name
             {sortKey === "name" && (sortDirection === "asc" ? " ↑" : " ↓")}
@@ -256,7 +293,7 @@ function ParticipantsPage() {
           <button
             type="button"
             onClick={() => handleSort("nickname")}
-            className="text-left hover:text-white"
+            className="text-left hover:text-zinc-950 dark:hover:text-white"
           >
             Nickname
             {sortKey === "nickname" && (sortDirection === "asc" ? " ↑" : " ↓")}
@@ -264,7 +301,7 @@ function ParticipantsPage() {
 
           <span>Actions</span>
         </div>
-        <div className="space-y-3 md:space-y-0 md:rounded-b-xl md:border-x md:border-b md:border-zinc-800 md:bg-zinc-900">
+        <div className="space-y-3 md:space-y-0 md:rounded-b-xl md:border-x md:border-b md:border-zinc-200 dark:border-zinc-800 md:bg-white dark:bg-zinc-900">
           {sortedParticipants.map((participant) => (
             <div key={participant.id} id={`participant-${participant.id}`}>
               <ParticipantCard

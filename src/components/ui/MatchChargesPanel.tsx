@@ -27,10 +27,7 @@ function MatchChargesPanel({ match, onClose }: MatchChargesPanelProps) {
   useEffect(() => {
     let ignore = false;
 
-    Promise.all([
-      getMatchCharges(match.id),
-      getParticipants(),
-    ])
+    Promise.all([getMatchCharges(match.id), getParticipants()])
       .then(([chargeData, participantData]) => {
         if (!ignore) {
           setCharges(chargeData);
@@ -57,12 +54,29 @@ function MatchChargesPanel({ match, onClose }: MatchChargesPanelProps) {
     return <p>Loading charges...</p>;
   }
 
+  if (error) {
+    return (
+      <div className="mt-5 rounded-lg border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-950">
+        <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+
+        <button
+          type="button"
+          onClick={onClose}
+          className="secondary-action mt-3 rounded-lg px-3 py-2 text-sm"
+        >
+          Close
+        </button>
+      </div>
+    );
+  }
   return (
-    <div className="mt-5 rounded-lg border border-zinc-800 bg-zinc-950 p-4">
+    <div className="mt-5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 p-4">
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-sm text-zinc-400">Match Charges</p>
-          <h3 className="text-lg font-semibold">Match #{match.id}</h3>
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+            Match Charges
+          </p>
+          <h3 className="text-lg font-semibold">Charge Breakdown</h3>
           <p className="mt-1 text-sm text-zinc-500">
             Total: {formatCurrency(total)}
           </p>{" "}
@@ -71,7 +85,7 @@ function MatchChargesPanel({ match, onClose }: MatchChargesPanelProps) {
         <button
           type="button"
           onClick={onClose}
-          className="text-sm text-zinc-400 hover:text-white"
+          className="text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white"
         >
           Close
         </button>
@@ -93,10 +107,10 @@ function MatchChargesPanel({ match, onClose }: MatchChargesPanelProps) {
             return (
               <div
                 key={charge.id}
-                className="flex items-center justify-between rounded-lg bg-zinc-900 px-3 py-2"
+                className="flex items-center justify-between gap-3 rounded-lg bg-white px-3 py-2 dark:bg-zinc-900"
               >
-                <div>
-                  <p className="font-medium">
+                <div className="min-w-0 flex-1 text-left">
+                  <p className="truncate font-medium">
                     {participant
                       ? formatFullName(
                           participant.firstName,
@@ -106,17 +120,17 @@ function MatchChargesPanel({ match, onClose }: MatchChargesPanelProps) {
                   </p>
 
                   {participant?.nickname && (
-                    <p className="text-xs text-zinc-500">
+                    <p className="truncate text-xs text-zinc-500">
                       {participant.nickname}
                     </p>
                   )}
 
-                  <p className="mt-1 text-xs text-zinc-400">
+                  <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
                     {formatLabel(charge.feeType)}
                   </p>
                 </div>
 
-                <span className="font-medium">
+                <span className="shrink-0 font-medium">
                   {formatCurrency(charge.amount)}
                 </span>
               </div>

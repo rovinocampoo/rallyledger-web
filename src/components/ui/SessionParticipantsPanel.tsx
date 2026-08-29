@@ -25,10 +25,13 @@ function SessionParticipantsPanel({
   >([]);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [selectedParticipantId, setSelectedParticipantId] = useState("");
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const availableParticipants = participants.filter(
     (participant) =>
+      !participant.isTemporary &&
       !sessionParticipants.some(
         (sessionParticipant) =>
           sessionParticipant.participantId === participant.id,
@@ -53,7 +56,7 @@ function SessionParticipantsPanel({
       .catch((err) => {
         if (!ignore) {
           console.error(err);
-          setError("Failed to load session players");
+          setLoadError("Failed to load session players");
           setLoading(false);
         }
       });
@@ -72,9 +75,15 @@ function SessionParticipantsPanel({
       await addSessionParticipant(session.id, Number(selectedParticipantId));
       await loadSessionParticipants();
       setSelectedParticipantId("");
+      setSaving(true);
+      setError(null);
     } catch (err) {
       console.error(err);
-      setError("Failed to add participant");
+      setError(
+        err instanceof Error ? err.message : "Failed to add participant",
+      );
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -93,9 +102,15 @@ function SessionParticipantsPanel({
     try {
       await removeSessionParticipant(session.id, participantId);
       await loadSessionParticipants();
+      setSaving(true);
+      setError(null);
     } catch (err) {
       console.error(err);
-      setError("Failed to remove participant");
+      setError(
+        err instanceof Error ? err.message : "Failed to remove participant",
+      );
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -103,50 +118,66 @@ function SessionParticipantsPanel({
     return <p>Loading session players...</p>;
   }
 
-  if (error) {
-    return <p>{error}</p>;
+  if (loadError) {
+    return (
+      <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+        <p className="text-sm text-red-600 dark:text-red-400">{loadError}</p>
+
+        <button
+          type="button"
+          onClick={onClose}
+          className="secondary-action mt-3 rounded-lg px-3 py-2 text-sm"
+        >
+          Close
+        </button>
+      </div>
+    );
   }
 
   return (
-    <div className="mb-6 rounded-xl border border-zinc-800 bg-zinc-900 p-4">
+    <div className="mb-6 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4">
       <div className="flex items-start justify-between">
         <div className="min-w-0 text-left">
-          <p className="text-sm text-zinc-400">Session Players</p>
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+            Session Players
+          </p>
 
           <h2 className="truncate text-xl font-semibold">{session.name}</h2>
 
           <p className="mt-1 text-sm text-zinc-500">
             {session.maxPlayers === null
-              ? `${participants.length} players · Unlimited`
-              : `${participants.length} / ${session.maxPlayers} players`}
+              ? `${sessionParticipants.length} players · Unlimited`
+              : `${sessionParticipants.length} / ${session.maxPlayers} players`}
           </p>
         </div>
 
         <button
           type="button"
           onClick={onClose}
-          className="text-sm text-zinc-400 hover:text-white"
+          className="text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white"
         >
           Close
         </button>
       </div>
+      {error && (
+        <p className="mt-4 text-sm text-red-600 dark:text-red-400">{error}</p>
+      )}
 
-      <div className="mt-5 flex gap-2">
+      <div className="mt-5 flex flex-col gap-2 sm:flex-row">
         <ParticipantPicker
           participants={availableParticipants}
           selectedParticipantId={selectedParticipantId}
           onSelect={setSelectedParticipantId}
-          disabled={sessionIsFull}
+          disabled={sessionIsFull || saving}
           placeholder={
             sessionIsFull ? "Session is full" : "Search participant..."
           }
         />
-
         <button
           type="button"
           onClick={handleAddParticipant}
-          disabled={sessionIsFull || !selectedParticipantId}
-          className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-black disabled:cursor-not-allowed disabled:opacity-50"
+          disabled={saving || sessionIsFull || !selectedParticipantId}
+          className="primary-action w-full rounded-lg px-4 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
         >
           Add Player
         </button>
@@ -165,7 +196,7 @@ function SessionParticipantsPanel({
             return (
               <div
                 key={sessionParticipant.participantId}
-                className="flex items-center justify-between rounded-lg bg-zinc-950 px-4 py-3"
+                className="flex items-center justify-between rounded-lg bg-zinc-50 dark:bg-zinc-950 px-4 py-3"
               >
                 <div className="min-w-0 flex-1 text-left">
                   <p className="truncate font-medium">
@@ -193,7 +224,8 @@ function SessionParticipantsPanel({
                   onClick={() =>
                     handleRemoveParticipant(sessionParticipant.participantId)
                   }
-                  className="text-xs text-red-400 hover:text-red-300"
+                  disabled={saving}
+                  className="danger-text shrink-0 text-xs disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Remove
                 </button>

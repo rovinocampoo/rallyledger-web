@@ -188,17 +188,17 @@ function MatchParticipantsPanel({
 
   if (loading) {
     return (
-      <div className="mt-5 min-w-0 overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950 p-4">
-        <p className="text-sm text-zinc-400">Loading match players...</p>
+      <div className="mt-5 min-w-0 overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 p-4">
+        <p className="text-sm text-zinc-600 dark:text-zinc-400">Loading match players...</p>
       </div>
     );
   }
 
   return (
-    <div className="mt-5 rounded-lg border border-zinc-800 bg-zinc-950 p-4">
+    <div className="mt-5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 p-4">
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-sm text-zinc-400">Match Players</p>
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">Match Players</p>
 
           <h3 className="text-lg font-semibold">Match #{match.id}</h3>
 
@@ -208,7 +208,7 @@ function MatchParticipantsPanel({
         <button
           type="button"
           onClick={onClose}
-          className="text-sm text-zinc-400 hover:text-white"
+          className="text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white"
         >
           Close
         </button>
@@ -226,7 +226,7 @@ function MatchParticipantsPanel({
         <select
           value={teamSide}
           onChange={(event) => setTeamSide(event.target.value)}
-          className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 sm:w-auto"
+          className="w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 sm:w-auto"
         >
           <option value="A">Team A</option>
           <option value="B">Team B</option>
@@ -260,7 +260,7 @@ function MatchParticipantsPanel({
                 return (
                   <div
                     key={matchParticipant.participantId}
-                    className="rounded-lg bg-zinc-900 p-3"
+                    className="rounded-lg bg-white dark:bg-zinc-900 p-3"
                   >
                     <div className="min-w-0 text-left">
                       <p className="truncate font-medium">
@@ -304,7 +304,7 @@ function MatchParticipantsPanel({
                             "B",
                           )
                         }
-                        className="rounded-lg border border-zinc-700 px-3 py-2 text-xs text-zinc-300 hover:bg-zinc-800"
+                        className="rounded-lg border border-zinc-300 dark:border-zinc-700 px-3 py-2 text-xs text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
                       >
                         Move to Team B
                       </button>
@@ -334,7 +334,7 @@ function MatchParticipantsPanel({
                 return (
                   <div
                     key={matchParticipant.participantId}
-                    className="rounded-lg bg-zinc-900 p-3"
+                    className="rounded-lg bg-white dark:bg-zinc-900 p-3"
                   >
                     <div className="min-w-0 text-left">
                       <p className="truncate font-medium">
@@ -378,7 +378,7 @@ function MatchParticipantsPanel({
                             "A",
                           )
                         }
-                        className="rounded-lg border border-zinc-700 px-3 py-2 text-xs text-zinc-300 hover:bg-zinc-800"
+                        className="rounded-lg border border-zinc-300 dark:border-zinc-700 px-3 py-2 text-xs text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
                       >
                         Move to Team A
                       </button>

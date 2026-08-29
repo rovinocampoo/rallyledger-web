@@ -38,26 +38,26 @@ function LoginPage({ onLoggedIn }: LoginPageProps) {
   }
 
   return (
-    <div className="flex min-h-screen w-full items-center justify-center bg-zinc-950 px-4 text-white">
+    <div className="flex min-h-screen w-full items-center justify-center bg-zinc-50 dark:bg-zinc-950 px-4 text-zinc-900 dark:text-white">
       <div className="w-full max-w-sm">
         <div className="mb-8">
           <h1 className="text-3xl font-bold">
             RallyLedger
           </h1>
 
-          <p className="mt-2 text-sm text-zinc-400">
+          <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
             Sign in to manage your tennis club.
           </p>
         </div>
 
         <form
           onSubmit={handleSubmit}
-          className="space-y-4 rounded-xl border border-zinc-800 bg-zinc-900 p-6"
+          className="space-y-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-6"
         >
           <div>
             <label
               htmlFor="email"
-              className="mb-1 block text-sm text-zinc-400"
+              className="mb-1 block text-sm text-zinc-600 dark:text-zinc-400"
             >
               Email
             </label>
@@ -69,14 +69,14 @@ function LoginPage({ onLoggedIn }: LoginPageProps) {
               onChange={(event) => setEmail(event.target.value)}
               autoComplete="email"
               required
-              className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-white outline-none focus:border-zinc-500"
+              className="w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 px-3 py-2 text-zinc-900 dark:text-white outline-none focus:border-zinc-500"
             />
           </div>
 
           <div>
             <label
               htmlFor="password"
-              className="mb-1 block text-sm text-zinc-400"
+              className="mb-1 block text-sm text-zinc-600 dark:text-zinc-400"
             >
               Password
             </label>
@@ -88,7 +88,7 @@ function LoginPage({ onLoggedIn }: LoginPageProps) {
               onChange={(event) => setPassword(event.target.value)}
               autoComplete="current-password"
               required
-              className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-white outline-none focus:border-zinc-500"
+              className="w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 px-3 py-2 text-zinc-900 dark:text-white outline-none focus:border-zinc-500"
             />
           </div>
 
@@ -101,7 +101,7 @@ function LoginPage({ onLoggedIn }: LoginPageProps) {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-lg bg-white px-4 py-2.5 font-medium text-black disabled:cursor-not-allowed disabled:opacity-50"
+            className="w-full rounded-lg bg-white px-4 py-2.5 font-medium hover:text-zinc-350 text-black disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading ? "Signing in..." : "Sign In"}
           </button>

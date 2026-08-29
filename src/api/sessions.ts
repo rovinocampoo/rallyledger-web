@@ -1,9 +1,10 @@
 import { apiFetch } from "./client";
-import type { Session } from "../types/session";
+import type { Session, SessionType  } from "../types/session";
 
 export type CreateSessionInput = {
   name: string;
   description: string;
+  sessionType: SessionType;
   sessionDate: string;
   startTime: string;
   endTime: string;

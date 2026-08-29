@@ -76,7 +76,6 @@ function MatchDetailsForm({
   setQuickGuestTarget,
   creatingGuest,
   handleQuickGuest,
-  error,
   submitting,
   handleSubmit,
   onCancel,
@@ -86,12 +85,12 @@ function MatchDetailsForm({
       <>
         <div className="grid gap-4 md:grid-cols-2 text-left">
           <label>
-            <span className="text-sm text-zinc-400">Court</span>
+            <span className="text-sm text-zinc-600 dark:text-zinc-400">Court</span>
 
             <select
               value={courtId}
               onChange={(event) => setCourtId(event.target.value)}
-              className="mt-2 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2"
+              className="mt-2 w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2"
             >
               <option value="">
                 {activeCourts.length === 0
@@ -107,7 +106,7 @@ function MatchDetailsForm({
           </label>
 
           <label>
-            <span className="text-sm text-zinc-400">Match Type</span>
+            <span className="text-sm text-zinc-600 dark:text-zinc-400">Match Type</span>
 
             <select
               value={matchType}
@@ -121,7 +120,7 @@ function MatchDetailsForm({
                   setTeamBPlayer2("");
                 }
               }}
-              className="mt-2 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2"
+              className="mt-2 w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2"
             >
               <option value="SINGLES">Singles</option>
 
@@ -134,11 +133,11 @@ function MatchDetailsForm({
 
         <div className="mt-6 text-left">
           <div className="mb-3">
-            <p className="text-sm font-medium text-zinc-400">Players</p>
+            <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400">Players</p>
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
-            <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-4">
+            <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-4">
               <p className="text-sm font-semibold">Team A</p>
 
               <div className="mt-4">
@@ -156,7 +155,7 @@ function MatchDetailsForm({
                   setQuickGuestTarget("A1");
                   setShowQuickGuest(true);
                 }}
-                className="mt-1.5 text-sm text-zinc-400 hover:text-white"
+                className="mt-1.5 text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white"
               >
                 + Quick Guest
               </button>
@@ -176,7 +175,7 @@ function MatchDetailsForm({
                       setQuickGuestTarget("A2");
                       setShowQuickGuest(true);
                     }}
-                    className="mt-1.5 text-sm text-zinc-400 hover:text-white"
+                    className="mt-1.5 text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white"
                   >
                     + Quick Guest
                   </button>
@@ -184,7 +183,7 @@ function MatchDetailsForm({
               )}
             </div>
 
-            <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-4">
+            <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-4">
               <p className="text-sm font-semibold">Team B</p>
 
               <div className="mt-4">
@@ -202,7 +201,7 @@ function MatchDetailsForm({
                   setQuickGuestTarget("B1");
                   setShowQuickGuest(true);
                 }}
-                className="mt-1.5 text-sm text-zinc-400 hover:text-white"
+                className="mt-1.5 text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white"
               >
                 + Quick Guest
               </button>
@@ -222,7 +221,7 @@ function MatchDetailsForm({
                       setQuickGuestTarget("B2");
                       setShowQuickGuest(true);
                     }}
-                    className="mt-1.5 text-sm text-zinc-400 hover:text-white"
+                    className="mt-1.5 text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white"
                   >
                     + Quick Guest
                   </button>
@@ -232,7 +231,7 @@ function MatchDetailsForm({
           </div>
         </div>
         {showQuickGuest && (
-          <div className="mt-4 rounded-lg border border-zinc-700 bg-zinc-900 p-4">
+          <div className="mt-4 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-4">
             <div className="mb-3">
               <p className="font-medium">Quick Guest</p>
               <p className="text-sm text-zinc-500">
@@ -246,7 +245,7 @@ function MatchDetailsForm({
                 value={quickGuestName}
                 onChange={(event) => setQuickGuestName(event.target.value)}
                 placeholder="Guest name or nickname"
-                className="min-w-0 flex-1 rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2"
+                className="min-w-0 flex-1 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 px-3 py-2"
               />
 
               <button
@@ -265,7 +264,7 @@ function MatchDetailsForm({
                   setQuickGuestTarget(null);
                   setQuickGuestName("");
                 }}
-                className="rounded-lg border border-zinc-700 px-4 py-2"
+                className="rounded-lg border border-zinc-300 dark:border-zinc-700 px-4 py-2"
               >
                 Cancel
               </button>
@@ -274,7 +273,7 @@ function MatchDetailsForm({
         )}
       </>
       <div className="mt-4 text-left">
-        <p className="mb-2 text-sm text-zinc-400">Lights Usage</p>
+        <p className="mb-2 text-sm text-zinc-600 dark:text-zinc-400">Lights Usage</p>
 
         <div className="grid grid-cols-3 gap-2">
           {(["NONE", "HALF", "FULL"] as const).map((usage) => (
@@ -284,8 +283,8 @@ function MatchDetailsForm({
               onClick={() => setLightUsage(usage)}
               className={`rounded-lg px-3 py-2 text-sm font-medium ${
                 lightUsage === usage
-                  ? "bg-white text-black"
-                  : "border border-zinc-700 text-zinc-300"
+                  ? "primary-action"
+                  : "secondary-action"
               }`}
             >
               {usage === "NONE" ? "None" : usage === "HALF" ? "Half" : "Full"}
@@ -297,16 +296,11 @@ function MatchDetailsForm({
           Half applies 50% of the normal light fee.
         </p>
       </div>
-      {error && (
-        <div className="mt-4 rounded-lg border border-red-900/50 bg-red-950/20 px-3 py-2">
-          <p className="text-sm text-red-400">{error}</p>
-        </div>
-      )}
       <div className="mt-4 flex gap-2">
         <button
           type="submit"
           disabled={submitting || activeCourts.length === 0}
-          className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-black disabled:opacity-50"
+          className="primary-action rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50"
         >
           {submitting
             ? "Saving..."
@@ -318,7 +312,7 @@ function MatchDetailsForm({
         <button
           type="button"
           onClick={onCancel}
-          className="rounded-lg border border-zinc-700 px-4 py-2 text-sm"
+          className="transition-colors rounded-lg border border-zinc-300 dark:border-zinc-700 px-4 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800"
         >
           Cancel
         </button>

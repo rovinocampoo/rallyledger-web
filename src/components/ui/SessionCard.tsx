@@ -9,6 +9,8 @@ type SessionCardProps = {
   onManageMatches: (session: Session) => void;
   onViewCharges: () => void;
   onManageTraining: (session: Session) => void;
+  onManageOutsider: (session: Session) => void;
+  onViewResults: (session: Session) => void;
 };
 
 function SessionCard({
@@ -18,38 +20,40 @@ function SessionCard({
   onManagePlayers,
   onManageMatches,
   onManageTraining,
+  onManageOutsider,
+  onViewResults,
   onViewCharges,
 }: SessionCardProps) {
   return (
-    <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4">
+    <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
       <div className="min-w-0 text-left">
         <h2 className="truncate text-xl font-semibold">{session.name}</h2>
 
-        <p className="mt-2 text-sm text-zinc-400">
+        <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
           {formatDate(session.sessionDate)}
         </p>
 
-        <p className="mt-1 text-sm text-zinc-500">
+        <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-500">
           {session.startTime} - {session.endTime}
         </p>
       </div>
       <div className="mt-3 flex flex-wrap gap-2 text-xs">
-        <span className="rounded-full bg-zinc-800 px-3 py-1">
+        <span className="rounded-full bg-zinc-100 px-3 py-1 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">
           {formatLabel(session.sessionType)}
         </span>
-        <span className="rounded-full bg-zinc-800 px-3 py-1">
+        <span className="rounded-full bg-zinc-100 px-3 py-1 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">
           {session.maxPlayers === null
             ? "Unlimited players"
             : `Max ${session.maxPlayers} players`}
         </span>
         {session.freeBalls && (
-          <span className="rounded-full bg-zinc-800 px-2.5 py-1">
+          <span className="rounded-full bg-zinc-100 dark:bg-zinc-800 px-2.5 py-1">
             Free Balls
           </span>
         )}
 
         {session.freeLights && (
-          <span className="rounded-full bg-zinc-800 px-2.5 py-1">
+          <span className="rounded-full bg-zinc-100 dark:bg-zinc-800 px-2.5 py-1">
             Free Lights
           </span>
         )}
@@ -58,7 +62,7 @@ function SessionCard({
         <button
           type="button"
           onClick={() => onEdit(session)}
-          className="w-full rounded-lg border border-zinc-700 px-3 py-2 text-sm sm:w-auto"
+          className="transition-colors w-full rounded-lg border border-zinc-300 dark:border-zinc-700 px-3 py-2 text-sm sm:w-auto hover:bg-zinc-100 dark:hover:bg-zinc-800"
         >
           Edit
         </button>
@@ -66,25 +70,35 @@ function SessionCard({
         <button
           type="button"
           onClick={() => onDelete(session)}
-          className="w-full rounded-lg border border-red-900/60 px-3 py-2 text-sm text-red-400 sm:w-auto"
+          className="danger-action w-full rounded-lg border border-red-300 px-3 py-2 text-sm text-red-600 dark:border-red-900/60 dark:text-red-400 sm:w-auto"
         >
           Delete
         </button>
         {session.sessionType === "REGULAR_PLAY" && (
-          <button
-            type="button"
-            onClick={() => onManageMatches(session)}
-            className="w-full rounded-lg border border-zinc-700 px-3 py-2 text-sm sm:w-auto"
-          >
-            Manage Matches
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={() => onManageMatches(session)}
+              className="transition-colors w-full rounded-lg border border-zinc-300 dark:border-zinc-700 px-3 py-2 text-sm sm:w-auto hover:bg-zinc-100 dark:hover:bg-zinc-800"
+            >
+              Manage Matches
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onViewResults(session)}
+              className="transition-colors w-full rounded-lg border border-zinc-300 dark:border-zinc-700 px-3 py-2 text-sm sm:w-auto hover:bg-zinc-100 dark:hover:bg-zinc-800"
+            >
+              View Results
+            </button>
+          </>
         )}
 
         {session.sessionType === "TRAINING" && (
           <button
             type="button"
             onClick={() => onManageTraining(session)}
-            className="w-full rounded-lg border border-zinc-700 px-3 py-2 text-sm sm:w-auto"
+            className="transition-colors w-full rounded-lg border border-zinc-300 dark:border-zinc-700 px-3 py-2 text-sm sm:w-auto hover:bg-zinc-100 dark:hover:bg-zinc-800 col-span-2"
           >
             Manage Training
           </button>
@@ -93,8 +107,8 @@ function SessionCard({
         {session.sessionType === "OUTSIDER_PLAY" && (
           <button
             type="button"
-            onClick={() => onManagePlayers(session)}
-            className="w-full rounded-lg border border-zinc-700 px-3 py-2 text-sm sm:w-auto"
+            onClick={() => onManageOutsider(session)}
+            className="transition-colors w-full rounded-lg border border-zinc-300 dark:border-zinc-700 px-3 py-2 text-sm sm:w-auto hover:bg-zinc-100 dark:hover:bg-zinc-800 col-span-2"
           >
             Manage Activity
           </button>
@@ -104,7 +118,7 @@ function SessionCard({
           <button
             type="button"
             onClick={() => onManagePlayers(session)}
-            className="w-full rounded-lg border border-zinc-700 px-3 py-2 text-sm sm:w-auto"
+            className="transition-colors w-full rounded-lg border border-zinc-300 dark:border-zinc-700 px-3 py-2 text-sm sm:w-auto hover:bg-zinc-100 dark:hover:bg-zinc-800 col-span-2"
           >
             Manage Event
           </button>
@@ -112,7 +126,7 @@ function SessionCard({
         <button
           type="button"
           onClick={onViewCharges}
-          className="col-span-2 w-full rounded-lg border border-zinc-700 px-3 py-2 text-sm sm:w-auto"
+          className="transition-colors col-span-2 w-full rounded-lg border border-zinc-300 dark:border-zinc-700 px-3 py-2 text-sm sm:w-auto hover:bg-zinc-100 dark:hover:bg-zinc-800"
         >
           View Charges
         </button>

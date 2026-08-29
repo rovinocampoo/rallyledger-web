@@ -13,9 +13,22 @@ import CourtsPage from "./pages/CourtsPage";
 import FeeRulesPage from "./pages/FeeRulesPage";
 import { AUTH_EXPIRED_EVENT } from "./api/client";
 
+type Theme = "light" | "dark";
+
 function App() {
   const [admin, setAdmin] = useState<AdminUser | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [theme, setTheme] = useState<Theme>(() => {
+    const savedTheme = localStorage.getItem("rallyledger-theme");
+
+    if (savedTheme === "light" || savedTheme === "dark") {
+      return savedTheme;
+    }
+
+    return window.matchMedia("(prefers-color-scheme: dark)").matches
+      ? "dark"
+      : "light";
+  });
 
   useEffect(() => {
     let ignore = false;
@@ -43,6 +56,17 @@ function App() {
   }, []);
 
   useEffect(() => {
+    const root = document.documentElement;
+
+    if (theme === "dark") {
+      root.classList.add("dark");
+    } else {
+      root.classList.remove("dark");
+    }
+    localStorage.setItem("rallyledger-theme", theme);
+  }, [theme]);
+
+  useEffect(() => {
     function handleAuthExpired() {
       setAdmin(null);
     }
@@ -64,9 +88,13 @@ function App() {
     }
   }
 
+  function handleThemeToggle() {
+    setTheme((current) => (current === "dark" ? "light" : "dark"));
+  }
+
   if (authLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-zinc-950 text-zinc-400">
+      <div className="flex min-h-screen items-center justify-center bg-zinc-50 text-zinc-600 dark:bg-zinc-950 dark:text-zinc-400">
         Checking session...
       </div>
     );
@@ -78,7 +106,16 @@ function App() {
 
   return (
     <Routes>
-      <Route element={<AppLayout admin={admin} onLogout={handleLogout} />}>
+      <Route
+        element={
+          <AppLayout
+            admin={admin}
+            onLogout={handleLogout}
+            theme={theme}
+            onThemeToggle={handleThemeToggle}
+          />
+        }
+      >
         <Route path="/" element={<DashboardPage />} />
         <Route path="/outstanding" element={<OutstandingPage />} />
         <Route path="/participants" element={<ParticipantsPage />} />

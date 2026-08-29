@@ -1,6 +1,6 @@
 export type FeeRule = {
   id: number;
-  feeType: "BALL" | "COURT" | "LIGHT";
+  feeType: "BALL" | "COURT" | "LIGHT" | "TRAINING" | "BALL_RENTAL" | "RACKET_RENTAL";
   participantType: string | null;
   matchType: string | null;
   amount: number;
@@ -10,7 +10,7 @@ export type FeeRule = {
 };
 
 export type FeeRuleInput = {
-  feeType: "BALL" | "COURT" | "LIGHT";
+  feeType: "BALL" | "COURT" | "LIGHT" | "TRAINING" | "BALL_RENTAL" | "RACKET_RENTAL";
   participantType: string | null;
   matchType: string | null;
   amount: number;

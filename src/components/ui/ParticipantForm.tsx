@@ -68,32 +68,32 @@ function ParticipantForm({
 
   return (
     <form onSubmit={handleSubmit}>
-      <div className="mb-6 rounded-xl border border-zinc-800 bg-zinc-900 p-4">
+      <div className="mb-6 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4">
         <div className="grid gap-4">
           <div className="grid gap-4">
             <label className="block text-left">
-              <span className="text-sm text-zinc-400">First Name</span>
+              <span className="text-sm text-zinc-600 dark:text-zinc-400">First Name</span>
               <input
                 type="text"
                 value={firstName}
                 onChange={(event) => setFirstName(event.target.value)}
                 required
-                className="mt-2 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-white outline-none"
+                className="mt-2 w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 px-3 py-2 text-zinc-900 dark:text-white outline-none"
               />
             </label>
             <label className="block text-left">
-              <span className="text-sm text-zinc-400">Last Name</span>
+              <span className="text-sm text-zinc-600 dark:text-zinc-400">Last Name</span>
               <input
                 type="text"
                 value={lastName}
                 onChange={(event) => setLastName(event.target.value)}
                 required
-                className="mt-2 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-white outline-none"
+                className="mt-2 w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 px-3 py-2 text-zinc-900 dark:text-white outline-none"
               />
             </label>
             <label className="block text-left">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-zinc-300">Nickname</span>
+                <span className="text-sm text-zinc-700 dark:text-zinc-300">Nickname</span>
                 <span className="text-xs text-zinc-500">Optional</span>
               </div>
               <input
@@ -101,27 +101,27 @@ function ParticipantForm({
                 value={nickname}
                 placeholder="Optional"
                 onChange={(event) => setNickname(event.target.value)}
-                className="mt-2 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-white outline-none"
+                className="mt-2 w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 px-3 py-2 text-zinc-900 dark:text-white outline-none"
               />
             </label>
             <label className="block text-left">
-              <span className="text-sm text-zinc-400">Birthday</span>
+              <span className="text-sm text-zinc-600 dark:text-zinc-400">Birthday</span>
 
               <input
                 type="date"
                 value={birthday}
                 onChange={(event) => setBirthday(event.target.value)}
                 required
-                className="mt-2 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-white outline-none"
+                className="mt-2 w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 px-3 py-2 text-zinc-900 dark:text-white outline-none"
               />
             </label>
             <label className="block text-left">
-              <span className="text-sm text-zinc-400">Participant Type</span>
+              <span className="text-sm text-zinc-600 dark:text-zinc-400">Participant Type</span>
 
               <select
                 value={participantType}
                 onChange={(event) => setParticipantType(event.target.value)}
-                className="mt-2 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-white outline-none"
+                className="mt-2 w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 px-3 py-2 text-zinc-900 dark:text-white outline-none"
               >
                 <option value="MEMBER">Member</option>
                 <option value="NONMEMBER">Nonmember</option>
@@ -131,12 +131,12 @@ function ParticipantForm({
               </select>
             </label>
             <label className="block text-left">
-              <span className="text-sm text-zinc-400">Membership Status</span>
+              <span className="text-sm text-zinc-600 dark:text-zinc-400">Membership Status</span>
 
               <select
                 value={membershipStatus}
                 onChange={(event) => setMembershipStatus(event.target.value)}
-                className="mt-2 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-white outline-none"
+                className="mt-2 w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 px-3 py-2 text-zinc-900 dark:text-white outline-none"
               >
                 <option value="ACTIVE">Active</option>
                 <option value="INACTIVE">Inactive</option>
@@ -155,7 +155,7 @@ function ParticipantForm({
           <button
             type="submit"
             disabled={submitting}
-            className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-black disabled:cursor-not-allowed disabled:opacity-50"
+            className="primary-action rounded-lg px-4 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
           >
             {submitting
               ? "Saving..."
@@ -167,7 +167,7 @@ function ParticipantForm({
           <button
             type="button"
             onClick={onCancel}
-            className="rounded-lg border border-zinc-700 px-4 py-2 text-sm text-zinc-300"
+            className="transition-colors rounded-lg border border-zinc-300 dark:border-zinc-700 px-4 py-2 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
           >
             Cancel
           </button>

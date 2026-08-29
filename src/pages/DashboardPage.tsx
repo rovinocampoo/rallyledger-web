@@ -16,7 +16,11 @@ import { useNavigate } from "react-router-dom";
 type DateFilter = "ALL_TIME" | "TODAY" | "THIS_MONTH" | "CUSTOM";
 
 function formatDateInput(date: Date) {
-  return date.toISOString().slice(0, 10);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
 }
 
 function buildDateRange(
@@ -54,6 +58,13 @@ function buildDateRange(
   return undefined;
 }
 
+function isSameDateRange(
+  first: ReportDateRange | undefined,
+  second: ReportDateRange | undefined,
+) {
+  return first?.from === second?.from && first?.to === second?.to;
+}
+
 function DashboardPage() {
   const [summary, setSummary] = useState<ReportSummary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -85,11 +96,17 @@ function DashboardPage() {
       return;
     }
 
-    setLoading(true);
-    setError(null);
     setFilterError(null);
 
-    setAppliedDateRange(buildDateRange(dateFilter, customFrom, customTo));
+    const nextDateRange = buildDateRange(dateFilter, customFrom, customTo);
+
+    if (isSameDateRange(nextDateRange, appliedDateRange)) {
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    setAppliedDateRange(nextDateRange);
   }
 
   function handlePresetFilter(filter: DateFilter) {
@@ -100,10 +117,15 @@ function DashboardPage() {
       return;
     }
 
+    const nextDateRange = buildDateRange(filter, customFrom, customTo);
+
+    if (isSameDateRange(nextDateRange, appliedDateRange)) {
+      return;
+    }
+
     setLoading(true);
     setError(null);
-
-    setAppliedDateRange(buildDateRange(filter, customFrom, customTo));
+    setAppliedDateRange(nextDateRange);
   }
 
   useEffect(() => {
@@ -152,7 +174,9 @@ function DashboardPage() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold">Dashboard</h1>
 
-        <p className="mt-1 text-sm text-zinc-400">RallyLedger overview.</p>
+        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+          RallyLedger overview.
+        </p>
       </div>
       <div className="mb-6 flex flex-wrap gap-2">
         {[
@@ -165,10 +189,10 @@ function DashboardPage() {
             key={value}
             type="button"
             onClick={() => handlePresetFilter(value as DateFilter)}
-            className={`rounded-lg px-3 py-2 text-sm ${
+            className={`rounded-lg px-3 py-2 text-sm transition-colors ${
               dateFilter === value
-                ? "bg-white text-black"
-                : "bg-zinc-900 text-zinc-400 hover:text-white"
+                ? "bg-zinc-950 text-white dark:bg-white dark:text-black"
+                : "bg-white text-zinc-600 hover:bg-zinc-200 hover:text-zinc-950 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-white"
             }`}
           >
             {label}
@@ -184,7 +208,7 @@ function DashboardPage() {
               type="date"
               value={customFrom}
               onChange={(event) => setCustomFrom(event.target.value)}
-              className="rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2"
+              className="rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2"
             />
           </div>
 
@@ -195,13 +219,13 @@ function DashboardPage() {
               type="date"
               value={customTo}
               onChange={(event) => setCustomTo(event.target.value)}
-              className="rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2"
+              className="rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2"
             />
           </div>
           <button
             type="button"
             onClick={handleApplyFilter}
-            className="self-end rounded-lg bg-white px-4 py-2 text-sm font-medium text-black"
+            className="primary-action self-end rounded-lg px-4 py-2 text-sm font-medium"
           >
             Apply
           </button>
@@ -212,51 +236,59 @@ function DashboardPage() {
       )}
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
-          <p className="text-sm text-zinc-400">Participants</p>
+        <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5">
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+            Participants
+          </p>
 
           <p className="mt-2 text-3xl font-bold">{summary.participantCount}</p>
         </div>
 
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
-          <p className="text-sm text-zinc-400">Sessions</p>
+        <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5">
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">Sessions</p>
 
           <p className="mt-2 text-3xl font-bold">{summary.sessionCount}</p>
         </div>
 
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
-          <p className="text-sm text-zinc-400">Matches</p>
+        <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5">
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">Matches</p>
 
           <p className="mt-2 text-3xl font-bold">{summary.matchCount}</p>
         </div>
 
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
-          <p className="text-sm text-zinc-400">Total Charges</p>
+        <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5">
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+            Total Charges
+          </p>
 
           <p className="mt-2 text-3xl font-bold">
             {formatCurrency(summary.totalCharges)}
           </p>
         </div>
 
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
-          <p className="text-sm text-zinc-400">Total Payments</p>
+        <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5">
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+            Total Payments
+          </p>
           <p className="mt-2 text-3xl font-bold">
             {formatCurrency(summary.totalPayments)}
           </p>{" "}
         </div>
 
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
-          <p className="text-sm text-zinc-400">Net Balance</p>
+        <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5">
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+            Net Balance
+          </p>
           <p className="mt-2 text-3xl font-bold">
             {formatCurrency(summary.outstandingBalance)}
           </p>
         </div>
       </div>
-      <div className="mt-8 rounded-xl border border-zinc-800 bg-zinc-900 p-5">
+      <div className="mt-8 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5">
         <div className="mb-4">
           <h2 className="text-lg font-semibold">Top Outstanding</h2>
 
-          <p className="mt-1 text-sm text-zinc-400">
+          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
             Participants with the highest unpaid balances.
           </p>
         </div>
@@ -276,7 +308,7 @@ function DashboardPage() {
                     },
                   })
                 }
-                className="flex w-full items-center justify-between rounded-lg bg-zinc-950 px-4 py-3 text-left hover:bg-zinc-800"
+                className="flex w-full items-center justify-between rounded-lg bg-zinc-50 px-4 py-3 text-left transition-colors hover:bg-zinc-200 dark:bg-zinc-950 dark:hover:bg-zinc-800"
               >
                 <div>
                   <p className="font-medium">
@@ -303,26 +335,30 @@ function DashboardPage() {
       </div>
       {/* Payment Report */}
       {paymentReport && (
-        <div className="mt-8 rounded-xl border border-zinc-800 bg-zinc-900 p-5">
+        <div className="mt-8 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5">
           <div className="mb-5">
             <h2 className="text-lg font-semibold">Payments Overview</h2>
 
-            <p className="mt-1 text-sm text-zinc-400">
+            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
               Breakdown of recorded payments by method.
             </p>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="rounded-lg bg-zinc-950 p-4">
-              <p className="text-sm text-zinc-400">Total Payments</p>
+            <div className="rounded-lg bg-zinc-50 dark:bg-zinc-950 p-4">
+              <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                Total Payments
+              </p>
 
               <p className="mt-2 text-2xl font-bold">
                 {formatCurrency(paymentReport.totalPayments)}
               </p>
             </div>
 
-            <div className="rounded-lg bg-zinc-950 p-4">
-              <p className="text-sm text-zinc-400">Payment Records</p>
+            <div className="rounded-lg bg-zinc-50 dark:bg-zinc-950 p-4">
+              <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                Payment Records
+              </p>
 
               <p className="mt-2 text-2xl font-bold">
                 {paymentReport.paymentCount}
@@ -337,7 +373,7 @@ function DashboardPage() {
               paymentReport.byMethod.map((method) => (
                 <div
                   key={method.paymentMethod}
-                  className="flex items-center justify-between rounded-lg bg-zinc-950 px-4 py-3"
+                  className="flex items-center justify-between rounded-lg bg-zinc-50 dark:bg-zinc-950 px-4 py-3"
                 >
                   <div>
                     <p className="font-medium">

@@ -44,6 +44,7 @@ function SessionMatchesPanel({ session, onClose }: SessionMatchesPanelProps) {
     "NONE",
   );
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [chargeMatch, setChargeMatch] = useState<Match | null>(null);
@@ -97,61 +98,69 @@ function SessionMatchesPanel({ session, onClose }: SessionMatchesPanelProps) {
       getCourts(),
       getParticipants(),
       getSessionParticipants(session.id),
-    ]).then(
-      async ([
-        matchData,
-        courtData,
-        participantData,
-        sessionParticipantData,
-      ]) => {
-        const chargeResults = await Promise.all(
-          matchData.map(async (match) => {
-            const charges = await getMatchCharges(match.id);
+    ])
+      .then(
+        async ([
+          matchData,
+          courtData,
+          participantData,
+          sessionParticipantData,
+        ]) => {
+          const chargeResults = await Promise.all(
+            matchData.map(async (match) => {
+              const charges = await getMatchCharges(match.id);
 
-            return {
-              matchId: match.id,
-              hasCharges: charges.length > 0,
-            };
-          }),
-        );
+              return {
+                matchId: match.id,
+                hasCharges: charges.length > 0,
+              };
+            }),
+          );
 
-        const participantResults = await Promise.all(
-          matchData.map(async (match) => {
-            const participants = await getMatchParticipants(match.id);
+          const participantResults = await Promise.all(
+            matchData.map(async (match) => {
+              const participants = await getMatchParticipants(match.id);
 
-            return {
-              matchId: match.id,
-              participants,
-            };
-          }),
-        );
+              return {
+                matchId: match.id,
+                participants,
+              };
+            }),
+          );
 
+          if (!ignore) {
+            setParticipants(participantData);
+            setMatches(matchData);
+            setCourts(courtData);
+            setSessionParticipantIds(
+              sessionParticipantData.map(
+                (sessionParticipant) => sessionParticipant.participantId,
+              ),
+            );
+
+            setChargedMatchIds(
+              chargeResults
+                .filter((result) => result.hasCharges)
+                .map((result) => result.matchId),
+            );
+            const groupedParticipants: Record<number, MatchParticipant[]> = {};
+
+            participantResults.forEach((result) => {
+              groupedParticipants[result.matchId] = result.participants;
+            });
+
+            setParticipantsByMatch(groupedParticipants);
+            setLoading(false);
+          }
+        },
+      )
+      .catch((err) => {
         if (!ignore) {
-          setParticipants(participantData);
-          setMatches(matchData);
-          setCourts(courtData);
-          setSessionParticipantIds(
-            sessionParticipantData.map(
-              (sessionParticipant) => sessionParticipant.participantId,
-            ),
-          );
-
-          setChargedMatchIds(
-            chargeResults
-              .filter((result) => result.hasCharges)
-              .map((result) => result.matchId),
-          );
-          const groupedParticipants: Record<number, MatchParticipant[]> = {};
-
-          participantResults.forEach((result) => {
-            groupedParticipants[result.matchId] = result.participants;
-          });
-
-          setParticipantsByMatch(groupedParticipants);
+          console.error(err);
+          setLoadError("Failed to load session matches");
           setLoading(false);
         }
-      },
-    );
+      });
 
     return () => {
       ignore = true;
@@ -376,7 +385,11 @@ function SessionMatchesPanel({ session, onClose }: SessionMatchesPanelProps) {
     } catch (err) {
       console.error(err);
       setError(
-        editingMatch ? "Failed to update match" : "Failed to create match",
+        err instanceof Error
+          ? err.message
+          : editingMatch
+            ? "Failed to update match"
+            : "Failed to create match",
       );
     } finally {
       setSubmitting(false);
@@ -466,13 +479,19 @@ function SessionMatchesPanel({ session, onClose }: SessionMatchesPanelProps) {
     setTeamBPlayer2(teamB[1] ? String(teamB[1].participantId) : "");
 
     setManageTab("SCORE");
+    setShowForm(false);
     setChargeMatch(null);
 
     setError(null);
   }
+  function getSessionMatchNumber(matchId: number) {
+    const index = matches.findIndex((match) => match.id === matchId);
+
+    return matches.length - index;
+  }
 
   async function handleDeleteMatch(match: Match) {
-    const confirmed = window.confirm(`Delete Match #${match.id}?`);
+    const confirmed = window.confirm(`Delete Match #${getSessionMatchNumber(match.id)}?`);
 
     if (!confirmed) {
       return;
@@ -491,7 +510,7 @@ function SessionMatchesPanel({ session, onClose }: SessionMatchesPanelProps) {
 
   async function handleGenerateCharges(match: Match) {
     const confirmed = window.confirm(
-      `Generate charges for Match #${match.id}?`,
+      `Generate charges for Match #${getSessionMatchNumber(match.id)}?`,
     );
 
     if (!confirmed) {
@@ -558,12 +577,29 @@ function SessionMatchesPanel({ session, onClose }: SessionMatchesPanelProps) {
   if (loading) {
     return <p>Loading matches...</p>;
   }
+  if (loadError) {
+    return (
+      <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+        <p className="text-sm text-red-600 dark:text-red-400">{loadError}</p>
+
+        <button
+          type="button"
+          onClick={onClose}
+          className="secondary-action mt-3 rounded-lg px-3 py-2 text-sm"
+        >
+          Close
+        </button>
+      </div>
+    );
+  }
 
   return (
-    <div className="mb-6 rounded-xl border border-zinc-800 bg-zinc-900 p-4">
+    <div className="mb-6 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4">
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-sm text-zinc-400">Session Matches</p>
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+            Session Matches
+          </p>
 
           <h2 className="text-xl font-semibold">{session.name}</h2>
 
@@ -573,7 +609,12 @@ function SessionMatchesPanel({ session, onClose }: SessionMatchesPanelProps) {
         <div className="flex gap-2">
           <button
             type="button"
-            onClick={() => setShowForm(true)}
+            onClick={() => {
+              setEditingMatch(null);
+              setChargeMatch(null);
+              resetMatchForm();
+              setShowForm(true);
+            }}
             className="rounded-lg bg-white px-3 py-1.5 text-sm font-medium text-black"
           >
             Add Match
@@ -582,17 +623,21 @@ function SessionMatchesPanel({ session, onClose }: SessionMatchesPanelProps) {
           <button
             type="button"
             onClick={onClose}
-            className="text-sm text-zinc-400 hover:text-white"
+            className="text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white"
           >
             Close
           </button>
         </div>
       </div>
-
+      {error && (
+        <div className="mt-4 rounded-lg border border-red-300 bg-red-50 px-3 py-2 dark:border-red-900/50 dark:bg-red-950/20">
+          <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+        </div>
+      )}
       {showForm && !editingMatch && (
         <div
           ref={createFormRef}
-          className="mt-5 rounded-xl border border-zinc-800 bg-zinc-950 p-4"
+          className="mt-5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 p-4"
         >
           <h3 className="mb-6 text-left text-lg font-semibold">Create Match</h3>
 
@@ -639,6 +684,7 @@ function SessionMatchesPanel({ session, onClose }: SessionMatchesPanelProps) {
           <p className="text-sm text-zinc-500">No matches yet.</p>
         ) : (
           matches.map((match, index) => {
+            const matchNumber = matches.length - index;
             const court = courts.find((court) => court.id === match.courtId);
             const hasCharges = chargedMatchIds.includes(match.id);
             const matchParticipants = participantsByMatch[match.id] ?? [];
@@ -661,37 +707,39 @@ function SessionMatchesPanel({ session, onClose }: SessionMatchesPanelProps) {
 
             return (
               <div key={match.id} className="space-y-3">
-                <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4 sm:p-5">
+                <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 p-4 sm:p-5">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1 text-left">
                       <p className="text-lg font-semibold">
-                        Match #{matches.length - index}
+                        Match #{matchNumber}
                       </p>
 
-                      <p className="mt-1 truncate text-sm text-zinc-400">
+                      <p className="mt-1 truncate text-sm text-zinc-600 dark:text-zinc-400">
                         {court?.name ?? `Court ${match.courtId}`} ·{" "}
                         {court?.location}
                       </p>
                     </div>
 
-                    <span className="shrink-0 rounded-full bg-zinc-800 px-3 py-1 text-sm">
+                    <span className="shrink-0 rounded-full bg-zinc-100 dark:bg-zinc-800 px-3 py-1 text-sm">
                       {formatLabel(match.result)}
                     </span>
                   </div>
 
                   <div className="mt-3 flex flex-wrap gap-2 text-xs">
-                    <span className="rounded-full bg-zinc-800 px-2.5 py-1">
+                    <span className="rounded-full bg-zinc-100 dark:bg-zinc-800 px-2.5 py-1">
                       {formatLabel(match.matchType)}
                     </span>
 
-                    {match.lightUsage && (
-                      <span className="rounded-full bg-zinc-800 px-2.5 py-1">
-                        Lights On
+                    {match.lightUsage !== "NONE" && (
+                      <span className="rounded-full bg-zinc-100 px-2.5 py-1 dark:bg-zinc-800">
+                        {match.lightUsage === "HALF"
+                          ? "Half Lights"
+                          : "Full Lights"}
                       </span>
                     )}
                   </div>
                   <div className="mt-4 grid grid-cols-2 gap-3">
-                    <div className="min-w-0 rounded-lg border border-zinc-800 bg-zinc-900 p-4 text-left">
+                    <div className="min-w-0 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4 text-left">
                       <p className="text-xs font-medium uppercase text-zinc-500">
                         Team A
                       </p>
@@ -713,7 +761,7 @@ function SessionMatchesPanel({ session, onClose }: SessionMatchesPanelProps) {
                       </div>
                     </div>
 
-                    <div className="min-w-0 rounded-lg border border-zinc-800 bg-zinc-900 p-4 text-left">
+                    <div className="min-w-0 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4 text-left">
                       <p className="text-xs font-medium uppercase text-zinc-500">
                         Team B
                       </p>
@@ -740,12 +788,12 @@ function SessionMatchesPanel({ session, onClose }: SessionMatchesPanelProps) {
                       type="button"
                       onClick={() => handleEditMatch(match)}
                       disabled={hasCharges}
-                      className="w-full rounded-lg border border-zinc-700 px-4 py-3 text-sm font-medium text-zinc-200 transition hover:bg-zinc-900 disabled:cursor-not-allowed disabled:opacity-40"
+                      className="secondary-action w-full rounded-lg px-4 py-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-40"
                     >
                       Manage Match
                     </button>
                   </div>
-                  <div className="mt-4 grid grid-cols-2 gap-2 border-t border-zinc-800 pt-4">
+                  <div className="mt-4 grid grid-cols-2 gap-2 border-t border-zinc-200 dark:border-zinc-800 pt-4">
                     <button
                       type="button"
                       onClick={() => handleDeleteMatch(match)}
@@ -768,6 +816,9 @@ function SessionMatchesPanel({ session, onClose }: SessionMatchesPanelProps) {
                       <button
                         type="button"
                         onClick={() => {
+                          setEditingMatch(null);
+                          setShowForm(false);
+                          resetMatchForm();
                           setChargeMatch(match);
                         }}
                         className="col-span-2 rounded-lg bg-white px-3 py-2 text-sm font-medium text-black transition hover:bg-zinc-200 sm:col-span-1"
@@ -781,11 +832,11 @@ function SessionMatchesPanel({ session, onClose }: SessionMatchesPanelProps) {
                 {editingMatch?.id === match.id && (
                   <div
                     ref={manageMatchRef}
-                    className="rounded-xl border border-zinc-800 bg-zinc-950 p-4 sm:p-5"
+                    className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 p-4 sm:p-5"
                   >
                     <div className="mb-4 flex items-center justify-between gap-3">
                       <h3 className="text-left text-lg font-semibold">
-                        Manage Match #{matches.length - index}
+                        Manage Match #{matchNumber}
                       </h3>
 
                       <button
@@ -795,7 +846,7 @@ function SessionMatchesPanel({ session, onClose }: SessionMatchesPanelProps) {
                           setManageTab("SCORE");
                           resetMatchForm();
                         }}
-                        className="text-sm text-zinc-400 hover:text-white"
+                        className="text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white"
                       >
                         Close
                       </button>
@@ -807,8 +858,8 @@ function SessionMatchesPanel({ session, onClose }: SessionMatchesPanelProps) {
                         onClick={() => setManageTab("MATCH")}
                         className={`rounded-lg px-3 py-2 text-sm font-medium ${
                           manageTab === "MATCH"
-                            ? "bg-white text-black"
-                            : "border border-zinc-700 text-zinc-300"
+                            ? "primary-action"
+                            : "secondary-action"
                         }`}
                       >
                         Details & Players
@@ -819,8 +870,8 @@ function SessionMatchesPanel({ session, onClose }: SessionMatchesPanelProps) {
                         onClick={() => setManageTab("SCORE")}
                         className={`rounded-lg px-3 py-2 text-sm font-medium ${
                           manageTab === "SCORE"
-                            ? "bg-white text-black"
-                            : "border border-zinc-700 text-zinc-300"
+                            ? "primary-action"
+                            : "secondary-action"
                         }`}
                       >
                         Score

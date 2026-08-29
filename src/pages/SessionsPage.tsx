@@ -10,6 +10,22 @@ import ParticipantLedgerPanel from "../components/ui/ParticipantLedgerPanel";
 import type { Participant } from "../types/participant";
 import { getParticipants } from "../api/participants";
 import SessionTrainingPanel from "../components/ui/SessionTrainingPanel";
+import SessionOutsiderPanel from "../components/sessions/SessionOutsiderPanel";
+import SessionResultsPanel from "../components/sessions/SessionResultsPanel";
+
+function sortSessions(items: Session[]) {
+  return [...items].sort((a, b) => {
+    if (a.sessionDate !== b.sessionDate) {
+      return b.sessionDate.localeCompare(a.sessionDate);
+    }
+
+    if (a.startTime !== b.startTime) {
+      return b.startTime.localeCompare(a.startTime);
+    }
+
+    return b.id - a.id;
+  });
+}
 
 function SessionsPage() {
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -20,29 +36,44 @@ function SessionsPage() {
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
   const [matchSession, setMatchSession] = useState<Session | null>(null);
   const [trainingSession, setTrainingSession] = useState<Session | null>(null);
+  const [outsiderSession, setOutsiderSession] = useState<Session | null>(null);
   const [chargeSession, setChargeSession] = useState<Session | null>(null);
   const [ledgerParticipant, setLedgerParticipant] =
     useState<Participant | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [returnToChargeSession, setReturnToChargeSession] =
     useState<Session | null>(null);
-  const matchPanelRef = useRef<HTMLDivElement | null>(null);
+  const sessionPanelRef = useRef<HTMLDivElement | null>(null);
+  const [resultsSession, setResultsSession] = useState<Session | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (matchSession) {
-      matchPanelRef.current?.scrollIntoView({
+    if (
+      matchSession ||
+      trainingSession ||
+      outsiderSession ||
+      resultsSession ||
+      chargeSession
+    ) {
+      sessionPanelRef.current?.scrollIntoView({
         behavior: "smooth",
-        block: "start",
+        block: "center",
       });
     }
-  }, [matchSession]);
+  }, [
+    matchSession,
+    trainingSession,
+    outsiderSession,
+    resultsSession,
+    chargeSession,
+  ]);
   useEffect(() => {
     let ignore = false;
 
     Promise.all([getSessions(), getParticipants()])
       .then(([sessionData, participantData]) => {
         if (!ignore) {
-          setSessions(sessionData);
+          setSessions(sortSessions(sessionData));
           setParticipants(participantData);
           setLoading(false);
         }
@@ -94,20 +125,6 @@ function SessionsPage() {
     setLedgerParticipant(participant);
   }
 
-  function sortSessions(items: Session[]) {
-    return [...items].sort((a, b) => {
-      if (a.sessionDate !== b.sessionDate) {
-        return b.sessionDate.localeCompare(a.sessionDate);
-      }
-
-      if (a.startTime !== b.startTime) {
-        return b.startTime.localeCompare(a.startTime);
-      }
-
-      return b.id - a.id;
-    });
-  }
-
   function handleSessionSaved(savedSession: Session) {
     setSessions((current) => {
       const exists = current.some((session) => session.id === savedSession.id);
@@ -135,13 +152,28 @@ function SessionsPage() {
     }
 
     try {
+      setActionError(null);
+
       await deleteSession(session.id);
 
       setSessions((current) =>
         current.filter((item) => item.id !== session.id),
       );
+
+      setSelectedSession(null);
+      setMatchSession(null);
+      setTrainingSession(null);
+      setOutsiderSession(null);
+      setResultsSession(null);
+      setChargeSession(null);
+      setLedgerParticipant(null);
+      setReturnToChargeSession(null);
     } catch (err) {
       console.error(err);
+
+      setActionError(
+        err instanceof Error ? err.message : "Failed to delete session",
+      );
     }
   }
 
@@ -150,9 +182,10 @@ function SessionsPage() {
       <div className="mb-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="text-left">
-            <h1 className="text-2xl font-bold sm:text-3xl">Sessions</h1>
-
-            <p className="mt-1 text-sm text-zinc-400">
+            <h1 className="text-2xl font-bold text-zinc-950 dark:text-white sm:text-3xl">
+              Sessions
+            </h1>
+            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
               Manage tennis sessions and events.
             </p>
           </div>
@@ -163,12 +196,16 @@ function SessionsPage() {
               setEditingSession(null);
               setShowForm(true);
             }}
-            className="w-full rounded-lg bg-white px-4 py-3 text-sm font-medium text-black sm:w-auto sm:py-2"
+            className="primary-action w-full rounded-lg px-4 py-3 text-sm font-medium sm:w-auto sm:py-2"
           >
             Add Session
           </button>
         </div>
-
+        {actionError && (
+          <p className="mt-4 text-sm text-red-600 dark:text-red-400">
+            {actionError}
+          </p>
+        )}
         {showForm && editingSession === null && (
           <div className="mt-4">
             <SessionForm
@@ -200,6 +237,19 @@ function SessionsPage() {
                 setSelectedSession(null);
                 setMatchSession(null);
                 setTrainingSession(null);
+                setOutsiderSession(null);
+                setResultsSession(null);
+                setLedgerParticipant(null);
+                setEditingSession(null);
+                setShowForm(false);
+              }}
+              onViewResults={(session) => {
+                setResultsSession(session);
+                setSelectedSession(null);
+                setMatchSession(null);
+                setTrainingSession(null);
+                setOutsiderSession(null);
+                setChargeSession(null);
                 setLedgerParticipant(null);
                 setEditingSession(null);
                 setShowForm(false);
@@ -209,6 +259,8 @@ function SessionsPage() {
                 setSelectedSession(session);
                 setMatchSession(null);
                 setTrainingSession(null);
+                setOutsiderSession(null);
+                setResultsSession(null);
                 setChargeSession(null);
                 setLedgerParticipant(null);
                 setEditingSession(null);
@@ -216,7 +268,10 @@ function SessionsPage() {
               }}
               onManageMatches={(session) => {
                 setMatchSession(session);
+
                 setTrainingSession(null);
+                setOutsiderSession(null);
+                setResultsSession(null);
                 setSelectedSession(null);
                 setChargeSession(null);
                 setLedgerParticipant(null);
@@ -226,8 +281,22 @@ function SessionsPage() {
               onManageTraining={(session) => {
                 setTrainingSession(session);
 
+                setOutsiderSession(null);
+                setResultsSession(null);
                 setSelectedSession(null);
                 setMatchSession(null);
+                setChargeSession(null);
+                setLedgerParticipant(null);
+                setEditingSession(null);
+                setShowForm(false);
+              }}
+              onManageOutsider={(session) => {
+                setOutsiderSession(session);
+
+                setSelectedSession(null);
+                setMatchSession(null);
+                setTrainingSession(null);
+                setResultsSession(null);
                 setChargeSession(null);
                 setLedgerParticipant(null);
                 setEditingSession(null);
@@ -256,7 +325,7 @@ function SessionsPage() {
             )}
 
             {matchSession?.id === session.id && (
-              <div ref={matchPanelRef}>
+              <div ref={sessionPanelRef}>
                 <SessionMatchesPanel
                   session={session}
                   onClose={() => setMatchSession(null)}
@@ -264,18 +333,37 @@ function SessionsPage() {
               </div>
             )}
             {trainingSession?.id === session.id && (
-              <SessionTrainingPanel
-                session={session}
-                onClose={() => setTrainingSession(null)}
-              />
+              <div ref={sessionPanelRef}>
+                <SessionTrainingPanel
+                  session={session}
+                  onClose={() => setTrainingSession(null)}
+                />
+              </div>
             )}
-
+            {outsiderSession?.id === session.id && (
+              <div ref={sessionPanelRef}>
+                <SessionOutsiderPanel
+                  session={session}
+                  onClose={() => setOutsiderSession(null)}
+                />
+              </div>
+            )}
+            {resultsSession?.id === session.id && (
+              <div ref={sessionPanelRef}>
+                <SessionResultsPanel
+                  session={session}
+                  onClose={() => setResultsSession(null)}
+                />
+              </div>
+            )}
             {chargeSession?.id === session.id && (
-              <SessionChargesPanel
-                session={session}
-                onClose={() => setChargeSession(null)}
-                onParticipantSelected={handleParticipantSelected}
-              />
+              <div ref={sessionPanelRef}>
+                <SessionChargesPanel
+                  session={session}
+                  onClose={() => setChargeSession(null)}
+                  onParticipantSelected={handleParticipantSelected}
+                />
+              </div>
             )}
 
             {ledgerParticipant && returnToChargeSession?.id === session.id && (

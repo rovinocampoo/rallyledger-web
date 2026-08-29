@@ -13,23 +13,32 @@ function CourtsPage() {
   const [actionError, setActionError] = useState<string | null>(null);
 
   useEffect(() => {
+    let ignore = false;
+
     async function loadCourts() {
       try {
-        setError(null);
-        setLoading(true);
-
         const data = await getCourts();
 
-        setCourts(data);
+        if (!ignore) {
+          setCourts(data);
+        }
       } catch (err) {
-        console.error(err);
-        setError("Failed to load courts");
+        if (!ignore) {
+          console.error(err);
+          setError("Failed to load courts");
+        }
       } finally {
-        setLoading(false);
+        if (!ignore) {
+          setLoading(false);
+        }
       }
     }
 
-    loadCourts();
+    void loadCourts();
+
+    return () => {
+      ignore = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -74,14 +83,24 @@ function CourtsPage() {
 
     try {
       setActionError(null);
+
       await deleteCourt(court.id);
 
       setCourts((current) => current.filter((item) => item.id !== court.id));
+
+      if (editingCourt?.id === court.id) {
+        setEditingCourt(null);
+        setShowForm(false);
+      }
     } catch (err) {
       console.error(err);
-      setActionError(`Failed to delete ${court.name}`);
+
+      setActionError(
+        err instanceof Error ? err.message : `Failed to delete ${court.name}`,
+      );
     }
   }
+
   if (loading) {
     return <p>Loading courts...</p>;
   }
@@ -94,8 +113,12 @@ function CourtsPage() {
     <div>
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="text-left">
-          <h1 className="text-2xl font-bold sm:text-3xl">Courts</h1>
-          <p className="mt-1 text-sm text-zinc-400">Manage tennis courts.</p>
+          <h1 className="text-2xl font-bold text-zinc-950 dark:text-white sm:text-3xl">
+            Courts
+          </h1>
+          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+            Manage tennis courts.
+          </p>
         </div>
 
         <button
@@ -103,8 +126,9 @@ function CourtsPage() {
           onClick={() => {
             setEditingCourt(null);
             setShowForm(true);
+            setActionError(null);
           }}
-          className="w-full rounded-lg bg-white px-4 py-3 text-sm font-medium text-black sm:w-auto sm:py-2"
+          className="primary-action w-full rounded-lg px-4 py-3 text-sm font-medium sm:w-auto sm:py-2"
         >
           Add Court
         </button>
@@ -133,6 +157,7 @@ function CourtsPage() {
                 onEdit={(court) => {
                   setEditingCourt(court);
                   setShowForm(true);
+                  setActionError(null);
                 }}
                 onDelete={handleCourtDelete}
               />

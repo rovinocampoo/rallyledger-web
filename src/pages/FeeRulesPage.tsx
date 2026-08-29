@@ -2,20 +2,41 @@ import { useEffect, useMemo, useState } from "react";
 import { deleteFeeRule, getFeeRules } from "../api/feeRules";
 import type { FeeRule } from "../types/feeRule";
 import FeeRuleForm from "../components/ui/FeeRuleForm";
-import { formatCurrency, formatLabel } from "../utils/format";
+import { formatLabel } from "../utils/format";
+import FeeRuleCard from "../components/ui/FeeRuleCard";
 
-const FEE_TYPES = ["BALL", "COURT", "LIGHT"] as const;
+const FEE_TYPES = [
+  "BALL",
+  "COURT",
+  "LIGHT",
+  "TRAINING",
+  "BALL_RENTAL",
+  "RACKET_RENTAL",
+] as const;
 
 function getFeeDescription(feeType: (typeof FEE_TYPES)[number]) {
-  if (feeType === "BALL") {
-    return "Per-match ball fee rules.";
-  }
+  switch (feeType) {
+    case "BALL":
+      return "Flat ball fee divided among match participants.";
 
-  if (feeType === "COURT") {
-    return "Daily court fee rules.";
-  }
+    case "COURT":
+      return "Daily court fee for nonmembers.";
 
-  return "Per-match light fee rules.";
+    case "LIGHT":
+      return "Light fee based on participant and optional match type.";
+
+    case "TRAINING":
+      return "Training fee per checked-in participant.";
+
+    case "BALL_RENTAL":
+      return "Flat ball-rental fee for an outsider session.";
+
+    case "RACKET_RENTAL":
+      return "Racket-rental fee per participant.";
+
+    default:
+      return "";
+  }
 }
 
 function FeeRulesPage() {
@@ -25,11 +46,6 @@ function FeeRulesPage() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  async function loadRules() {
-    const data = await getFeeRules();
-    setRules(data);
-  }
 
   useEffect(() => {
     let ignore = false;
@@ -58,7 +74,7 @@ function FeeRulesPage() {
     };
   }, []);
 
-    useEffect(() => {
+  useEffect(() => {
     if (!editingRule || loading) {
       return;
     }
@@ -109,7 +125,8 @@ function FeeRulesPage() {
       setError(null);
 
       await deleteFeeRule(rule.id);
-      await loadRules();
+
+      setRules((current) => current.filter((item) => item.id !== rule.id));
     } catch (err) {
       console.error(err);
 
@@ -119,8 +136,19 @@ function FeeRulesPage() {
     }
   }
 
-  async function handleSaved() {
-    await loadRules();
+  function handleSaved(savedRule: FeeRule) {
+    setRules((current) => {
+      const exists = current.some((rule) => rule.id === savedRule.id);
+
+      if (exists) {
+        return current.map((rule) =>
+          rule.id === savedRule.id ? savedRule : rule,
+        );
+      }
+
+      return [...current, savedRule];
+    });
+
     setEditingRule(null);
     setShowForm(false);
     setError(null);
@@ -142,15 +170,15 @@ function FeeRulesPage() {
         <div className="text-left">
           <h1 className="text-2xl font-bold">Fee Rules</h1>
 
-          <p className="mt-1 text-sm text-zinc-400">
-            Configure the club&apos;s default ball, court, and light pricing.
+          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+            Configure ball, court, light, training, and rental pricing.
           </p>
         </div>
 
         <button
           type="button"
           onClick={handleAdd}
-          className="w-full rounded-lg bg-white px-4 py-3 text-sm font-medium text-black sm:w-auto sm:py-2"
+          className="primary-action w-full rounded-lg px-4 py-3 text-sm font-medium sm:w-auto sm:py-2"
         >
           Add Fee Rule
         </button>
@@ -187,139 +215,32 @@ function FeeRulesPage() {
                   {getFeeDescription(feeType)}
                 </p>
               </div>
-
-              {/* MOBILE */}
-              <div className="space-y-3 md:hidden">
-                {typeRules.length === 0 ? (
-                  <p className="text-left text-sm text-zinc-500">
-                    No {formatLabel(feeType).toLowerCase()} fee rules.
-                  </p>
-                ) : (
-                  typeRules.map((rule) => (
-                    <div key={rule.id}  id={`fee-${rule.id}`} className="space-y-3">
-                      <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0 text-left">
-                            <p className="font-semibold">
-                              {rule.participantType
-                                ? formatLabel(rule.participantType)
-                                : "Any participant"}
-                            </p>
-
-                            <p className="mt-1 text-sm text-zinc-400">
-                              {rule.matchType
-                                ? formatLabel(rule.matchType)
-                                : "Any match"}
-                            </p>
-                          </div>
-
-                          <span
-                            className={`shrink-0 rounded-full px-2.5 py-1 text-xs ${
-                              rule.isActive
-                                ? "bg-emerald-500/10 text-emerald-400"
-                                : "bg-zinc-800 text-zinc-500"
-                            }`}
-                          >
-                            {rule.isActive ? "Active" : "Inactive"}
-                          </span>
-                        </div>
-
-                        <p className="mt-4 text-left text-2xl font-bold">
-                          {formatCurrency(rule.amount)}
-                        </p>
-
-                        <div className="mt-4 grid grid-cols-2 gap-2">
-                          <button
-                            type="button"
-                            onClick={() => handleEdit(rule)}
-                            className="rounded-lg border border-zinc-700 px-3 py-2 text-sm"
-                          >
-                            Edit
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => handleDelete(rule)}
-                            className="rounded-lg border border-red-900/60 px-3 py-2 text-sm text-red-400"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </div>
-                      {showForm && editingRule?.id === rule.id && (
-                        <FeeRuleForm
-                          rule={editingRule}
-                          onSaved={handleSaved}
-                          onCancel={handleCancel}
-                        />
-                      )}
-                    </div>
-                  ))
-                )}
+              {/* DESKTOP HEADER */}
+              <div className="hidden grid-cols-[minmax(0,1fr)_minmax(0,1fr)_100px_90px_150px] items-center gap-3 rounded-t-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-left text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-950 md:grid">
+                <span>Participant Type</span>
+                <span>Match Type</span>
+                <span>Amount</span>
+                <span>Status</span>
+                <span className="text-right">Actions</span>
               </div>
 
-              {/* DESKTOP */}
-              <div className="hidden overflow-hidden rounded-xl border border-zinc-800 md:block">
-                <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_100px_90px_150px] items-center gap-3 bg-zinc-950 px-4 py-3 text-left text-sm text-zinc-500">
-                  <span>Participant Type</span>
-                  <span>Match Type</span>
-                  <span>Amount</span>
-                  <span>Status</span>
-                  <span className="text-right">Actions</span>
-                </div>
-
+              {/* MOBILE CARDS + DESKTOP ROWS */}
+              <div className="space-y-3 md:space-y-0 md:overflow-hidden md:rounded-b-xl md:border-x md:border-b md:border-zinc-200 dark:md:border-zinc-800">
                 {typeRules.length === 0 ? (
-                  <p className="bg-zinc-900 px-4 py-6 text-left text-sm text-zinc-500">
+                  <p className="bg-white px-4 py-6 text-left text-sm text-zinc-500 dark:bg-zinc-900">
                     No {formatLabel(feeType).toLowerCase()} fee rules.
                   </p>
                 ) : (
                   typeRules.map((rule) => (
-                    <div key={rule.id}>
-                      <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_100px_90px_150px] items-center gap-3 border-t border-zinc-800 bg-zinc-900 px-4 py-3 text-left">
-                        <p className="min-w-0 truncate text-sm text-zinc-400">
-                          {rule.participantType
-                            ? formatLabel(rule.participantType)
-                            : "Any"}
-                        </p>
+                    <div key={rule.id} id={`fee-${rule.id}`}>
+                      <FeeRuleCard
+                        rule={rule}
+                        onEdit={handleEdit}
+                        onDelete={handleDelete}
+                      />
 
-                        <p className="min-w-0 truncate text-sm text-zinc-400">
-                          {rule.matchType ? formatLabel(rule.matchType) : "Any"}
-                        </p>
-
-                        <p className="font-semibold">
-                          {formatCurrency(rule.amount)}
-                        </p>
-
-                        <span
-                          className={`w-fit rounded-full px-2.5 py-1 text-xs ${
-                            rule.isActive
-                              ? "bg-emerald-500/10 text-emerald-400"
-                              : "bg-zinc-800 text-zinc-500"
-                          }`}
-                        >
-                          {rule.isActive ? "Active" : "Inactive"}
-                        </span>
-
-                        <div className="flex justify-end gap-2">
-                          <button
-                            type="button"
-                            onClick={() => handleEdit(rule)}
-                            className="rounded-lg border border-zinc-700 px-3 py-1.5 text-sm"
-                          >
-                            Edit
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => handleDelete(rule)}
-                            className="rounded-lg border border-red-900/60 px-3 py-1.5 text-sm text-red-400"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </div>
                       {showForm && editingRule?.id === rule.id && (
-                        <div className="border-t border-zinc-800 bg-zinc-950 p-4">
+                        <div className="mt-3 md:mt-0 md:border-t md:border-zinc-200 md:bg-zinc-50 md:p-4 dark:md:border-zinc-800 dark:md:bg-zinc-950">
                           <FeeRuleForm
                             rule={editingRule}
                             onSaved={handleSaved}

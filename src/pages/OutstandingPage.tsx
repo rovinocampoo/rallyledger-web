@@ -24,10 +24,12 @@ function OutstandingPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [searchParams, setSearchParams] = useSearchParams();
-  const limitParam = searchParams.get("limit");
 
-  const limit =
-    limitParam && Number(limitParam) > 0 ? Number(limitParam) : undefined;
+  const allowedLimits = [5, 10, 20, 50, 100];
+
+  const parsedLimit = Number(searchParams.get("limit"));
+
+  const limit = allowedLimits.includes(parsedLimit) ? parsedLimit : undefined;
   const [actionError, setActionError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -38,6 +40,7 @@ function OutstandingPage() {
         if (!ignore) {
           setOutstanding(outstandingData);
           setParticipants(participantData);
+          setError(null);
           setLoading(false);
         }
       })
@@ -77,6 +80,10 @@ function OutstandingPage() {
   );
 
   function handleLimitChange(value: string) {
+    setLoading(true);
+    setError(null);
+    setLedgerParticipantId(null);
+
     if (value === "ALL") {
       setSearchParams({});
       return;
@@ -126,8 +133,15 @@ function OutstandingPage() {
       const link = document.createElement("a");
 
       link.href = url;
-      const today = new Date().toISOString().slice(0, 10);
-      link.download = `outstanding-balances-${today}.csv`;
+      const today = new Date();
+
+      const year = today.getFullYear();
+      const month = String(today.getMonth() + 1).padStart(2, "0");
+      const day = String(today.getDate()).padStart(2, "0");
+
+      const localDate = `${year}-${month}-${day}`;
+
+      link.download = `outstanding-balances-${localDate}.csv`;
 
       document.body.appendChild(link);
       link.click();
@@ -137,6 +151,22 @@ function OutstandingPage() {
     } catch (err) {
       console.error(err);
       setActionError("Failed to export outstanding balances");
+    }
+  }
+
+  async function refreshOutstanding() {
+    try {
+      const data = await getOutstanding(limit);
+
+      setOutstanding(data);
+    } catch (err) {
+      console.error(err);
+
+      setActionError(
+        err instanceof Error
+          ? err.message
+          : "Failed to refresh outstanding balances",
+      );
     }
   }
 
@@ -151,22 +181,22 @@ function OutstandingPage() {
   return (
     <div>
       <div className="mb-6">
-        <div className="grid grid-cols-[1fr_auto] items-end gap-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div className="min-w-0 text-left">
             <h1 className="text-2xl font-bold">Outstanding Balances</h1>
 
-            <p className="mt-1 text-sm text-zinc-400">
+            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
               Participants with unpaid balances.
             </p>
           </div>
-          <div className="flex shrink-0 items-center justify-end gap-2">
+          <div className="grid w-full grid-cols-[1fr_auto] items-center gap-2 sm:flex sm:w-auto">
             <label className="flex items-center gap-2 text-sm">
               <span className="text-sm text-zinc-500">Show</span>
 
               <select
                 value={limit?.toString() ?? "ALL"}
                 onChange={(event) => handleLimitChange(event.target.value)}
-                className="rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2"
+                className="rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2"
               >
                 <option value="ALL">All</option>
                 <option value="5">5</option>
@@ -176,12 +206,11 @@ function OutstandingPage() {
                 <option value="100">100</option>
               </select>
             </label>
-
             <button
               type="button"
               onClick={handleExportCsv}
               disabled={outstanding.length === 0}
-              className="rounded-lg border border-zinc-700 px-3 py-2 text-sm text-zinc-300 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+              className="transition-colors rounded-lg border border-zinc-300 dark:border-zinc-700 px-3 py-2 text-sm text-zinc-700 dark:text-zinc-300 hover:text-zinc-950 dark:hover:text-white disabled:cursor-not-allowed disabled:opacity-50 hover:bg-zinc-100 dark:hover:bg-zinc-800"
             >
               Export CSV
             </button>
@@ -192,18 +221,22 @@ function OutstandingPage() {
         <p className="mb-4 text-sm text-red-400">{actionError}</p>
       )}
 
-      <div className="mb-6 rounded-xl border border-zinc-800 bg-zinc-900 p-5">
-        <p className="text-sm text-zinc-400">
+      <div className="mb-6 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5">
+        <p className="text-sm text-zinc-600 dark:text-zinc-400">
           {limit ? "Shown Outstanding" : "Total Outstanding"}
         </p>
         <p className="mt-2 text-3xl font-bold">
           {formatCurrency(totalOutstanding)}
         </p>
-        {limit && (
-          <p className="mt-1 text-xs text-zinc-500">
-            Top {outstanding.length} participants shown.
-          </p>
-        )}
+        <p className="mt-1 text-xs text-zinc-500">
+          {limit
+            ? `Top ${outstanding.length} ${
+                outstanding.length === 1 ? "participant" : "participants"
+              } shown.`
+            : `${outstanding.length} ${
+                outstanding.length === 1 ? "participant" : "participants"
+              } shown.`}
+        </p>
       </div>
 
       <div className="space-y-3">
@@ -230,7 +263,7 @@ function OutstandingPage() {
                         : item.participantId,
                     )
                   }
-                  className="flex w-full items-center justify-between rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-4 text-left hover:bg-zinc-800"
+                  className="flex w-full items-center justify-between rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-4 py-4 text-left hover:bg-zinc-100 dark:hover:bg-zinc-800"
                 >
                   <div>
                     <p className="font-medium">
@@ -248,10 +281,9 @@ function OutstandingPage() {
                     </p>
                   </div>
 
-                  <div className="text-right">
+                  <div className="shrink-0 text-right">
                     <p className="text-xs text-zinc-500">Balance</p>
-
-                    <p className="font-semibold">
+                    <p className="truncate font-medium">
                       {formatCurrency(item.balance)}
                     </p>
                   </div>
@@ -261,6 +293,7 @@ function OutstandingPage() {
                   <ParticipantLedgerPanel
                     participant={participant}
                     onClose={() => setLedgerParticipantId(null)}
+                    onLedgerChanged={refreshOutstanding}
                   />
                 )}
               </div>
