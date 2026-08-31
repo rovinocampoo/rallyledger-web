@@ -1,5 +1,6 @@
 import { apiFetch } from "./client";
-import type { Session, SessionType  } from "../types/session";
+import type { Session, SessionType, LightUsage  } from "../types/session";
+
 
 export type CreateSessionInput = {
   name: string;
@@ -11,6 +12,7 @@ export type CreateSessionInput = {
   maxPlayers: number | null;
   freeBalls: boolean;
   freeLights: boolean;
+  lightUsage: LightUsage;
 };
 
 export function getSessions() {

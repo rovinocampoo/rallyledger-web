@@ -1,6 +1,11 @@
 import { useState, type SubmitEvent } from "react";
 import { createSession, updateSession } from "../../api/sessions";
-import type { Session, SessionType } from "../../types/session";
+import {
+  type LightUsage,
+  type Session,
+  type SessionType,
+} from "../../types/session";
+import { formatLabel } from "../../utils/format";
 
 type SessionFormProps = {
   session?: Session;
@@ -34,6 +39,10 @@ function SessionForm({ session, onSaved, onCancel }: SessionFormProps) {
   );
   const [freeBalls, setFreeBalls] = useState(session?.freeBalls ?? false);
   const [freeLights, setFreeLights] = useState(session?.freeLights ?? false);
+  const [lightUsage, setLightUsage] = useState<LightUsage>(
+    session?.lightUsage ?? "NONE",
+  );
+
 
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -77,9 +86,10 @@ function SessionForm({ session, onSaved, onCancel }: SessionFormProps) {
         sessionDate,
         startTime,
         endTime,
-        maxPlayers: parsedMaxPlayers,
+        maxPlayers: maxPlayers.trim() === "" ? null : parsedMaxPlayers,
         freeBalls,
         freeLights,
+        lightUsage,
       };
 
       let savedSession: Session;
@@ -209,26 +219,48 @@ function SessionForm({ session, onSaved, onCancel }: SessionFormProps) {
               className="mt-2 w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 px-3 py-2"
             />
           </label>
-        </div>
+          <div className="flex gap-4">
+            <label className="flex items-center">
+              <input
+                type="checkbox"
+                checked={freeBalls}
+                onChange={(event) => setFreeBalls(event.target.checked)}
+              />
+              <span className="text-sm">Free Balls</span>
+            </label>
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={freeLights}
+                onChange={(event) => setFreeLights(event.target.checked)}
+              />
+              <span className="text-sm">Free Lights</span>
+            </label>
+          </div>
+          {sessionType === "TRAINING" && !freeLights && (
+            <div className="block text-left">
+              <p className="mb-2 text-sm text-zinc-600 dark:text-zinc-400">
+                Light Usage
+              </p>
 
-        <div className="mt-4 flex flex-wrap gap-4">
-          <label className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={freeBalls}
-              onChange={(event) => setFreeBalls(event.target.checked)}
-            />
-            <span className="text-sm">Free Balls</span>
-          </label>
-
-          <label className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={freeLights}
-              onChange={(event) => setFreeLights(event.target.checked)}
-            />
-            <span className="text-sm">Free Lights</span>
-          </label>
+              <div className="grid grid-cols-3 gap-2 sm:flex">
+                {(["NONE", "HALF", "FULL"] as const).map((usage) => (
+                  <button
+                    key={usage}
+                    type="button"
+                    onClick={() => setLightUsage(usage)}
+                    className={`rounded-lg px-3 py-2 text-sm ${
+                      lightUsage === usage
+                        ? "primary-action"
+                        : "secondary-action"
+                    }`}
+                  >
+                    {formatLabel(usage)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {formError && <p className="mt-4 text-sm text-red-400">{formError}</p>}

@@ -9,6 +9,7 @@ export type Session = {
   maxPlayers: number | null;
   freeBalls: boolean;
   freeLights: boolean;
+  lightUsage: LightUsage;
   createdAt: string;
   updatedAt: string;
 };
@@ -18,3 +19,8 @@ export type SessionType =
   | "TRAINING"
   | "OUTSIDER_PLAY"
   | "EVENT";
+
+  export type LightUsage =
+  | "NONE"
+  | "HALF"
+  | "FULL";

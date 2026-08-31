@@ -12,6 +12,7 @@ import ParticipantPicker from "./ParticipantPicker";
 import { generateTrainingCharges, getSessionCharges } from "../../api/charges";
 import type { Charge } from "../../types/charge";
 import { formatCurrency, formatLabel } from "../../utils/format";
+import ParticipantLedgerPanel from "./ParticipantLedgerPanel";
 
 type SessionTrainingPanelProps = {
   session: Session;
@@ -38,9 +39,7 @@ function SessionTrainingPanel({ session, onClose }: SessionTrainingPanelProps) {
   const [generatingCharges, setGeneratingCharges] = useState(false);
   const chargedTrainingParticipantIds = new Set(
     charges
-      .filter(
-        (charge) => charge.matchId === null && charge.feeType === "TRAINING",
-      )
+      .filter((charge) => charge.feeType === "TRAINING")
       .map((charge) => charge.participantId),
   );
 
@@ -58,6 +57,9 @@ function SessionTrainingPanel({ session, onClose }: SessionTrainingPanelProps) {
       });
     }
   }, [showCharges]);
+
+  const [ledgerParticipant, setLedgerParticipant] =
+    useState<Participant | null>(null);
 
   useEffect(() => {
     let ignore = false;
@@ -467,9 +469,16 @@ function SessionTrainingPanel({ session, onClose }: SessionTrainingPanelProps) {
                 );
 
                 return (
-                  <div
+                  <button
                     key={charge.id}
-                    className="flex items-center justify-between gap-3 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 p-3"
+                    type="button"
+                    disabled={!participant}
+                    onClick={() => {
+                      if (participant) {
+                        setLedgerParticipant(participant);
+                      }
+                    }}
+                    className="flex w-full items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-left transition-colors hover:bg-zinc-100 disabled:cursor-default dark:border-zinc-800 dark:bg-zinc-950 dark:hover:bg-zinc-800"
                   >
                     <div className="min-w-0 text-left">
                       <p className="truncate font-medium">
@@ -487,10 +496,18 @@ function SessionTrainingPanel({ session, onClose }: SessionTrainingPanelProps) {
                     <p className="shrink-0 font-medium">
                       {formatCurrency(charge.amount)}{" "}
                     </p>
-                  </div>
+                  </button>
                 );
               })
             )}
+          </div>
+        )}
+        {ledgerParticipant && (
+          <div className="mt-4">
+            <ParticipantLedgerPanel
+              participant={ledgerParticipant}
+              onClose={() => setLedgerParticipant(null)}
+            />
           </div>
         )}
       </div>

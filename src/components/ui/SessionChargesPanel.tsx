@@ -200,7 +200,7 @@ function SessionChargesPanel({
               <h4 className="font-semibold">Match Breakdown</h4>
 
               <div className="mt-3 space-y-4">
-                {matchIds.map((matchId) => {
+                {matchIds.map((matchId, index) => {
                   const matchCharges = charges.filter(
                     (charge) => charge.matchId === matchId,
                   );
@@ -216,7 +216,7 @@ function SessionChargesPanel({
                       className="rounded-lg bg-white dark:bg-zinc-900 p-4"
                     >
                       <div className="flex items-center justify-between">
-                        <p className="font-medium">Match #{matchId}</p>
+                        <p className="font-medium">Match #{index + 1}</p>
                         <p className="font-medium">
                           {formatCurrency(matchTotal)}
                         </p>{" "}

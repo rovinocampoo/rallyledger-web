@@ -6,7 +6,7 @@ import type { OutstandingParticipant } from "../types/report";
 import type { Participant } from "../types/participant";
 
 import ParticipantLedgerPanel from "../components/ui/ParticipantLedgerPanel";
-import { formatCurrency, formatFullName } from "../utils/format";
+import { formatCurrency, formatFullName, formatLabel } from "../utils/format";
 import { escapeCsvValue } from "../utils/csv";
 
 import { useSearchParams } from "react-router-dom";
@@ -100,48 +100,58 @@ function OutstandingPage() {
 
       const exportData = await getOutstanding();
 
+      const today = new Date();
+      const reportDate = [
+        today.getFullYear(),
+        String(today.getMonth() + 1).padStart(2, "0"),
+        String(today.getDate()).padStart(2, "0"),
+      ].join("-");
+
       const headers = [
+        "Report Date",
+        "Rank",
         "First Name",
         "Last Name",
         "Nickname",
-        "Total Charges",
-        "Total Payments",
-        "Balance",
+        "Participant Type",
+        "Membership Status",
+        "Total Charges (PHP)",
+        "Total Payments (PHP)",
+        "Outstanding Balance (PHP)",
       ];
 
-      const rows = exportData.map((participant) => [
-        participant.firstName,
-        participant.lastName,
-        participant.nickname,
-        participant.totalCharges,
-        participant.totalPayments,
-        participant.balance,
-      ]);
+      const rows = exportData.map((item, index) => {
+        const participant = participants.find(
+          (participant) => participant.id === item.participantId,
+        );
+
+        return [
+          reportDate,
+          index + 1,
+          item.firstName,
+          item.lastName,
+          item.nickname ?? "",
+          participant ? formatLabel(participant.participantType) : "",
+          participant ? formatLabel(participant.membershipStatus) : "",
+          item.totalCharges,
+          item.totalPayments,
+          item.balance,
+        ];
+      });
 
       const csv = [headers, ...rows]
         .map((row) => row.map(escapeCsvValue).join(","))
-        .join("\n");
+        .join("\r\n");
 
-      const csvWithBom = "\uFEFF" + csv;
-
-      const blob = new Blob([csvWithBom], {
+      const blob = new Blob(["\uFEFF" + csv], {
         type: "text/csv;charset=utf-8;",
       });
 
       const url = URL.createObjectURL(blob);
-
       const link = document.createElement("a");
 
       link.href = url;
-      const today = new Date();
-
-      const year = today.getFullYear();
-      const month = String(today.getMonth() + 1).padStart(2, "0");
-      const day = String(today.getDate()).padStart(2, "0");
-
-      const localDate = `${year}-${month}-${day}`;
-
-      link.download = `outstanding-balances-${localDate}.csv`;
+      link.download = `outstanding-balances-${reportDate}.csv`;
 
       document.body.appendChild(link);
       link.click();

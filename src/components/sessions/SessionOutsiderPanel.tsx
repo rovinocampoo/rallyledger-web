@@ -59,11 +59,11 @@ function SessionOutsiderPanel({ session, onClose }: SessionOutsiderPanelProps) {
     .filter((participant): participant is Participant => Boolean(participant));
 
   const ballRentalCharge = charges.find(
-    (charge) => charge.matchId === null && charge.feeType === "BALL_RENTAL",
+    (charge) => charge.feeType === "BALL_RENTAL",
   );
 
   const racketRentalCharges = charges.filter(
-    (charge) => charge.matchId === null && charge.feeType === "RACKET_RENTAL",
+    (charge) => charge.feeType === "RACKET_RENTAL",
   );
 
   const racketRentalParticipantIds = new Set(
@@ -78,9 +78,8 @@ function SessionOutsiderPanel({ session, onClose }: SessionOutsiderPanelProps) {
     charges
       .filter(
         (charge) =>
-          charge.matchId === null &&
-          (charge.feeType === "BALL_RENTAL" ||
-            charge.feeType === "RACKET_RENTAL"),
+          charge.feeType === "BALL_RENTAL" ||
+          charge.feeType === "RACKET_RENTAL",
       )
       .map((charge) => charge.participantId),
   );
@@ -240,17 +239,25 @@ function SessionOutsiderPanel({ session, onClose }: SessionOutsiderPanelProps) {
       return;
     }
 
+    if (generatingBallRental) {
+      return;
+    }
+
     try {
       setGeneratingBallRental(true);
       setError(null);
 
-      await generateBallRentalCharge(session.id, Number(ballRentalPayerId));
       const createdCharge = await generateBallRentalCharge(
         session.id,
         Number(ballRentalPayerId),
       );
 
-      setCharges((current) => [...current, createdCharge]);
+      setCharges((current) =>
+        current.some((charge) => charge.id === createdCharge.id)
+          ? current
+          : [...current, createdCharge],
+      );
+
       setShowBallRentalCharge(true);
     } catch (err) {
       console.error(err);
@@ -266,7 +273,7 @@ function SessionOutsiderPanel({ session, onClose }: SessionOutsiderPanelProps) {
   }
 
   async function handleRacketRental() {
-    if (!racketRentalParticipantId) {
+    if (!racketRentalParticipantId || generatingRacketRental) {
       return;
     }
 
@@ -274,17 +281,17 @@ function SessionOutsiderPanel({ session, onClose }: SessionOutsiderPanelProps) {
       setGeneratingRacketRental(true);
       setError(null);
 
-      await generateRacketRentalCharge(
-        session.id,
-        Number(racketRentalParticipantId),
-      );
-
       const createdCharge = await generateRacketRentalCharge(
         session.id,
         Number(racketRentalParticipantId),
       );
 
-      setCharges((current) => [...current, createdCharge]);
+      setCharges((current) =>
+        current.some((charge) => charge.id === createdCharge.id)
+          ? current
+          : [...current, createdCharge],
+      );
+
       setRacketRentalParticipantId("");
     } catch (err) {
       console.error(err);

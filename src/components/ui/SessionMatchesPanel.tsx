@@ -491,7 +491,9 @@ function SessionMatchesPanel({ session, onClose }: SessionMatchesPanelProps) {
   }
 
   async function handleDeleteMatch(match: Match) {
-    const confirmed = window.confirm(`Delete Match #${getSessionMatchNumber(match.id)}?`);
+    const confirmed = window.confirm(
+      `Delete Match #${getSessionMatchNumber(match.id)}?`,
+    );
 
     if (!confirmed) {
       return;
@@ -557,6 +559,14 @@ function SessionMatchesPanel({ session, onClose }: SessionMatchesPanelProps) {
     });
   }
 
+  function getPersistentLightUsage(): "NONE" | "HALF" | "FULL" {
+    const latestMatchUsingLights = [...matches]
+      .sort((a, b) => b.id - a.id)
+      .find((match) => match.lightUsage !== "NONE");
+
+    return latestMatchUsingLights?.lightUsage ?? "NONE";
+  }
+
   function resetMatchForm() {
     setCourtId("");
     setMatchType("DOUBLES");
@@ -613,6 +623,7 @@ function SessionMatchesPanel({ session, onClose }: SessionMatchesPanelProps) {
               setEditingMatch(null);
               setChargeMatch(null);
               resetMatchForm();
+              setLightUsage(getPersistentLightUsage());
               setShowForm(true);
             }}
             className="rounded-lg bg-white px-3 py-1.5 text-sm font-medium text-black"

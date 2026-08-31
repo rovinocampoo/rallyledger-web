@@ -141,6 +141,24 @@ function LedgerStatement({
   paymentTotal,
   closingBalance,
 }: LedgerStatementProps) {
+  const chargesByType = charges.reduce<Record<string, number>>(
+    (totals, charge) => {
+      totals[charge.feeType] = (totals[charge.feeType] ?? 0) + charge.amount;
+
+      return totals;
+    },
+    {},
+  );
+
+  const chargesByDate = charges.reduce<Record<string, number>>(
+    (totals, charge) => {
+      totals[charge.chargeDate] =
+        (totals[charge.chargeDate] ?? 0) + charge.amount;
+
+      return totals;
+    },
+    {},
+  );
   return (
     <div className="w-[700px] bg-white p-10 text-zinc-950">
       <div className="border-b border-zinc-200 pb-6">
@@ -205,30 +223,77 @@ function LedgerStatement({
           </p>
         </div>
       </div>
-      <div className="mt-8">
-        <h3 className="text-lg font-semibold">Charges</h3>
+      <div className="grid grid-cols-2 gap-2">
+        <div className="rounded-lg bg-zinc-50 p-4">
+          <h3 className="font-semibold">Charges by Type</h3>
+          <div className="mt-3 space-y-2">
+            {Object.entries(chargesByType).length === 0 ? (
+              <p className="text-sm text-zinc-500">No charges yet.</p>
+            ) : (
+              Object.entries(chargesByType).map(([feeType, amount]) => (
+                <div
+                  key={feeType}
+                  className="flex items-center justify-between text-sm"
+                >
+                  <span className="text-zinc-600 dark:text-zinc-400">
+                    {formatLabel(feeType)}
+                  </span>
 
-        <div className="mt-3 space-y-2">
-          {charges.length === 0 ? (
-            <p className="text-sm text-zinc-500">No charges recorded.</p>
-          ) : (
-            charges.map((charge) => (
-              <div
-                key={charge.id}
-                className="flex items-center justify-between rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3"
-              >
-                <div>
-                  <p className="font-medium">{formatLabel(charge.feeType)}</p>
-
-                  <p className="text-xs text-zinc-500">
-                    {formatDate(charge.chargeDate)}
-                  </p>
+                  <span className="font-medium">{formatCurrency(amount)}</span>
                 </div>
+              ))
+            )}
+          </div>
+        </div>
+        <div className="rounded-lg bg-zinc-50 p-4">
+          <h3 className="font-semibold">Charges by Date</h3>
+          <div className="mt-3 space-y-2">
+            {Object.entries(chargesByDate).length === 0 ? (
+              <p className="text-sm text-zinc-500">No charges yet.</p>
+            ) : (
+              Object.entries(chargesByDate).map(([feeType, amount]) => (
+                <div
+                  key={feeType}
+                  className="flex items-center justify-between text-sm"
+                >
+                  <span className="text-zinc-600 dark:text-zinc-400">
+                    {formatLabel(feeType)}
+                  </span>
 
-                <p className="font-semibold">{formatCurrency(charge.amount)}</p>
-              </div>
-            ))
-          )}
+                  <span className="font-medium">{formatCurrency(amount)}</span>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-8">
+        <h3 className="text-lg font-semibold">Charge Details</h3>
+
+        <div className="mt-3 overflow-hidden rounded-lg border border-zinc-200">
+          <div className="grid grid-cols-[minmax(0,1fr)_160px_120px] gap-4 bg-zinc-50 px-4 py-3 text-sm text-zinc-500">
+            <span>Type</span>
+            <span>Date</span>
+            <span className="text-right">Amount</span>
+          </div>
+
+          {charges.map((charge) => (
+            <div
+              key={charge.id}
+              className="grid grid-cols-[minmax(0,1fr)_160px_120px] gap-4 border-t border-zinc-200 px-4 py-3"
+            >
+              <span className="font-medium">{formatLabel(charge.feeType)}</span>
+
+              <span className="text-zinc-600">
+                {formatDate(charge.chargeDate)}
+              </span>
+
+              <span className="text-right font-semibold">
+                {formatCurrency(charge.amount)}
+              </span>
+            </div>
+          ))}
         </div>
       </div>
       <div className="mt-8">
@@ -300,6 +365,8 @@ function ParticipantLedgerPanel({
   const statementPeriodLabel = getStatementPeriodLabel(statementPeriod);
 
   const statementRef = useRef<HTMLDivElement | null>(null);
+  const [showChargeDetails, setShowChargeDetails] = useState(false);
+  const [showPaymentDetails, setShowPaymentDetails] = useState(false);
 
   async function loadLedger() {
     try {
@@ -408,6 +475,19 @@ function ParticipantLedgerPanel({
         `${formatDate(charge.chargeDate)} — ${formatLabel(charge.feeType)}: ${formatCurrency(charge.amount)}`,
     );
 
+    const chargeTypeLines = Object.entries(chargesByType)
+      .sort(([typeA], [typeB]) => typeA.localeCompare(typeB))
+      .map(
+        ([feeType, amount]) =>
+          `${formatLabel(feeType)}: ${formatCurrency(amount)}`,
+      );
+
+    const chargeDateLines = Object.entries(chargesByDate)
+      .sort(([dateA], [dateB]) => dateB.localeCompare(dateA))
+      .map(
+        ([date, amount]) => `${formatDate(date)}: ${formatCurrency(amount)}`,
+      );
+
     const paymentLines = statementPayments.map((payment) => {
       const reference = payment.reference ? ` (${payment.reference})` : "";
 
@@ -426,13 +506,23 @@ function ParticipantLedgerPanel({
       `Payments This Period: ${formatCurrency(statementPaymentTotal)}`,
       `Closing Balance: ${formatCurrency(closingBalance)} (${getBalanceLabel(closingBalance)})`,
       "",
+      "CHARGES BY TYPE",
+      ...(chargeTypeLines.length > 0
+        ? chargeTypeLines
+        : ["No charges recorded."]),
+      "",
+      "CHARGES BY DATE",
+      ...(chargeDateLines.length > 0
+        ? chargeDateLines
+        : ["No charges recorded."]),
+      "",
       "CHARGES",
       ...(chargeLines.length > 0 ? chargeLines : ["No charges recorded."]),
       "",
       "PAYMENTS",
       ...(paymentLines.length > 0 ? paymentLines : ["No payments recorded."]),
       "",
-      `Generated: ${formatDate(new Date().toISOString().slice(0, 10))}`,
+      `Generated: ${formatDate(getTodayDate())}`,
     ]
       .filter((line): line is string => line !== null)
       .join("\n");
@@ -836,7 +926,7 @@ function ParticipantLedgerPanel({
           {shareMessage}
         </p>
       )}
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
         <div className="rounded-lg bg-zinc-50 dark:bg-zinc-950 p-4">
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
             Opening Balance
@@ -850,7 +940,6 @@ function ParticipantLedgerPanel({
             {getBalanceLabel(openingBalance)}
           </p>
         </div>
-
         <div className="rounded-lg bg-zinc-50 dark:bg-zinc-950 p-4">
           <p className="text-sm text-zinc-600 dark:text-zinc-400">Charges</p>
 
@@ -858,7 +947,6 @@ function ParticipantLedgerPanel({
             {formatCurrency(statementChargeTotal)}
           </p>
         </div>
-
         <div className="rounded-lg bg-zinc-50 dark:bg-zinc-950 p-4">
           <p className="text-sm text-zinc-600 dark:text-zinc-400">Payments</p>
 
@@ -866,7 +954,6 @@ function ParticipantLedgerPanel({
             {formatCurrency(statementPaymentTotal)}
           </p>
         </div>
-
         <div className="rounded-lg bg-zinc-50 dark:bg-zinc-950 p-4">
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
             Closing Balance
@@ -881,36 +968,10 @@ function ParticipantLedgerPanel({
           </p>
         </div>
       </div>
-      <div className="mt-6">
-        <h3 className="mb-3 text-lg font-semibold">Charges</h3>
 
-        {statementCharges.length === 0 ? (
-          <p className="text-sm text-zinc-500">No charges yet.</p>
-        ) : (
-          <div className="space-y-2">
-            {statementCharges.map((charge) => (
-              <div
-                key={charge.id}
-                className="flex items-center justify-between rounded-lg bg-zinc-50 dark:bg-zinc-950 px-4 py-3"
-              >
-                <div>
-                  <p className="font-medium">{formatLabel(charge.feeType)}</p>
-
-                  <p className="text-xs text-zinc-500">
-                    {formatDate(charge.chargeDate)}
-                  </p>
-                </div>
-
-                <p className="font-semibold">{formatCurrency(charge.amount)}</p>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
       <div className="mt-6 grid gap-4 md:grid-cols-2">
         <div className="rounded-lg bg-zinc-50 dark:bg-zinc-950 p-4">
           <h3 className="font-semibold">Charges by Type</h3>
-
           <div className="mt-3 space-y-2">
             {Object.entries(chargesByType).length === 0 ? (
               <p className="text-sm text-zinc-500">No charges yet.</p>
@@ -998,48 +1059,144 @@ function ParticipantLedgerPanel({
           </div>
         </div>
       </div>
-      <div className="mt-6">
-        <h3 className="mb-3 text-lg font-semibold">Payments</h3>
+      <div className="mt-6 overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-800">
+        <button
+          type="button"
+          onClick={() => setShowChargeDetails((current) => !current)}
+          className="flex w-full items-center justify-between gap-4 bg-zinc-50 px-4 py-3 text-left transition-colors hover:bg-zinc-100 dark:bg-zinc-950 dark:hover:bg-zinc-800"
+        >
+          <div>
+            <p className="font-semibold">Charge Details</p>
 
-        {statementPayments.length === 0 ? (
-          <p className="text-sm text-zinc-500">No payments yet.</p>
-        ) : (
-          <div className="space-y-2">
-            {statementPayments.map((payment) => (
-              <div
-                key={payment.id}
-                className="flex items-center justify-between rounded-lg bg-zinc-50 dark:bg-zinc-950 px-4 py-3"
-              >
-                <div>
-                  <p className="font-medium">
-                    {formatLabel(payment.paymentMethod)}
-                  </p>
+            <p className="mt-1 text-xs text-zinc-500">
+              {statementCharges.length}{" "}
+              {statementCharges.length === 1 ? "charge" : "charges"}
+            </p>
+          </div>
 
-                  <p className="text-xs text-zinc-500">
-                    {formatDate(payment.paymentDate)}
-                  </p>
-                  {payment.reference && (
-                    <p className="mt-1 text-xs text-zinc-600">
-                      Ref: {payment.reference}
+          <div className="flex items-center gap-3">
+            <span className="font-semibold">
+              {formatCurrency(statementChargeTotal)}
+            </span>
+
+            <span className="text-xs text-zinc-500">
+              {showChargeDetails ? "▲" : "▼"}
+            </span>
+          </div>
+        </button>
+
+        {showChargeDetails && (
+          <div>
+            {/* DESKTOP HEADER */}
+            <div className="hidden grid-cols-[minmax(0,1fr)_160px_120px] gap-4 border-t border-zinc-200 bg-zinc-50 px-4 py-3 text-left text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-950 md:grid">
+              <span>Type</span>
+              <span>Date</span>
+              <span className="text-right">Amount</span>
+            </div>
+
+            {statementCharges.length === 0 ? (
+              <p className="border-t border-zinc-200 px-4 py-4 text-sm text-zinc-500 dark:border-zinc-800">
+                No charges recorded.
+              </p>
+            ) : (
+              statementCharges.map((charge) => (
+                <div
+                  key={charge.id}
+                  className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-t border-zinc-200 bg-white px-4 py-3 text-left dark:border-zinc-800 dark:bg-zinc-900 md:grid-cols-[minmax(0,1fr)_160px_120px]"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate font-medium">
+                      {formatLabel(charge.feeType)}
                     </p>
-                  )}
-                </div>
 
-                <div className="flex items-center gap-3">
-                  <p className="font-semibold">
-                    {formatCurrency(payment.amount)}
+                    <p className="mt-1 text-xs text-zinc-500 md:hidden">
+                      {formatDate(charge.chargeDate)}
+                    </p>
+                  </div>
+
+                  <p className="hidden text-sm text-zinc-500 md:block">
+                    {formatDate(charge.chargeDate)}
                   </p>
 
-                  <button
-                    type="button"
-                    onClick={() => handleDeletePayment(payment.id)}
-                    className="text-xs text-red-400 hover:text-red-300"
-                  >
-                    Delete
-                  </button>
+                  <p className="text-right font-semibold">
+                    {formatCurrency(charge.amount)}
+                  </p>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
+          </div>
+        )}
+      </div>
+      <div className="mt-6 overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-800">
+        <button
+          type="button"
+          onClick={() => setShowPaymentDetails((current) => !current)}
+          className="flex w-full items-center justify-between gap-4 bg-zinc-50 px-4 py-3 text-left transition-colors hover:bg-zinc-100 dark:bg-zinc-950 dark:hover:bg-zinc-800"
+        >
+          <div>
+            <p className="font-semibold">Payments</p>
+
+            <p className="mt-1 text-xs text-zinc-500">
+              {statementPayments.length}{" "}
+              {statementPayments.length === 1 ? "payment" : "payments"}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <span className="font-semibold">
+              {formatCurrency(statementPaymentTotal)}
+            </span>
+
+            <span className="text-xs text-zinc-500">
+              {showPaymentDetails ? "▲" : "▼"}
+            </span>
+          </div>
+        </button>
+
+        {showPaymentDetails && (
+          <div className="divide-y divide-zinc-200 dark:divide-zinc-800">
+            {statementPayments.length === 0 ? (
+              <p className="px-4 py-4 text-sm text-zinc-500">
+                No payments yet.
+              </p>
+            ) : (
+              statementPayments.map((payment) => (
+                <div
+                  key={payment.id}
+                  className="flex items-center justify-between gap-4 bg-white px-4 py-3 dark:bg-zinc-900"
+                >
+                  <div className="min-w-0 text-left">
+                    <p className="font-medium">
+                      {formatLabel(payment.paymentMethod)}
+                    </p>
+
+                    <p className="text-xs text-zinc-500">
+                      {formatDate(payment.paymentDate)}
+                    </p>
+
+                    {payment.reference && (
+                      <p className="mt-1 truncate text-xs text-zinc-500">
+                        Ref: {payment.reference}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="flex shrink-0 items-center gap-3">
+                    <p className="font-semibold">
+                      {formatCurrency(payment.amount)}
+                    </p>
+
+                    <button
+                      type="button"
+                      onClick={() => handleDeletePayment(payment.id)}
+                      className="danger-text text-xs text-red-400"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         )}
       </div>

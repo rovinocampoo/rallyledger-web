@@ -182,6 +182,32 @@ function ParticipantsPage() {
       return true;
     }
 
+    const statusSearchMap: Record<string, Participant["membershipStatus"]> = {
+      active: "ACTIVE",
+      inactive: "INACTIVE",
+    };
+
+    const searchedStatus = statusSearchMap[query];
+
+    if (searchedStatus) {
+      return participant.membershipStatus === searchedStatus;
+    }
+
+    const typeSearchMap: Record<string, Participant["participantType"]> = {
+      member: "MEMBER",
+      nonmember: "NONMEMBER",
+      "non member": "NONMEMBER",
+      "mmsu student": "MMSU_STUDENT",
+      "mmsu employee": "MMSU_EMPLOYEE",
+      "mmsu varsity": "MMSU_VARSITY",
+    };
+
+    const searchedType = typeSearchMap[query];
+
+    if (searchedType) {
+      return participant.participantType === searchedType;
+    }
+
     const searchableText = normalizeSearchText(
       [
         participant.firstName,
