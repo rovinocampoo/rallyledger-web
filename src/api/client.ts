@@ -5,7 +5,8 @@ export class ApiError extends Error {
   status: number
 
   constructor(status: number, message: string) {
-    super(message)
+    super(message);
+    this.name = "ApiError";
     this.status = status
   }
 }
@@ -28,8 +29,12 @@ export async function apiFetch<T>(
   })
 
 if (!response.ok) {
-  if (response.status === 401) {
-    window.dispatchEvent(new Event(AUTH_EXPIRED_EVENT))
+
+    if (
+    response.status === 401 &&
+    path !== "/auth/login"
+  ) {
+    window.dispatchEvent(new Event(AUTH_EXPIRED_EVENT));
   }
 
   const errorText = await response.text()
