@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { Route, Routes } from "react-router-dom";
 
 import { getCurrentAdmin, logout, type AdminUser } from "./api/auth";
+import { getCurrentOrganization } from "./api/organization";
+import type { Organization } from "./types/organization";
 
 import AppLayout from "./components/layout/AppLayout";
 import LoginPage from "./pages/LoginPage";
@@ -17,6 +19,7 @@ type Theme = "light" | "dark";
 
 function App() {
   const [admin, setAdmin] = useState<AdminUser | null>(null);
+  const [organization, setOrganization] = useState<Organization | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [theme, setTheme] = useState<Theme>(() => {
     const savedTheme = localStorage.getItem("rallyledger-theme");
@@ -33,22 +36,41 @@ function App() {
   useEffect(() => {
     let ignore = false;
 
-    getCurrentAdmin()
-      .then((currentAdmin) => {
-        if (!ignore) {
-          setAdmin(currentAdmin);
+    async function loadCurrentSession() {
+      try {
+        const currentAdmin = await getCurrentAdmin();
+
+        if (ignore) {
+          return;
         }
-      })
-      .catch(() => {
+
+        setAdmin(currentAdmin);
+
+        try {
+          const currentOrganization = await getCurrentOrganization();
+
+          if (!ignore) {
+            setOrganization(currentOrganization);
+          }
+        } catch (err) {
+          if (!ignore) {
+            console.error("Failed to load organization", err);
+            setOrganization(null);
+          }
+        }
+      } catch {
         if (!ignore) {
           setAdmin(null);
+          setOrganization(null);
         }
-      })
-      .finally(() => {
+      } finally {
         if (!ignore) {
           setAuthLoading(false);
         }
-      });
+      }
+    }
+
+    void loadCurrentSession();
 
     return () => {
       ignore = true;
@@ -69,6 +91,7 @@ function App() {
   useEffect(() => {
     function handleAuthExpired() {
       setAdmin(null);
+      setOrganization(null);
     }
 
     window.addEventListener(AUTH_EXPIRED_EVENT, handleAuthExpired);
@@ -78,6 +101,18 @@ function App() {
     };
   }, []);
 
+  async function handleLoggedIn(loggedInAdmin: AdminUser) {
+    setAdmin(loggedInAdmin);
+
+    try {
+      const currentOrganization = await getCurrentOrganization();
+      setOrganization(currentOrganization);
+    } catch (err) {
+      console.error("Failed to load organization", err);
+      setOrganization(null);
+    }
+  }
+
   async function handleLogout() {
     try {
       await logout();
@@ -85,6 +120,7 @@ function App() {
       console.error(err);
     } finally {
       setAdmin(null);
+      setOrganization(null);
     }
   }
 
@@ -101,7 +137,7 @@ function App() {
   }
 
   if (!admin) {
-    return <LoginPage onLoggedIn={setAdmin} />;
+    return <LoginPage onLoggedIn={handleLoggedIn} />;
   }
 
   return (
@@ -110,6 +146,7 @@ function App() {
         element={
           <AppLayout
             admin={admin}
+            organization={organization}
             onLogout={handleLogout}
             theme={theme}
             onThemeToggle={handleThemeToggle}

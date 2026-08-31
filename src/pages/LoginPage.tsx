@@ -1,39 +1,36 @@
-import { useState, type SubmitEvent } from "react"
-import { login, type AdminUser } from "../api/auth"
+import { useState, type SubmitEvent } from "react";
+import { login, type AdminUser } from "../api/auth";
+import GoogleLoginButton from "../components/auth/GoogleLoginButton";
 
 type LoginPageProps = {
-  onLoggedIn: (admin: AdminUser) => void
-}
+  onLoggedIn: (admin: AdminUser) => void;
+};
 
 function LoginPage({ onLoggedIn }: LoginPageProps) {
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
-    event.preventDefault()
+    event.preventDefault();
 
     try {
-      setLoading(true)
-      setError(null)
+      setLoading(true);
+      setError(null);
 
       const admin = await login({
         email,
         password,
-      })
+      });
 
-      onLoggedIn(admin)
+      onLoggedIn(admin);
     } catch (err) {
-      console.error(err)
+      console.error(err);
 
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Unable to login",
-      )
+      setError(err instanceof Error ? err.message : "Unable to login");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
@@ -41,9 +38,7 @@ function LoginPage({ onLoggedIn }: LoginPageProps) {
     <div className="flex min-h-screen w-full items-center justify-center bg-zinc-50 dark:bg-zinc-950 px-4 text-zinc-900 dark:text-white">
       <div className="w-full max-w-sm">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold">
-            RallyLedger
-          </h1>
+          <h1 className="text-3xl font-bold">RallyLedger</h1>
 
           <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
             Sign in to manage your tennis club.
@@ -101,14 +96,28 @@ function LoginPage({ onLoggedIn }: LoginPageProps) {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-lg bg-white px-4 py-2.5 font-medium hover:text-zinc-350 text-black disabled:cursor-not-allowed disabled:opacity-50"
+            className="primary-action w-full rounded-lg px-4 py-2.5 font-medium disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading ? "Signing in..." : "Sign In"}
           </button>
+          <div className="flex items-center gap-3 py-1">
+            <div className="h-px flex-1 bg-zinc-200 dark:bg-zinc-800" />
+
+            <span className="text-xs uppercase text-zinc-500">Or</span>
+
+            <div className="h-px flex-1 bg-zinc-200 dark:bg-zinc-800" />
+          </div>
+
+          <GoogleLoginButton
+            onLoggedIn={onLoggedIn}
+            onError={(message) => {
+              setError(message || null);
+            }}
+          />
         </form>
       </div>
     </div>
-  )
+  );
 }
 
-export default LoginPage
+export default LoginPage;

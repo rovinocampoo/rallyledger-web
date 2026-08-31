@@ -12,6 +12,8 @@ import type {
 } from "../types/report";
 import { formatCurrency, formatFullName, formatLabel } from "../utils/format";
 import { useNavigate } from "react-router-dom";
+import { useOutletContext } from "react-router-dom";
+import type { AppOutletContext } from "../components/layout/AppLayout";
 
 type DateFilter = "ALL_TIME" | "TODAY" | "THIS_MONTH" | "CUSTOM";
 
@@ -66,6 +68,7 @@ function isSameDateRange(
 }
 
 function DashboardPage() {
+  const { organization } = useOutletContext<AppOutletContext>();
   const [summary, setSummary] = useState<ReportSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -175,7 +178,9 @@ function DashboardPage() {
         <h1 className="text-2xl font-bold">Dashboard</h1>
 
         <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-          RallyLedger overview.
+          {organization
+            ? `${organization.name} overview.`
+            : "Organization overview."}
         </p>
       </div>
       <div className="mb-6 flex flex-wrap gap-2">

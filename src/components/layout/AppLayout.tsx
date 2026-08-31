@@ -1,14 +1,26 @@
 import { NavLink, Outlet } from "react-router-dom";
 import type { AdminUser } from "../../api/auth";
+import type { Organization } from "../../types/organization";
+
+export type AppOutletContext = {
+  organization: Organization | null;
+};
 
 type AppLayoutProps = {
   admin: AdminUser;
+  organization: Organization | null;
   onLogout: () => void;
   theme: "light" | "dark";
   onThemeToggle: () => void;
 };
 
-function AppLayout({ admin, onLogout, theme, onThemeToggle }: AppLayoutProps) {
+function AppLayout({
+  admin,
+  organization,
+  onLogout,
+  theme,
+  onThemeToggle,
+}: AppLayoutProps) {
   const navItems = [
     { to: "/", label: "Home", icon: "🏠", end: true },
     { to: "/outstanding", label: "Balance", icon: "₱", end: true },
@@ -22,9 +34,16 @@ function AppLayout({ admin, onLogout, theme, onThemeToggle }: AppLayoutProps) {
     <div className="min-h-screen w-full overflow-x-hidden bg-zinc-50 text-zinc-950 dark:bg-zinc-950 dark:text-white">
       <div className="flex min-h-screen w-full min-w-0">
         <aside className="fixed inset-y-0 left-0 z-40 hidden w-56 overflow-y-auto border-r border-zinc-200 bg-white px-5 py-6 dark:border-zinc-800 dark:bg-zinc-950 md:flex md:flex-col">
-          <h1 className="truncate text-base font-semibold text-zinc-950 dark:text-zinc-100">
-            RallyLedger
-          </h1>
+          <div className="min-w-0">
+            <h1
+              className="truncate text-base font-semibold text-zinc-950 dark:text-zinc-100"
+              title={organization?.name}
+            >
+              {organization?.name ?? "Organization"}
+            </h1>
+
+            <p className="mt-1 text-xs text-zinc-500">Powered by RallyLedger</p>
+          </div>
           <nav className="mt-8 flex flex-col gap-2">
             {navItems.map((item) => (
               <NavLink
@@ -91,7 +110,7 @@ function AppLayout({ admin, onLogout, theme, onThemeToggle }: AppLayoutProps) {
             </div>
           </div>
           <div className="w-full max-w-none">
-            <Outlet />
+            <Outlet context={{ organization }} />
           </div>
         </main>
       </div>

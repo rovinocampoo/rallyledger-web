@@ -18,6 +18,15 @@ export function login(data: LoginInput) {
   })
 }
 
+export function loginWithGoogle(credential: string) {
+  return apiFetch<AdminUser>("/auth/google", {
+    method: "POST",
+    body: JSON.stringify({
+      credential,
+    }),
+  });
+}
+
 export function getCurrentAdmin() {
   return apiFetch<AdminUser>("/auth/me")
 }
