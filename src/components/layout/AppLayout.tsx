@@ -1,6 +1,9 @@
 import { NavLink, Outlet } from "react-router-dom";
 import type { AdminUser } from "../../api/auth";
-import type { Organization } from "../../types/organization";
+import type {
+  Organization,
+  OrganizationAccess,
+} from "../../types/organization";
 
 export type AppOutletContext = {
   organization: Organization | null;
@@ -9,6 +12,10 @@ export type AppOutletContext = {
 type AppLayoutProps = {
   admin: AdminUser;
   organization: Organization | null;
+  organizations: OrganizationAccess[];
+  organizationSwitching: boolean;
+  organizationError: string | null;
+  onOrganizationChange: (organizationId: number) => Promise<void>;
   onLogout: () => void;
   theme: "light" | "dark";
   onThemeToggle: () => void;
@@ -17,6 +24,10 @@ type AppLayoutProps = {
 function AppLayout({
   admin,
   organization,
+  organizations,
+  organizationSwitching,
+  organizationError,
+  onOrganizationChange,
   onLogout,
   theme,
   onThemeToggle,
@@ -44,6 +55,32 @@ function AppLayout({
 
             <p className="mt-1 text-xs text-zinc-500">Powered by RallyLedger</p>
           </div>
+          {organizations.length > 1 && (
+            <label className="mt-4 block">
+              <span className="text-xs text-zinc-500">Organization</span>
+
+              <select
+                value={admin.organizationId}
+                disabled={organizationSwitching}
+                onChange={(event) =>
+                  void onOrganizationChange(Number(event.target.value))
+                }
+                className="mt-1 w-full rounded-lg border border-zinc-300 bg-zinc-50 px-2 py-2 text-sm text-zinc-900 disabled:cursor-wait disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white"
+              >
+                {organizations.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name}
+                  </option>
+                ))}
+              </select>
+
+              {organizationSwitching && (
+                <span className="mt-1 block text-xs text-zinc-500">
+                  Switching...
+                </span>
+              )}
+            </label>
+          )}
           <nav className="mt-8 flex flex-col gap-2">
             {navItems.map((item) => (
               <NavLink
@@ -86,28 +123,54 @@ function AppLayout({
         </aside>
 
         <main className="min-w-0 flex-1 overflow-x-hidden p-4 pb-24 md:ml-56 md:p-6 md:pb-6 lg:p-8">
-          <div className="mb-4 flex items-center justify-between md:hidden">
-            <span className="truncate text-xs text-zinc-500">
-              {admin.email}
-            </span>
+          <div className="mb-4 flex items-center gap-7 md:hidden">
+            {organizations.length > 1 ? (
+              <label className="min-w-0 flex-1">
+                <span className="sr-only">Organization</span>
 
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={onThemeToggle}
-                className="mt-3 w-full rounded-lg border-zinc-300 text-sm text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-white"
+                <select
+                  value={admin.organizationId}
+                  disabled={organizationSwitching}
+                  onChange={(event) =>
+                    void onOrganizationChange(Number(event.target.value))
+                  }
+                  className="mt-0 w-full rounded-lg  bg-zinc-50 px-2 py-2 text-sm text-zinc-900 disabled:cursor-wait disabled:opacity-60 dark:bg-zinc-900 dark:text-white"
+                >
+                  {organizations.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : (
+              <p className="min-w-0 flex-1 truncate text-sm font-semibold">
+                {organization?.name ?? "Organization"}
+              </p>
+            )}
+            <button
+              type="button"
+              onClick={onThemeToggle}
+              aria-label="Toggle theme"
+              className="shrink-0 text-sm opacity-70 transition-opacity hover:opacity-100"
+            >
+              {theme === "dark" ? "🌙" : "☀️"}
+            </button>
+            <button
+              type="button"
+              onClick={onLogout}
+              className="shrink-0 text-sm text-zinc-500 transition-colors hover:text-zinc-950 dark:hover:text-white"
+            >
+              Logout
+            </button>
+            {organizationError && (
+              <p
+                role="alert"
+                className="mb-4 rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-600 dark:border-red-900/60 dark:bg-red-950/20 dark:text-red-400"
               >
-                {theme === "dark" ? "🌙" : "☀️"}
-              </button>
-
-              <button
-                type="button"
-                onClick={onLogout}
-                className="mt-3 w-full rounded-lg border-zinc-300 text-xs text-zinc-600 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white"
-              >
-                Logout
-              </button>
-            </div>
+                {organizationError}
+              </p>
+            )}
           </div>
           <div className="w-full max-w-none">
             <Outlet context={{ organization }} />

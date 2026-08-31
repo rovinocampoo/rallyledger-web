@@ -220,167 +220,172 @@ function SessionsPage() {
       </div>
 
       <div className="space-y-3">
-        {sessions.map((session) => (
-          <div
-            key={session.id}
-            id={`session-${session.id}`}
-            className="space-y-3"
-          >
-            <SessionCard
-              session={session}
-              onEdit={(session) => {
-                setEditingSession(session);
-                setShowForm(true);
-              }}
-              onViewCharges={() => {
-                setChargeSession(session);
-                setSelectedSession(null);
-                setMatchSession(null);
-                setTrainingSession(null);
-                setOutsiderSession(null);
-                setResultsSession(null);
-                setLedgerParticipant(null);
-                setEditingSession(null);
-                setShowForm(false);
-              }}
-              onViewResults={(session) => {
-                setResultsSession(session);
-                setSelectedSession(null);
-                setMatchSession(null);
-                setTrainingSession(null);
-                setOutsiderSession(null);
-                setChargeSession(null);
-                setLedgerParticipant(null);
-                setEditingSession(null);
-                setShowForm(false);
-              }}
-              onDelete={handleSessionDelete}
-              onManagePlayers={(session) => {
-                setSelectedSession(session);
-                setMatchSession(null);
-                setTrainingSession(null);
-                setOutsiderSession(null);
-                setResultsSession(null);
-                setChargeSession(null);
-                setLedgerParticipant(null);
-                setEditingSession(null);
-                setShowForm(false);
-              }}
-              onManageMatches={(session) => {
-                setMatchSession(session);
-
-                setTrainingSession(null);
-                setOutsiderSession(null);
-                setResultsSession(null);
-                setSelectedSession(null);
-                setChargeSession(null);
-                setLedgerParticipant(null);
-                setEditingSession(null);
-                setShowForm(false);
-              }}
-              onManageTraining={(session) => {
-                setTrainingSession(session);
-
-                setOutsiderSession(null);
-                setResultsSession(null);
-                setSelectedSession(null);
-                setMatchSession(null);
-                setChargeSession(null);
-                setLedgerParticipant(null);
-                setEditingSession(null);
-                setShowForm(false);
-              }}
-              onManageOutsider={(session) => {
-                setOutsiderSession(session);
-
-                setSelectedSession(null);
-                setMatchSession(null);
-                setTrainingSession(null);
-                setResultsSession(null);
-                setChargeSession(null);
-                setLedgerParticipant(null);
-                setEditingSession(null);
-                setShowForm(false);
-              }}
-            />
-
-            {showForm && editingSession?.id === session.id && (
-              <div className="p-3">
-                <SessionForm
-                  session={editingSession}
-                  onSaved={handleSessionSaved}
-                  onCancel={() => {
-                    setShowForm(false);
-                    setEditingSession(null);
-                  }}
-                />
-              </div>
-            )}
-
-            {selectedSession?.id === session.id && (
-              <SessionParticipantsPanel
+        {sessions.length === 0 ? (
+          <p className="text-sm text-zinc-500">No sessions yet.</p>
+        ) : (
+          sessions.map((session) => (
+            <div
+              key={session.id}
+              id={`session-${session.id}`}
+              className="space-y-3"
+            >
+              <SessionCard
                 session={session}
-                onClose={() => setSelectedSession(null)}
-              />
-            )}
-
-            {matchSession?.id === session.id && (
-              <div ref={sessionPanelRef}>
-                <SessionMatchesPanel
-                  session={session}
-                  onClose={() => setMatchSession(null)}
-                />
-              </div>
-            )}
-            {trainingSession?.id === session.id && (
-              <div ref={sessionPanelRef}>
-                <SessionTrainingPanel
-                  session={session}
-                  onClose={() => setTrainingSession(null)}
-                />
-              </div>
-            )}
-            {outsiderSession?.id === session.id && (
-              <div ref={sessionPanelRef}>
-                <SessionOutsiderPanel
-                  session={session}
-                  onClose={() => setOutsiderSession(null)}
-                />
-              </div>
-            )}
-            {resultsSession?.id === session.id && (
-              <div ref={sessionPanelRef}>
-                <SessionResultsPanel
-                  session={session}
-                  onClose={() => setResultsSession(null)}
-                />
-              </div>
-            )}
-            {chargeSession?.id === session.id && (
-              <div ref={sessionPanelRef}>
-                <SessionChargesPanel
-                  session={session}
-                  onClose={() => setChargeSession(null)}
-                  onParticipantSelected={handleParticipantSelected}
-                />
-              </div>
-            )}
-
-            {ledgerParticipant && returnToChargeSession?.id === session.id && (
-              <ParticipantLedgerPanel
-                participant={ledgerParticipant}
-                onClose={() => {
+                onEdit={(session) => {
+                  setEditingSession(session);
+                  setShowForm(true);
+                }}
+                onViewCharges={() => {
+                  setChargeSession(session);
+                  setSelectedSession(null);
+                  setMatchSession(null);
+                  setTrainingSession(null);
+                  setOutsiderSession(null);
+                  setResultsSession(null);
                   setLedgerParticipant(null);
+                  setEditingSession(null);
+                  setShowForm(false);
+                }}
+                onViewResults={(session) => {
+                  setResultsSession(session);
+                  setSelectedSession(null);
+                  setMatchSession(null);
+                  setTrainingSession(null);
+                  setOutsiderSession(null);
+                  setChargeSession(null);
+                  setLedgerParticipant(null);
+                  setEditingSession(null);
+                  setShowForm(false);
+                }}
+                onDelete={handleSessionDelete}
+                onManagePlayers={(session) => {
+                  setSelectedSession(session);
+                  setMatchSession(null);
+                  setTrainingSession(null);
+                  setOutsiderSession(null);
+                  setResultsSession(null);
+                  setChargeSession(null);
+                  setLedgerParticipant(null);
+                  setEditingSession(null);
+                  setShowForm(false);
+                }}
+                onManageMatches={(session) => {
+                  setMatchSession(session);
 
-                  if (returnToChargeSession) {
-                    setChargeSession(returnToChargeSession);
-                    setReturnToChargeSession(null);
-                  }
+                  setTrainingSession(null);
+                  setOutsiderSession(null);
+                  setResultsSession(null);
+                  setSelectedSession(null);
+                  setChargeSession(null);
+                  setLedgerParticipant(null);
+                  setEditingSession(null);
+                  setShowForm(false);
+                }}
+                onManageTraining={(session) => {
+                  setTrainingSession(session);
+
+                  setOutsiderSession(null);
+                  setResultsSession(null);
+                  setSelectedSession(null);
+                  setMatchSession(null);
+                  setChargeSession(null);
+                  setLedgerParticipant(null);
+                  setEditingSession(null);
+                  setShowForm(false);
+                }}
+                onManageOutsider={(session) => {
+                  setOutsiderSession(session);
+
+                  setSelectedSession(null);
+                  setMatchSession(null);
+                  setTrainingSession(null);
+                  setResultsSession(null);
+                  setChargeSession(null);
+                  setLedgerParticipant(null);
+                  setEditingSession(null);
+                  setShowForm(false);
                 }}
               />
-            )}
-          </div>
-        ))}
+
+              {showForm && editingSession?.id === session.id && (
+                <div className="p-3">
+                  <SessionForm
+                    session={editingSession}
+                    onSaved={handleSessionSaved}
+                    onCancel={() => {
+                      setShowForm(false);
+                      setEditingSession(null);
+                    }}
+                  />
+                </div>
+              )}
+
+              {selectedSession?.id === session.id && (
+                <SessionParticipantsPanel
+                  session={session}
+                  onClose={() => setSelectedSession(null)}
+                />
+              )}
+
+              {matchSession?.id === session.id && (
+                <div ref={sessionPanelRef}>
+                  <SessionMatchesPanel
+                    session={session}
+                    onClose={() => setMatchSession(null)}
+                  />
+                </div>
+              )}
+              {trainingSession?.id === session.id && (
+                <div ref={sessionPanelRef}>
+                  <SessionTrainingPanel
+                    session={session}
+                    onClose={() => setTrainingSession(null)}
+                  />
+                </div>
+              )}
+              {outsiderSession?.id === session.id && (
+                <div ref={sessionPanelRef}>
+                  <SessionOutsiderPanel
+                    session={session}
+                    onClose={() => setOutsiderSession(null)}
+                  />
+                </div>
+              )}
+              {resultsSession?.id === session.id && (
+                <div ref={sessionPanelRef}>
+                  <SessionResultsPanel
+                    session={session}
+                    onClose={() => setResultsSession(null)}
+                  />
+                </div>
+              )}
+              {chargeSession?.id === session.id && (
+                <div ref={sessionPanelRef}>
+                  <SessionChargesPanel
+                    session={session}
+                    onClose={() => setChargeSession(null)}
+                    onParticipantSelected={handleParticipantSelected}
+                  />
+                </div>
+              )}
+
+              {ledgerParticipant &&
+                returnToChargeSession?.id === session.id && (
+                  <ParticipantLedgerPanel
+                    participant={ledgerParticipant}
+                    onClose={() => {
+                      setLedgerParticipant(null);
+
+                      if (returnToChargeSession) {
+                        setChargeSession(returnToChargeSession);
+                        setReturnToChargeSession(null);
+                      }
+                    }}
+                  />
+                )}
+            </div>
+          ))
+        )}
       </div>
     </div>
   );

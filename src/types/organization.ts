@@ -5,3 +5,12 @@ export type Organization = {
   createdAt: string;
   updatedAt: string;
 };
+
+export type OrganizationRole = "OWNER" | "ADMIN";
+
+export type OrganizationAccess = {
+  id: number;
+  name: string;
+  slug: string;
+  role: OrganizationRole;
+};

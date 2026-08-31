@@ -1,9 +1,16 @@
 import { useEffect, useState } from "react";
 import { Route, Routes } from "react-router-dom";
 
-import { getCurrentAdmin, logout, type AdminUser } from "./api/auth";
+import {
+  getAdminOrganizations,
+  getCurrentAdmin,
+  logout,
+  switchOrganization,
+  type AdminUser,
+} from "./api/auth";
+
+import type { Organization, OrganizationAccess } from "./types/organization";
 import { getCurrentOrganization } from "./api/organization";
-import type { Organization } from "./types/organization";
 
 import AppLayout from "./components/layout/AppLayout";
 import LoginPage from "./pages/LoginPage";
@@ -20,6 +27,11 @@ type Theme = "light" | "dark";
 function App() {
   const [admin, setAdmin] = useState<AdminUser | null>(null);
   const [organization, setOrganization] = useState<Organization | null>(null);
+  const [organizations, setOrganizations] = useState<OrganizationAccess[]>([]);
+  const [organizationSwitching, setOrganizationSwitching] = useState(false);
+  const [organizationError, setOrganizationError] = useState<string | null>(
+    null,
+  );
   const [authLoading, setAuthLoading] = useState(true);
   const [theme, setTheme] = useState<Theme>(() => {
     const savedTheme = localStorage.getItem("rallyledger-theme");
@@ -47,15 +59,21 @@ function App() {
         setAdmin(currentAdmin);
 
         try {
-          const currentOrganization = await getCurrentOrganization();
+          const [currentOrganization, accessibleOrganizations] =
+            await Promise.all([
+              getCurrentOrganization(),
+              getAdminOrganizations(),
+            ]);
 
           if (!ignore) {
             setOrganization(currentOrganization);
+            setOrganizations(accessibleOrganizations);
           }
         } catch (err) {
           if (!ignore) {
-            console.error("Failed to load organization", err);
+            console.error("Failed to load organization information", err);
             setOrganization(null);
+            setOrganizations([]);
           }
         }
       } catch {
@@ -91,6 +109,8 @@ function App() {
   useEffect(() => {
     function handleAuthExpired() {
       setAdmin(null);
+      setOrganizations([]);
+      setOrganizationError(null);
       setOrganization(null);
     }
 
@@ -105,11 +125,17 @@ function App() {
     setAdmin(loggedInAdmin);
 
     try {
-      const currentOrganization = await getCurrentOrganization();
+      const [currentOrganization, accessibleOrganizations] = await Promise.all([
+        getCurrentOrganization(),
+        getAdminOrganizations(),
+      ]);
+
       setOrganization(currentOrganization);
+      setOrganizations(accessibleOrganizations);
     } catch (err) {
-      console.error("Failed to load organization", err);
+      console.error("Failed to load organization information", err);
       setOrganization(null);
+      setOrganizations([]);
     }
   }
 
@@ -120,7 +146,38 @@ function App() {
       console.error(err);
     } finally {
       setAdmin(null);
+      setOrganizations([]);
+      setOrganizationError(null);
       setOrganization(null);
+    }
+  }
+
+  async function handleOrganizationChange(organizationId: number) {
+    if (organizationId === admin?.organizationId) {
+      return;
+    }
+
+    try {
+      setOrganizationSwitching(true);
+      setOrganizationError(null);
+
+      await switchOrganization(organizationId);
+
+      const [updatedAdmin, currentOrganization] = await Promise.all([
+        getCurrentAdmin(),
+        getCurrentOrganization(),
+      ]);
+
+      setOrganization(currentOrganization);
+      setAdmin(updatedAdmin);
+    } catch (err) {
+      console.error(err);
+
+      setOrganizationError(
+        err instanceof Error ? err.message : "Failed to switch organization",
+      );
+    } finally {
+      setOrganizationSwitching(false);
     }
   }
 
@@ -145,8 +202,13 @@ function App() {
       <Route
         element={
           <AppLayout
+            key={admin.organizationId}
             admin={admin}
             organization={organization}
+            organizations={organizations}
+            organizationSwitching={organizationSwitching}
+            organizationError={organizationError}
+            onOrganizationChange={handleOrganizationChange}
             onLogout={handleLogout}
             theme={theme}
             onThemeToggle={handleThemeToggle}

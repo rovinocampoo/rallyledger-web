@@ -1,4 +1,5 @@
 import { apiFetch } from "./client"
+import type { OrganizationAccess } from "../types/organization";
 
 export type AdminUser = {
   id: number
@@ -36,3 +37,17 @@ export function logout() {
     method: "POST",
   })
 }
+
+export function getAdminOrganizations() {
+  return apiFetch<OrganizationAccess[]>("/auth/organizations");
+}
+
+export function switchOrganization(organizationId: number) {
+  return apiFetch<void>("/auth/organization", {
+    method: "POST",
+    body: JSON.stringify({
+      organizationId,
+    }),
+  });
+}
+
