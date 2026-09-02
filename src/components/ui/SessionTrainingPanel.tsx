@@ -42,12 +42,7 @@ function SessionTrainingPanel({ session, onClose }: SessionTrainingPanelProps) {
       .filter((charge) => charge.feeType === "TRAINING")
       .map((charge) => charge.participantId),
   );
-
-  const pendingTrainingParticipantIds = checkedInParticipantIds.filter(
-    (participantId) => !chargedTrainingParticipantIds.has(participantId),
-  );
-
-  const hasPendingTrainingCharges = pendingTrainingParticipantIds.length > 0;
+  const hasGeneratedTrainingCharges = chargedTrainingParticipantIds.size > 0;
   const chargeRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     if (showCharges) {
@@ -182,9 +177,11 @@ function SessionTrainingPanel({ session, onClose }: SessionTrainingPanelProps) {
     }
 
     const confirmed = window.confirm(
-      `Generate training charges for ${pendingTrainingParticipantIds.length} checked-in participant${
-        pendingTrainingParticipantIds.length === 1 ? "" : "s"
-      }?`,
+      hasGeneratedTrainingCharges
+        ? `Recalculate training charges for ${checkedInParticipants.length} checked-in participants? Unedited Light charges will be rebalanced.`
+        : `Generate training charges for ${checkedInParticipants.length} checked-in participant${
+            checkedInParticipants.length === 1 ? "" : "s"
+          }?`,
     );
 
     if (!confirmed) {
@@ -427,20 +424,25 @@ function SessionTrainingPanel({ session, onClose }: SessionTrainingPanelProps) {
               <p className="text-sm font-medium">Training Charges</p>
 
               <p className="mt-1 text-xs text-zinc-500">
-                Training, court, and light fees for checked-in players.
+                Training and court fees are charged individually. The session
+                Light fee is divided among non-exempt players.
               </p>
             </div>
 
             <div className="flex gap-2">
+              {charges.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setShowCharges((current) => !current)}
+                  className="secondary-action rounded-lg px-3 py-2 text-sm"
+                >
+                  {showCharges ? "Hide Charges" : "View Charges"}
+                </button>
+              )}
+
               <button
                 type="button"
-                onClick={() => {
-                  if (hasPendingTrainingCharges) {
-                    void handleGenerateCharges();
-                  } else {
-                    setShowCharges((current) => !current);
-                  }
-                }}
+                onClick={() => void handleGenerateCharges()}
                 disabled={
                   generatingCharges || checkedInParticipants.length === 0
                 }
@@ -448,11 +450,9 @@ function SessionTrainingPanel({ session, onClose }: SessionTrainingPanelProps) {
               >
                 {generatingCharges
                   ? "Generating..."
-                  : hasPendingTrainingCharges
-                    ? "Generate Charges"
-                    : showCharges
-                      ? "Hide Charges"
-                      : "View Charges"}
+                  : hasGeneratedTrainingCharges
+                    ? "Recalculate Charges"
+                    : "Generate Charges"}
               </button>
             </div>
           </div>
