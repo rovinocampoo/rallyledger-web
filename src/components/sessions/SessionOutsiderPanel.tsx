@@ -425,7 +425,8 @@ function SessionOutsiderPanel({ session, onClose }: SessionOutsiderPanelProps) {
               </p>
 
               <p className="text-xs text-zinc-500">
-                {formatLabel(participant.participantType)}
+                {participant.participantTypeName ||
+                  formatLabel(participant.participantType)}
               </p>
             </div>
 

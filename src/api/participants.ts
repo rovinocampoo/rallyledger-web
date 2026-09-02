@@ -5,7 +5,12 @@ export function getParticipants() {
   return apiFetch<Participant[]>("/participants")
 }
 
-export function createParticipant(data: Omit<Participant, "id" | "createdAt" | "updatedAt">) {
+type ParticipantInput = Omit<
+  Participant,
+  "id" | "participantTypeName" | "createdAt" | "updatedAt"
+>
+
+export function createParticipant(data: ParticipantInput) {
   return apiFetch<Participant>("/participants", {
     method: "POST",
     body: JSON.stringify(data),
@@ -14,7 +19,7 @@ export function createParticipant(data: Omit<Participant, "id" | "createdAt" | "
 
 export function updateParticipant(
   id: number,
-  data: Omit<Participant, "id" | "createdAt" | "updatedAt">,
+  data: ParticipantInput,
 ) {
   return apiFetch<Participant>(`/participants/${id}`, {
     method: "PUT",

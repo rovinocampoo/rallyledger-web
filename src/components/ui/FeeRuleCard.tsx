@@ -1,13 +1,21 @@
 import type { FeeRule } from "../../types/feeRule";
 import { formatCurrency, formatLabel } from "../../utils/format";
+import type { ParticipantCategory } from "../../types/participantCategory";
+import { getParticipantCategoryLabel } from "../../utils/participantCategory";
 
 type FeeRuleCardProps = {
   rule: FeeRule;
+  categories: ParticipantCategory[];
   onEdit: (rule: FeeRule) => void;
   onDelete: (rule: FeeRule) => void;
 };
 
-function FeeRuleCard({ rule, onEdit, onDelete }: FeeRuleCardProps) {
+function FeeRuleCard({
+  rule,
+  categories,
+  onEdit,
+  onDelete,
+}: FeeRuleCardProps) {
   return (
     <>
       {/* MOBILE CARD */}
@@ -15,9 +23,7 @@ function FeeRuleCard({ rule, onEdit, onDelete }: FeeRuleCardProps) {
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 text-left">
             <p className="font-semibold">
-              {rule.participantType
-                ? formatLabel(rule.participantType)
-                : "Any participant"}
+              {getParticipantCategoryLabel(categories, rule.participantType)}
             </p>
 
             <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
@@ -62,7 +68,9 @@ function FeeRuleCard({ rule, onEdit, onDelete }: FeeRuleCardProps) {
       {/* DESKTOP ROW */}
       <div className="hidden grid-cols-[minmax(0,1fr)_minmax(0,1fr)_100px_90px_150px] items-center gap-3 border-t border-zinc-200 bg-white px-4 py-3 text-left dark:border-zinc-800 dark:bg-zinc-900 hidden md:grid">
         <p className="min-w-0 truncate text-sm text-zinc-600 dark:text-zinc-400">
-          {rule.participantType ? formatLabel(rule.participantType) : "Any"}
+          {rule.participantType
+            ? getParticipantCategoryLabel(categories, rule.participantType)
+            : "Any"}
         </p>
 
         <p className="min-w-0 truncate text-sm text-zinc-600 dark:text-zinc-400">

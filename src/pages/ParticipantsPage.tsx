@@ -6,6 +6,10 @@ import ParticipantForm from "../components/ui/ParticipantForm";
 import ParticipantLedgerPanel from "../components/ui/ParticipantLedgerPanel";
 import { useLocation, useNavigate } from "react-router-dom";
 import { formatFullName } from "../utils/format";
+import { getParticipantCategories } from "../api/participantCategories";
+import type { ParticipantCategory } from "../types/participantCategory";
+import ParticipantCategoryManager from "../components/ui/ParticipantCategoryManager";
+import { getParticipantCategoryLabel } from "../utils/participantCategory";
 
 type SortKey = "type" | "name" | "nickname";
 type SortDirection = "asc" | "desc";
@@ -20,11 +24,13 @@ function normalizeSearchText(value: string | null | undefined) {
 
 function ParticipantsPage() {
   const [participants, setParticipants] = useState<Participant[]>([]);
+  const [categories, setCategories] = useState<ParticipantCategory[]>([]);
   const [editingParticipant, setEditingParticipant] =
     useState<Participant | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [showCategories, setShowCategories] = useState(false);
   type ParticipantsPageState = {
     ledgerParticipantId?: number;
   };
@@ -56,10 +62,14 @@ function ParticipantsPage() {
 
     async function loadParticipants() {
       try {
-        const data = await getParticipants();
+        const [participantData, categoryData] = await Promise.all([
+          getParticipants(),
+          getParticipantCategories(),
+        ]);
 
         if (!ignore) {
-          setParticipants(data);
+          setParticipants(participantData);
+          setCategories(categoryData);
         }
       } catch (err) {
         if (!ignore) {
@@ -137,6 +147,11 @@ function ParticipantsPage() {
     setEditingParticipant(null);
   }
 
+  async function loadCategories() {
+    const data = await getParticipantCategories();
+    setCategories(data);
+  }
+
   if (loading) {
     return <p>Loading participants...</p>;
   }
@@ -193,19 +208,14 @@ function ParticipantsPage() {
       return participant.membershipStatus === searchedStatus;
     }
 
-    const typeSearchMap: Record<string, Participant["participantType"]> = {
-      member: "MEMBER",
-      nonmember: "NONMEMBER",
-      "non member": "NONMEMBER",
-      "mmsu student": "MMSU_STUDENT",
-      "mmsu employee": "MMSU_EMPLOYEE",
-      "mmsu varsity": "MMSU_VARSITY",
-    };
+    const searchedCategory = categories.find(
+      (category) =>
+        normalizeSearchText(category.name) === query ||
+        normalizeSearchText(category.code) === query,
+    );
 
-    const searchedType = typeSearchMap[query];
-
-    if (searchedType) {
-      return participant.participantType === searchedType;
+    if (searchedCategory) {
+      return participant.participantType === searchedCategory.code;
     }
 
     const searchableText = normalizeSearchText(
@@ -215,6 +225,7 @@ function ParticipantsPage() {
         participant.nickname,
         formatFullName(participant.firstName, participant.lastName),
         participant.participantType,
+        getParticipantCategoryLabel(categories, participant.participantType),
         participant.membershipStatus,
       ].join(" "),
     );
@@ -226,8 +237,8 @@ function ParticipantsPage() {
     let bValue = "";
 
     if (sortKey === "type") {
-      aValue = a.participantType;
-      bValue = b.participantType;
+      aValue = getParticipantCategoryLabel(categories, a.participantType);
+      bValue = getParticipantCategoryLabel(categories, b.participantType);
     }
 
     if (sortKey === "name") {
@@ -258,25 +269,48 @@ function ParticipantsPage() {
             Manage club members and guests.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => {
-            setEditingParticipant(null);
-            setShowForm(true);
-          }}
-          className="primary-action w-full rounded-lg px-4 py-2 text-sm font-medium sm:w-auto"
-        >
-          Add Participant
-        </button>
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+          <button
+            type="button"
+            onClick={() => {
+              setShowCategories((current) => !current);
+              setShowForm(false);
+              setEditingParticipant(null);
+            }}
+            className="secondary-action w-full rounded-lg px-4 py-2 text-sm font-medium sm:w-auto"
+          >
+            Manage Categories
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setEditingParticipant(null);
+              setShowForm(true);
+              setShowCategories(false);
+            }}
+            className="primary-action w-full rounded-lg px-4 py-2 text-sm font-medium sm:w-auto"
+          >
+            Add Participant
+          </button>
+        </div>
       </div>
       {actionError && (
         <p className="mb-4 text-sm text-red-600 dark:text-red-400">
           {actionError}
         </p>
       )}
+      {showCategories && (
+        <ParticipantCategoryManager
+          categories={categories}
+          onChanged={loadCategories}
+          onClose={() => setShowCategories(false)}
+        />
+      )}
+
       {showForm && editingParticipant === null && (
         <div className="mb-6">
           <ParticipantForm
+            categories={categories}
             onSaved={handleParticipantSaved}
             onCancel={() => {
               setShowForm(false);
@@ -332,6 +366,10 @@ function ParticipantsPage() {
             <div key={participant.id} id={`participant-${participant.id}`}>
               <ParticipantCard
                 participant={participant}
+                participantTypeLabel={getParticipantCategoryLabel(
+                  categories,
+                  participant.participantType,
+                )}
                 onEdit={(participant) => {
                   setEditingParticipant(participant);
                   setShowForm(true);
@@ -349,6 +387,7 @@ function ParticipantsPage() {
                 <div className="p-3">
                   <ParticipantForm
                     participant={editingParticipant}
+                    categories={categories}
                     onSaved={handleParticipantSaved}
                     onCancel={() => {
                       setShowForm(false);

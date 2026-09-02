@@ -3,6 +3,7 @@ import { formatFullName, formatLabel } from "../../utils/format";
 
 type ParticipantCardProps = {
   participant: Participant;
+  participantTypeLabel: string;
   onEdit: (participant: Participant) => void;
   onDelete: (participant: Participant) => void;
   onViewLedger: (participant: Participant) => void;
@@ -10,6 +11,7 @@ type ParticipantCardProps = {
 
 function ParticipantCard({
   participant,
+  participantTypeLabel,
   onEdit,
   onDelete,
   onViewLedger,
@@ -81,7 +83,7 @@ function ParticipantCard({
                 "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
               }`}
             >
-              {formatLabel(participant.participantType)}
+              {participantTypeLabel}
             </span>
           </div>
         </div>
@@ -131,7 +133,7 @@ function ParticipantCard({
               "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
             }`}
           >
-            {formatLabel(participant.participantType)}
+            {participantTypeLabel}
           </span>
         </div>
         <p className="min-w-0 truncate  text-[14px] text-left" title={fullName}>

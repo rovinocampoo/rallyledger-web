@@ -1,15 +1,18 @@
 import { useState, type SubmitEvent } from "react";
 import { createParticipant, updateParticipant } from "../../api/participants";
 import type { Participant } from "../../types/participant";
+import type { ParticipantCategory } from "../../types/participantCategory";
 
 type ParticipantFormProps = {
   participant?: Participant;
+  categories: ParticipantCategory[];
   onSaved: (participant: Participant) => void;
   onCancel: () => void;
 };
 
 function ParticipantForm({
   participant,
+  categories,
   onSaved,
   onCancel,
 }: ParticipantFormProps) {
@@ -20,7 +23,10 @@ function ParticipantForm({
     participant?.birthday?.slice(0, 10) ?? "",
   );
   const [participantType, setParticipantType] = useState(
-    participant?.participantType ?? "MEMBER",
+    participant?.participantType ??
+      categories.find((category) => category.code === "MEMBER")?.code ??
+      categories.find((category) => category.isActive)?.code ??
+      "",
   );
   const [membershipStatus, setMembershipStatus] = useState(
     participant?.membershipStatus ?? "ACTIVE",
@@ -123,11 +129,16 @@ function ParticipantForm({
                 onChange={(event) => setParticipantType(event.target.value)}
                 className="mt-2 w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 px-3 py-2 text-zinc-900 dark:text-white outline-none"
               >
-                <option value="MEMBER">Member</option>
-                <option value="NONMEMBER">Nonmember</option>
-                <option value="MMSU_STUDENT">MMSU Student</option>
-                <option value="MMSU_EMPLOYEE">MMSU Employee</option>
-                <option value="MMSU_VARSITY">MMSU Varsity</option>
+                {categories
+                  .filter(
+                    (category) =>
+                      category.isActive || category.code === participantType,
+                  )
+                  .map((category) => (
+                    <option key={category.id} value={category.code}>
+                      {category.name}
+                    </option>
+                  ))}
               </select>
             </label>
             <label className="block text-left">

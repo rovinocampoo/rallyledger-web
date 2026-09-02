@@ -2,33 +2,31 @@ import { useState, type SubmitEvent } from "react";
 import { createFeeRule, updateFeeRule } from "../../api/feeRules";
 import type { FeeRule, FeeRuleInput } from "../../types/feeRule";
 import { formatLabel } from "../../utils/format";
+import type { ParticipantCategory } from "../../types/participantCategory";
 
 type FeeRuleFormProps = {
   rule?: FeeRule | null;
+  categories: ParticipantCategory[];
   onSaved: (savedRule: FeeRule) => void;
   onCancel: () => void;
 };
 
-const PARTICIPANT_TYPES = [
-  "MEMBER",
-  "NONMEMBER",
-  "MMSU_STUDENT",
-  "MMSU_EMPLOYEE",
-  "MMSU_VARSITY",
-];
-
 const MATCH_TYPES = ["SINGLES", "DOUBLES", "MIXED_DOUBLES"];
 
-function FeeRuleForm({ rule, onSaved, onCancel }: FeeRuleFormProps) {
+function FeeRuleForm({
+  rule,
+  categories,
+  onSaved,
+  onCancel,
+}: FeeRuleFormProps) {
   const [feeType, setFeeType] = useState<FeeRuleInput["feeType"]>(
     rule?.feeType ?? "BALL",
   );
   const [participantType, setParticipantType] = useState(
     rule?.participantType ?? "",
   );
-  const usesParticipantType = feeType === "COURT" || feeType === "LIGHT";
-
-  const usesMatchType = feeType === "LIGHT";
+  const usesParticipantType = feeType !== "BALL";
+  const usesMatchType = feeType === "BALL" || feeType === "LIGHT";
   const [matchType, setMatchType] = useState(rule?.matchType ?? "");
   const [amount, setAmount] = useState(rule ? String(rule.amount) : "");
   const [isActive, setIsActive] = useState(rule?.isActive ?? true);
@@ -45,19 +43,9 @@ function FeeRuleForm({ rule, onSaved, onCancel }: FeeRuleFormProps) {
       return;
     }
 
-    if (feeType === "LIGHT" && !participantType) {
-      setFormError("Participant type is required for light fees.");
-      return;
-    }
-
     const input: FeeRuleInput = {
       feeType,
-      participantType:
-        feeType === "COURT"
-          ? "NONMEMBER"
-          : usesParticipantType
-            ? participantType || null
-            : null,
+      participantType: usesParticipantType ? participantType || null : null,
       matchType: usesMatchType ? matchType || null : null,
       amount: parsedAmount,
       isActive,
@@ -70,9 +58,9 @@ function FeeRuleForm({ rule, onSaved, onCancel }: FeeRuleFormProps) {
       let savedRule: FeeRule;
 
       if (rule) {
-       savedRule = await updateFeeRule(rule.id, input);
+        savedRule = await updateFeeRule(rule.id, input);
       } else {
-       savedRule = await createFeeRule(input);
+        savedRule = await createFeeRule(input);
       }
 
       onSaved(savedRule);
@@ -119,12 +107,7 @@ function FeeRuleForm({ rule, onSaved, onCancel }: FeeRuleFormProps) {
 
               setFeeType(value);
               setMatchType("");
-
-              if (value === "COURT") {
-                setParticipantType("NONMEMBER");
-              } else {
-                setParticipantType("");
-              }
+              setParticipantType("");
             }}
             className="mt-2 w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 px-3 py-2"
           >
@@ -139,21 +122,27 @@ function FeeRuleForm({ rule, onSaved, onCancel }: FeeRuleFormProps) {
 
         <label className="block min-w-0 text-left">
           <span className="text-sm text-zinc-600 dark:text-zinc-400">
-            Participant Type
+            Participant Category
           </span>
 
           <select
             value={participantType}
             onChange={(event) => setParticipantType(event.target.value)}
-            className="mt-2 w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 px-3 py-2"
+            disabled={!usesParticipantType}
+            className="mt-2 w-full rounded-lg border border-zinc-300 bg-zinc-50 px-3 py-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-950"
           >
-            <option value="">Any / not applicable</option>
+            <option value="">Any participant / Default</option>
 
-            {PARTICIPANT_TYPES.map((type) => (
-              <option key={type} value={type}>
-                {formatLabel(type)}
-              </option>
-            ))}
+            {categories
+              .filter(
+                (category) =>
+                  category.isActive || category.code === participantType,
+              )
+              .map((category) => (
+                <option key={category.id} value={category.code}>
+                  {category.name}
+                </option>
+              ))}
           </select>
         </label>
 
@@ -165,9 +154,10 @@ function FeeRuleForm({ rule, onSaved, onCancel }: FeeRuleFormProps) {
           <select
             value={matchType}
             onChange={(event) => setMatchType(event.target.value)}
-            className="mt-2 w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 px-3 py-2"
+            disabled={!usesMatchType}
+            className="mt-2 w-full rounded-lg border border-zinc-300 bg-zinc-50 px-3 py-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-950"
           >
-            <option value="">Any / not applicable</option>
+            <option value="">Any match / Default</option>
 
             {MATCH_TYPES.map((type) => (
               <option key={type} value={type}>

@@ -131,7 +131,10 @@ function OutstandingPage() {
           item.firstName,
           item.lastName,
           item.nickname ?? "",
-          participant ? formatLabel(participant.participantType) : "",
+          participant
+            ? participant.participantTypeName ||
+              formatLabel(participant.participantType)
+            : "",
           participant ? formatLabel(participant.membershipStatus) : "",
           item.totalCharges,
           item.totalPayments,

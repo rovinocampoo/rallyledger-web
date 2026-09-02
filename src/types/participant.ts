@@ -6,6 +6,7 @@ export type Participant = {
   birthday: string | null;
   membershipStatus: string
   participantType: string
+  participantTypeName: string
   isTemporary: boolean
   createdAt: string
   updatedAt: string

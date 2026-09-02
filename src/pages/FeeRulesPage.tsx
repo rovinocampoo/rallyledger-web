@@ -4,6 +4,8 @@ import type { FeeRule } from "../types/feeRule";
 import FeeRuleForm from "../components/ui/FeeRuleForm";
 import { formatLabel } from "../utils/format";
 import FeeRuleCard from "../components/ui/FeeRuleCard";
+import { getParticipantCategories } from "../api/participantCategories";
+import type { ParticipantCategory } from "../types/participantCategory";
 
 const FEE_TYPES = [
   "BALL",
@@ -17,22 +19,22 @@ const FEE_TYPES = [
 function getFeeDescription(feeType: (typeof FEE_TYPES)[number]) {
   switch (feeType) {
     case "BALL":
-      return "Flat ball fee divided among match participants.";
+      return "Flat ball fee divided among players, optionally by match type.";
 
     case "COURT":
-      return "Daily court fee for nonmembers.";
+      return "Daily court fee by participant category.";
 
     case "LIGHT":
       return "Light fee based on participant and optional match type.";
 
     case "TRAINING":
-      return "Training fee per checked-in participant.";
+      return "Training fee per checked-in participant category.";
 
     case "BALL_RENTAL":
-      return "Flat ball-rental fee for an outsider session.";
+      return "Flat outsider-session ball rental by payer category.";
 
     case "RACKET_RENTAL":
-      return "Racket-rental fee per participant.";
+      return "Racket-rental fee per participant category.";
 
     default:
       return "";
@@ -41,6 +43,7 @@ function getFeeDescription(feeType: (typeof FEE_TYPES)[number]) {
 
 function FeeRulesPage() {
   const [rules, setRules] = useState<FeeRule[]>([]);
+  const [categories, setCategories] = useState<ParticipantCategory[]>([]);
   const [editingRule, setEditingRule] = useState<FeeRule | null>(null);
   const [showForm, setShowForm] = useState(false);
 
@@ -50,10 +53,11 @@ function FeeRulesPage() {
   useEffect(() => {
     let ignore = false;
 
-    getFeeRules()
-      .then((data) => {
+    Promise.all([getFeeRules(), getParticipantCategories()])
+      .then(([ruleData, categoryData]) => {
         if (!ignore) {
-          setRules(data);
+          setRules(ruleData);
+          setCategories(categoryData);
           setLoading(false);
         }
       })
@@ -193,6 +197,7 @@ function FeeRulesPage() {
       {showForm && editingRule === null && (
         <FeeRuleForm
           rule={null}
+          categories={categories}
           onSaved={handleSaved}
           onCancel={handleCancel}
         />
@@ -217,7 +222,7 @@ function FeeRulesPage() {
               </div>
               {/* DESKTOP HEADER */}
               <div className="hidden grid-cols-[minmax(0,1fr)_minmax(0,1fr)_100px_90px_150px] items-center gap-3 rounded-t-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-left text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-950 md:grid">
-                <span>Participant Type</span>
+                <span>Participant Category</span>
                 <span>Match Type</span>
                 <span>Amount</span>
                 <span>Status</span>
@@ -235,6 +240,7 @@ function FeeRulesPage() {
                     <div key={rule.id} id={`fee-${rule.id}`}>
                       <FeeRuleCard
                         rule={rule}
+                        categories={categories}
                         onEdit={handleEdit}
                         onDelete={handleDelete}
                       />
@@ -243,6 +249,7 @@ function FeeRulesPage() {
                         <div className="mt-3 md:mt-0 md:border-t md:border-zinc-200 md:bg-zinc-50 md:p-4 dark:md:border-zinc-800 dark:md:bg-zinc-950">
                           <FeeRuleForm
                             rule={editingRule}
+                            categories={categories}
                             onSaved={handleSaved}
                             onCancel={handleCancel}
                           />
