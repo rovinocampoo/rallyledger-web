@@ -227,7 +227,7 @@ function SessionResultsPanel({ session, onClose }: SessionResultsPanelProps) {
 
       URL.revokeObjectURL(url);
 
-      setShareMessage("Results PNG downloaded.");
+      setShareMessage("Results PNG downloadefd.");
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") {
         return;
@@ -535,7 +535,7 @@ function SessionResultsPanel({ session, onClose }: SessionResultsPanelProps) {
 
             {/* MATCHES */}
             <div className="grid grid-cols-2 items-start gap-x-5 gap-y-5">
-              {results.map(({ match, sets, matchParticipants }) => {
+              {results.map(({ match, sets, matchParticipants }, index) => {
                 const orderedSets = getOrderedSets(sets);
 
                 const teamAPlayers = matchParticipants
@@ -557,7 +557,7 @@ function SessionResultsPanel({ session, onClose }: SessionResultsPanelProps) {
                 return (
                   <div key={match.id}>
                     <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
-                      Match {match.id} · {formatLabel(match.matchType)}
+                      Match {index + 1} · {formatLabel(match.matchType)}
                     </p>
 
                     <div className="overflow-hidden rounded-lg border border-zinc-300 bg-white">
@@ -645,7 +645,7 @@ function SessionResultsPanel({ session, onClose }: SessionResultsPanelProps) {
             </div>
 
             <p className="mt-8 text-center text-xs text-zinc-600 dark:text-zinc-400">
-              Powered by RallyLedger · kurovin
+              {}Powered by RallyLedger · kurovin
             </p>
           </div>
         </div>

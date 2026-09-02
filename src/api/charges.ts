@@ -1,5 +1,8 @@
-import type { Charge } from "../types/charge";
-import { apiFetch } from "./client";
+import type {
+  Charge,
+  ChargeAdjustment,
+  UpdateChargeInput,
+} from "../types/charge";import { apiFetch } from "./client";
 
 export function generateMatchCharges(matchId: number) {
   return apiFetch<void>(`/matches/${matchId}/charges`, {
@@ -13,6 +16,22 @@ export function getMatchCharges(matchId: number) {
 
 export function getSessionCharges(sessionId: number) {
   return apiFetch<Charge[]>(`/sessions/${sessionId}/charges`);
+}
+
+export function updateCharge(
+  chargeId: number,
+  data: UpdateChargeInput,
+) {
+  return apiFetch<Charge>(`/charges/${chargeId}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
+export function getChargeAdjustments(chargeId: number) {
+  return apiFetch<ChargeAdjustment[]>(
+    `/charges/${chargeId}/adjustments`,
+  );
 }
 
 export function generateTrainingCharges(sessionId: number) {

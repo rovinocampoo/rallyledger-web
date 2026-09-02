@@ -9,3 +9,19 @@ export type Charge = {
   chargeDate: string;
   createdAt: string;
 };
+
+export type ChargeAdjustment = {
+  id: number;
+  organizationId: number;
+  chargeId: number;
+  previousAmount: number;
+  newAmount: number;
+  reason: string;
+  adjustedByAdminUserId: number;
+  createdAt: string;
+};
+
+export type UpdateChargeInput = {
+  amount: number;
+  reason: string;
+};

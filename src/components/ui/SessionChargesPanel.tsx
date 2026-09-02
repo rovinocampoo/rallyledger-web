@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { getSessionCharges } from "../../api/charges";
+import ChargeEditForm from "./ChargeEditForm";
 import type { Charge } from "../../types/charge";
 import type { Session } from "../../types/session";
 import { getParticipants } from "../../api/participants";
@@ -25,6 +26,7 @@ function SessionChargesPanel({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
+  const [editingChargeId, setEditingChargeId] = useState<number | null>(null);
   const total = charges.reduce((sum, charge) => sum + charge.amount, 0);
   const matchIds = [
     ...new Set(
@@ -73,6 +75,60 @@ function SessionChargesPanel({
 
   function getParticipant(participantId: number) {
     return participants.find((participant) => participant.id === participantId);
+  }
+
+  function handleChargeSaved(updatedCharge: Charge) {
+    setCharges((current) =>
+      current.map((charge) =>
+        charge.id === updatedCharge.id ? updatedCharge : charge,
+      ),
+    );
+
+    setEditingChargeId(null);
+  }
+
+  function renderChargeRow(charge: Charge) {
+    const participant = getParticipant(charge.participantId);
+
+    return (
+      <div
+        key={charge.id}
+        className="border-b border-zinc-200 py-3 last:border-b-0 dark:border-zinc-800"
+      >
+        <div className="flex items-center justify-between gap-3 text-sm">
+          <span className="min-w-0 text-zinc-600 dark:text-zinc-400">
+            {participant
+              ? formatFullName(participant.firstName, participant.lastName)
+              : `Participant #${charge.participantId}`}{" "}
+            — {formatLabel(charge.feeType)}
+          </span>
+
+          <div className="flex shrink-0 items-center gap-3">
+            <span>{formatCurrency(charge.amount)}</span>
+
+            <button
+              type="button"
+              onClick={() =>
+                setEditingChargeId((current) =>
+                  current === charge.id ? null : charge.id,
+                )
+              }
+              className="text-xs text-zinc-600 transition-colors hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white"
+            >
+              {editingChargeId === charge.id ? "Close Edit" : "Edit"}
+            </button>
+          </div>
+        </div>
+
+        {editingChargeId === charge.id && (
+          <ChargeEditForm
+            charge={charge}
+            onSaved={handleChargeSaved}
+            onCancel={() => setEditingChargeId(null)}
+          />
+        )}
+      </div>
+    );
   }
   if (loading) {
     return <p>Loading session charges...</p>;
@@ -169,28 +225,7 @@ function SessionChargesPanel({
 
               <div className="mt-3 rounded-lg bg-white dark:bg-zinc-900 p-4">
                 <div className="space-y-2">
-                  {sessionLevelCharges.map((charge) => {
-                    const participant = getParticipant(charge.participantId);
-
-                    return (
-                      <div
-                        key={charge.id}
-                        className="flex items-center justify-between text-sm"
-                      >
-                        <span className="text-zinc-600 dark:text-zinc-400">
-                          {participant
-                            ? formatFullName(
-                                participant.firstName,
-                                participant.lastName,
-                              )
-                            : `Participant #${charge.participantId}`}{" "}
-                          — {formatLabel(charge.feeType)}
-                        </span>
-
-                        <span>{formatCurrency(charge.amount)}</span>
-                      </div>
-                    );
-                  })}
+                  {sessionLevelCharges.map(renderChargeRow)}
                 </div>
               </div>
             </div>
@@ -223,30 +258,7 @@ function SessionChargesPanel({
                       </div>
 
                       <div className="mt-3 space-y-2">
-                        {matchCharges.map((charge) => {
-                          const participant = getParticipant(
-                            charge.participantId,
-                          );
-
-                          return (
-                            <div
-                              key={charge.id}
-                              className="flex items-center justify-between text-sm"
-                            >
-                              <span className="text-zinc-600 dark:text-zinc-400">
-                                {participant
-                                  ? formatFullName(
-                                      participant.firstName,
-                                      participant.lastName,
-                                    )
-                                  : `Participant #${charge.participantId}`}{" "}
-                                — {formatLabel(charge.feeType)}
-                              </span>
-
-                              <span>{formatCurrency(charge.amount)}</span>
-                            </div>
-                          );
-                        })}
+                        {matchCharges.map(renderChargeRow)}
                       </div>
                     </div>
                   );

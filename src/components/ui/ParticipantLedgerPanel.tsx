@@ -10,6 +10,7 @@ import {
   formatDate,
 } from "../../utils/format";
 import { createPayment, deletePayment } from "../../api/payments";
+import ChargeAdjustmentHistory from "./ChargeAdjustmentHistory";
 
 type ParticipantLedgerPanelProps = {
   participant: Participant;
@@ -1102,25 +1103,29 @@ function ParticipantLedgerPanel({
               statementCharges.map((charge) => (
                 <div
                   key={charge.id}
-                  className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-t border-zinc-200 bg-white px-4 py-3 text-left dark:border-zinc-800 dark:bg-zinc-900 md:grid-cols-[minmax(0,1fr)_160px_120px]"
+                  className="border-t border-zinc-200 bg-white px-4 py-3 text-left dark:border-zinc-800 dark:bg-zinc-900"
                 >
-                  <div className="min-w-0">
-                    <p className="truncate font-medium">
-                      {formatLabel(charge.feeType)}
+                  <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 md:grid-cols-[minmax(0,1fr)_160px_120px]">
+                    <div className="min-w-0">
+                      <p className="truncate font-medium">
+                        {formatLabel(charge.feeType)}
+                      </p>
+
+                      <p className="mt-1 text-xs text-zinc-500 md:hidden">
+                        {formatDate(charge.chargeDate)}
+                      </p>
+                    </div>
+
+                    <p className="hidden text-sm text-zinc-500 md:block">
+                      {formatDate(charge.chargeDate)}
                     </p>
 
-                    <p className="mt-1 text-xs text-zinc-500 md:hidden">
-                      {formatDate(charge.chargeDate)}
+                    <p className="text-right font-semibold">
+                      {formatCurrency(charge.amount)}
                     </p>
                   </div>
 
-                  <p className="hidden text-sm text-zinc-500 md:block">
-                    {formatDate(charge.chargeDate)}
-                  </p>
-
-                  <p className="text-right font-semibold">
-                    {formatCurrency(charge.amount)}
-                  </p>
+                  <ChargeAdjustmentHistory chargeId={charge.id} />
                 </div>
               ))
             )}
