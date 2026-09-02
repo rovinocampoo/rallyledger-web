@@ -46,7 +46,7 @@ function ParticipantForm({
         firstName,
         lastName,
         nickname,
-        birthday: `${birthday}T00:00:00Z`,
+        birthday: birthday ? `${birthday}T00:00:00Z` : null,
         membershipStatus,
         participantType,
         isTemporary: participant?.isTemporary ?? false,
@@ -78,7 +78,9 @@ function ParticipantForm({
         <div className="grid gap-4">
           <div className="grid gap-4">
             <label className="block text-left">
-              <span className="text-sm text-zinc-600 dark:text-zinc-400">First Name</span>
+              <span className="text-sm text-zinc-600 dark:text-zinc-400">
+                First Name
+              </span>
               <input
                 type="text"
                 value={firstName}
@@ -88,7 +90,9 @@ function ParticipantForm({
               />
             </label>
             <label className="block text-left">
-              <span className="text-sm text-zinc-600 dark:text-zinc-400">Last Name</span>
+              <span className="text-sm text-zinc-600 dark:text-zinc-400">
+                Last Name
+              </span>
               <input
                 type="text"
                 value={lastName}
@@ -99,7 +103,9 @@ function ParticipantForm({
             </label>
             <label className="block text-left">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-zinc-700 dark:text-zinc-300">Nickname</span>
+                <span className="text-sm text-zinc-700 dark:text-zinc-300">
+                  Nickname
+                </span>
                 <span className="text-xs text-zinc-500">Optional</span>
               </div>
               <input
@@ -111,18 +117,24 @@ function ParticipantForm({
               />
             </label>
             <label className="block text-left">
-              <span className="text-sm text-zinc-600 dark:text-zinc-400">Birthday</span>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-zinc-600 dark:text-zinc-400">
+                  Birthday
+                </span>
+                <span className="text-xs text-zinc-500">Optional</span>
+              </div>
 
               <input
                 type="date"
                 value={birthday}
                 onChange={(event) => setBirthday(event.target.value)}
-                required
                 className="mt-2 w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 px-3 py-2 text-zinc-900 dark:text-white outline-none"
               />
             </label>
             <label className="block text-left">
-              <span className="text-sm text-zinc-600 dark:text-zinc-400">Participant Type</span>
+              <span className="text-sm text-zinc-600 dark:text-zinc-400">
+                Participant Type
+              </span>
 
               <select
                 value={participantType}
@@ -142,7 +154,9 @@ function ParticipantForm({
               </select>
             </label>
             <label className="block text-left">
-              <span className="text-sm text-zinc-600 dark:text-zinc-400">Membership Status</span>
+              <span className="text-sm text-zinc-600 dark:text-zinc-400">
+                Membership Status
+              </span>
 
               <select
                 value={membershipStatus}
