@@ -5,6 +5,7 @@ import type { Charge } from "../../types/charge";
 import type { Session } from "../../types/session";
 import { getParticipants } from "../../api/participants";
 import type { Participant } from "../../types/participant";
+import ChargeAdjustmentHistory from "./ChargeAdjustmentHistory";
 import {
   formatCurrency,
   formatFullName,
@@ -38,6 +39,9 @@ function SessionChargesPanel({
   const sessionLevelCharges = charges.filter(
     (charge) => charge.matchId === null,
   );
+  const [lastAdjustedChargeId, setLastAdjustedChargeId] = useState<
+    number | null
+  >(null);
 
   useEffect(() => {
     let ignore = false;
@@ -83,7 +87,7 @@ function SessionChargesPanel({
         charge.id === updatedCharge.id ? updatedCharge : charge,
       ),
     );
-
+    setLastAdjustedChargeId(updatedCharge.id);
     setEditingChargeId(null);
   }
 
@@ -127,6 +131,10 @@ function SessionChargesPanel({
             onCancel={() => setEditingChargeId(null)}
           />
         )}
+        <ChargeAdjustmentHistory
+          chargeId={charge.id}
+          initiallyOpen={lastAdjustedChargeId === charge.id}
+        />
       </div>
     );
   }
