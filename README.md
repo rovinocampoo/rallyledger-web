@@ -1,12 +1,18 @@
 # RallyLedger Web
 
-**Version:** v0.5.0
+Responsive administration interface for **RallyLedger**, a multi-organization tennis club operations and financial ledger platform.
 
-Frontend admin application for **RallyLedger**, a tennis club management and ledger system.
+**Release:** v1.0.0
 
-RallyLedger provides a responsive interface for managing participants, courts, sessions, matches, configurable fees, charges, payments, balances, and reports.
+**Live application:** https://rallyledger-web.vercel.app
 
-## Tech Stack
+**Developer:** [Kharl Rovin Ocampo](https://github.com/kurovin)
+
+## Overview
+
+RallyLedger Web gives authorized club administrators one interface for participants, courts, sessions, matches, configurable fees, charges, payments, ledgers, balances, and reports. Organization identity and available club access come from the authenticated API session.
+
+## Technology
 
 - React
 - TypeScript
@@ -14,142 +20,155 @@ RallyLedger provides a responsive interface for managing participants, courts, s
 - Tailwind CSS v4
 - React Router
 - Fetch API
+- Google Identity Services
 - html-to-image
 - Vercel
-- Git / GitHub
 
-Backend services:
+The frontend communicates with a Go, chi, pgx, and PostgreSQL API deployed on Render with Neon as the production database.
 
-- Go
-- chi
-- PostgreSQL
-- Render
-- Neon
+## V1 Features
 
-## Current Features
+### Authentication and organizations
 
-### Authentication
-
-- Admin email/password login
-- Session restoration on page refresh
+- Email/password administrator login
+- Google administrator login
 - HttpOnly cookie authentication
-- Logout
+- Session restoration on refresh
+- Global handling of expired sessions and `401` responses
+- Logout and theme switching
+- Multi-organization access and club switching
+- Organization-aware headings and branding
 - Protected application interface
 
-Authentication tokens are not stored in `localStorage`.
-
-Authenticated requests use:
+Authentication tokens are never stored in `localStorage`. Authenticated API calls use:
 
 ```ts
-credentials: "include";
+credentials: "include"
 ```
+
+### Dashboard and reports
+
+- All-time, today, monthly, and custom date ranges
+- Participant, session, and match totals
+- Charge, payment, and net-balance summaries
+- Top outstanding balances
+- Payment overview
+- Responsive desktop and mobile layouts
 
 ### Participants
 
-- View participants
-- Add participants
-- Edit participants
-- Delete participants
-- Participant classification
+- Searchable participant list
+- Add, edit, and delete participants
+- Nullable birthday support
 - Membership status
-- Participant ledger
-- Record payments
+- Temporary guests
+- Organization-defined participant categories
+- Participant ledger access
+- Payment recording
 
 ### Courts
 
-- View courts
-- Add courts
-- Edit courts
-- Active/inactive court support
+- Add, edit, and delete courts
+- Surface and location details
+- Active/inactive status
+- Responsive card and desktop layouts
 
 ### Sessions
 
-- Create sessions
-- Edit sessions
-- Delete sessions
-- Manage session participants
-- Manage matches within sessions
-- View generated charges
+- Regular Play, Training, Outsider Play, and Event workflows
+- Dates, times, capacity, and attendance
+- Full, half, or no light usage
+- Free-ball and free-light overrides
+- Quick guest creation
+- Match, Training, activity, results, and charge panels
+- Smooth navigation to the active session workspace
 
-### Matches
+### Matches and results
 
-- Singles
-- Doubles
-- Mixed doubles
+- Singles, Doubles, and Mixed Doubles
 - Court selection
-- Team A / Team B
-- Player assignment
-- Match scoring
-- Match sets
-- Lights-used option
-- Automatic charge generation
+- Team assignment
+- Match sets and scoring
+- Manual status, walkover, draw, and abandoned-result handling
+- Match results summary and export-friendly presentation
+- Automatic Ball, Court, and Light charge generation
 
-### Fee Rules
+### Training and outsider workflows
 
-Administrators can manage configurable fee rules for:
+- Training attendance management
+- Category-specific Training fees
+- Pooled Training Light fee divided among eligible attendees
+- Safe charge recalculation when attendance changes
+- Protection for manually adjusted Light charges
+- Outsider Play Ball and Racket rentals
 
-- Ball
-- Court
-- Light
+### Fee rules
 
-Rules may vary by participant classification and match type.
+- Ball, Court, Light, Training, Ball Rental, and Racket Rental fee types
+- Organization-defined participant categories
+- Optional match-type conditions
+- Active/inactive rules
+- Specific rules with general fallback behavior
+- Explicit zero-value exemptions
+- Responsive card and table layouts
 
-### Participant Ledger
+### Charges, payments, and ledgers
 
-Participant ledgers display:
+- Session and Match charge breakdowns
+- Participant totals
+- Editable one-off charge amounts
+- Required adjustment reason
+- Adjustment history in Session Charges and Participant Ledger
+- Empty adjustment histories hidden automatically
+- Payments and running participant balances
+- Charges grouped by type and date
+- Compact charge and payment tables
+- Copy-as-text ledger statement
+- PNG ledger export
+- Outstanding-balances CSV export for Excel and Google Sheets
 
-- Total charges
-- Total payments
-- Current balance
-- Charge history
-- Payment history
+## Application Routes
 
-Balance is calculated using:
+| Route | Purpose |
+|---|---|
+| `/` | Dashboard |
+| `/outstanding` | Outstanding balances |
+| `/participants` | Participants and ledgers |
+| `/sessions` | Session-centered club operations |
+| `/courts` | Court management |
+| `/fee-rules` | Organization fee rules |
 
-```text
-Total Charges - Total Payments
-```
+## Environment Variables
 
-A negative balance represents participant credit.
-
-Ledger information can currently be shared as text or PNG.
-
-### Reports
-
-The frontend includes reporting and participant balance views backed by the RallyLedger API.
-
-## API Configuration
-
-The frontend communicates with the Go backend through the shared API client.
-
-Local development:
+Create `.env.local` for local development:
 
 ```env
 VITE_API_URL=http://localhost:8080
+VITE_GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
 ```
 
-Production:
+Production normally uses the Vercel rewrite:
 
 ```env
 VITE_API_URL=/api
+VITE_GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
 ```
 
-Production requests use paths such as:
+Variables prefixed with `VITE_` are exposed to browser code. Never place database credentials, Google client secrets, or other private server values in them.
 
-```text
-/api/auth/me
-/api/participants
-/api/sessions
-/api/reports/...
-```
+## Local Development
 
-Vercel forwards `/api/*` requests to the deployed Render API.
+### Requirements
 
-## Running Locally
+- Node.js 22 or newer
+- npm
+- RallyLedger API running locally
 
-Install dependencies:
+Clone and install:
 
 ```bash
+git clone https://github.com/kurovin/rallyledger-web.git
+cd rallyledger-web
 npm install
 ```
 
@@ -159,108 +178,57 @@ Start Vite:
 npm run dev
 ```
 
-To expose the frontend to other devices on the local network:
+Expose the development server to another device on the local network:
 
 ```bash
 npm run dev -- --host
 ```
 
+When testing Google login, add each development origin—such as `http://localhost:5173` or a LAN origin—to the Google OAuth client's authorized JavaScript origins.
+
 ## Validation
 
-Before pushing changes:
+Before committing:
 
 ```bash
 npm run lint
 npm run build
+git diff --check
 ```
 
-## Environment Files
+Use LF line endings for source files. In VS Code, click `CRLF` in the status bar, choose `LF`, and save if `git diff --check` reports `^M` as trailing whitespace.
 
-Local environment files should not be committed.
+## API Client
 
-Example:
+All network requests go through the shared API client. It:
 
-```gitignore
-.env
-.env.*
-```
+- Prepends `VITE_API_URL`
+- Includes the HttpOnly session cookie
+- Parses JSON and empty `204` responses
+- Converts unsuccessful responses into `ApiError`
+- Dispatches the global authentication-expired event for `401` responses
 
-## Deployment
+The browser is not trusted to select an arbitrary organization ID. The active organization is controlled by the authenticated server session.
 
-Current production architecture:
+## Production Deployment
 
 ```text
-User
+Browser
     ↓
-Vercel
-React + Vite
+Vercel — React + Vite
+    ↓  /api/* rewrite
+Render — RallyLedger API
     ↓
-/api/*
-    ↓
-Vercel Rewrite
-    ↓
-Render
-Go API
-    ↓
-Neon PostgreSQL
+Neon — PostgreSQL
 ```
 
-The frontend is deployed on **Vercel**.
-
-The backend API is deployed on **Render**.
-
-PostgreSQL is hosted on **Neon**.
+The frontend is deployed on Vercel. Pushes to the configured production branch trigger deployments. Confirm that `VITE_GOOGLE_CLIENT_ID` is configured and that `/api/*` forwards to the deployed Render service.
 
 ## Project Status
 
-### v0.5.0
-
-Current deployed functionality includes:
-
-- Admin authentication
-- Dashboard
-- Participants
-- Courts
-- Sessions
-- Match management
-- Match participants
-- Match sets
-- Fee rules
-- Charge generation
-- Payments
-- Participant ledger
-- Outstanding balances
-- Reports
-- Responsive desktop/mobile interface
-- Production deployment
-
-## Planned v0.6
-
-The next version will focus on improving the real tennis-club workflow.
-
-Planned features include:
-
-- Period-based PNG ledger statements
-- Period-based Copy as Text statements
-- Global 401 handling
-- Session-centered workflow
-- Regular Play
-- Training
-- Outsider Play
-- Quick Add Guest
-- Training fees
-- Ball rental
-- Racket rental
-- Google admin login
-- Multi-tenant isolation testing
-- CSRF / Origin protection
-- Mobile workflow improvements
-
-The goal is to move away from separate CRUD-style workflows and make a Session the main operational workspace.
+`v1.0.0` is the first production release. Current post-V1 priorities include administrator access management, a unified organization audit log, expanded integration testing, and production performance monitoring.
 
 ## Author
 
-**Kharl Rovin Ocampo**
-
-Bachelor of Science in Computer Science  
-Mariano Marcos State University
+**Kharl Rovin Ocampo**  
+Creator and full-stack developer of RallyLedger
