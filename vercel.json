@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://rallyledger-api.onrender.com/:path*"
+      "destination": "https://rallyledger-api-sea.onrender.com/:path*"
     },
     {
       "source": "/(.*)",
