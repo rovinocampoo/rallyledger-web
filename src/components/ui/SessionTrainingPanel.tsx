@@ -9,7 +9,11 @@ import {
 } from "../../api/sessionParticipants";
 import { createParticipant, getParticipants } from "../../api/participants";
 import ParticipantPicker from "./ParticipantPicker";
-import { generateTrainingCharges, getSessionCharges } from "../../api/charges";
+import {
+  generateRacketRentalCharge,
+  generateTrainingCharges,
+  getSessionCharges,
+} from "../../api/charges";
 import type { Charge } from "../../types/charge";
 import { formatCurrency, formatLabel } from "../../utils/format";
 import ParticipantLedgerPanel from "./ParticipantLedgerPanel";
@@ -42,7 +46,16 @@ function SessionTrainingPanel({ session, onClose }: SessionTrainingPanelProps) {
       .filter((charge) => charge.feeType === "TRAINING")
       .map((charge) => charge.participantId),
   );
+  const racketRentalParticipantIds = new Set(
+    charges
+      .filter((charge) => charge.feeType === "RACKET_RENTAL")
+      .map((charge) => charge.participantId),
+  );
+
   const hasGeneratedTrainingCharges = chargedTrainingParticipantIds.size > 0;
+  const [racketRentalParticipantId, setRacketRentalParticipantId] =
+    useState("");
+  const [generatingRacketRental, setGeneratingRacketRental] = useState(false);
   const chargeRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     if (showCharges) {
@@ -106,6 +119,10 @@ function SessionTrainingPanel({ session, onClose }: SessionTrainingPanelProps) {
       participants.find((participant) => participant.id === participantId),
     )
     .filter((participant): participant is Participant => Boolean(participant));
+
+  const availableRacketRentalParticipants = checkedInParticipants.filter(
+    (participant) => !racketRentalParticipantIds.has(participant.id),
+  );
 
   const isAtCapacity =
     session.maxPlayers !== null &&
@@ -207,6 +224,35 @@ function SessionTrainingPanel({ session, onClose }: SessionTrainingPanelProps) {
       );
     } finally {
       setGeneratingCharges(false);
+    }
+  }
+
+  async function handleRacketRental() {
+    if (!racketRentalParticipantId) {
+      return;
+    }
+
+    const participantId = Number(racketRentalParticipantId);
+
+    try {
+      setGeneratingRacketRental(true);
+      setError(null);
+
+      await generateRacketRentalCharge(session.id, participantId);
+
+      await loadCharges();
+
+      setRacketRentalParticipantId("");
+    } catch (err) {
+      console.error(err);
+
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to generate racket rental charge",
+      );
+    } finally {
+      setGeneratingRacketRental(false);
     }
   }
 
@@ -456,7 +502,43 @@ function SessionTrainingPanel({ session, onClose }: SessionTrainingPanelProps) {
               </button>
             </div>
           </div>
+                  <div className="mt-4 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+            <div className="flex-1">
+              <p className="text-left text-sm font-medium">Racket Rental</p>
+
+              <p className="mt-1 text-xs text-zinc-500">
+                Add a racket rental charge to a checked-in participant.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <ParticipantPicker
+                  participants={availableRacketRentalParticipants}
+                  selectedParticipantId={racketRentalParticipantId}
+                  onSelect={setRacketRentalParticipantId}
+                  placeholder="Search player..."
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={() => void handleRacketRental()}
+                disabled={
+                  !racketRentalParticipantId ||
+                  generatingRacketRental ||
+                  availableRacketRentalParticipants.length === 0
+                }
+                className="primary-action rounded-lg px-3 py-2 text-sm font-medium disabled:opacity-50"
+              >
+                {generatingRacketRental ? "Adding..." : "Add Racket Rental"}
+              </button>
+            </div>
+          </div>
         </div>
+        </div>
+
         {showCharges && (
           <div ref={chargeRef} className="mt-4 space-y-2">
             {charges.length === 0 ? (
