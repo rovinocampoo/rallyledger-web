@@ -4,6 +4,8 @@ import type {
   UpdateChargeInput,
 } from "../types/charge";import { apiFetch } from "./client";
 
+
+
 export function generateMatchCharges(matchId: number) {
   return apiFetch<void>(`/matches/${matchId}/charges`, {
     method: "POST",

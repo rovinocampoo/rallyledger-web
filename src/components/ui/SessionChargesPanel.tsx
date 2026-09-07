@@ -1,5 +1,9 @@
 import { useEffect, useState } from "react";
-import { getSessionCharges } from "../../api/charges";
+import {
+  getChargeAdjustments,
+  getSessionCharges,
+  updateCharge,
+} from "../../api/charges";
 import ChargeEditForm from "./ChargeEditForm";
 import type { Charge } from "../../types/charge";
 import type { Session } from "../../types/session";
@@ -11,6 +15,8 @@ import {
   formatFullName,
   formatLabel,
 } from "../../utils/format";
+
+const HALF_BALL_REASON = "Half ball due to match interruption";
 
 type SessionChargesPanelProps = {
   session: Session;
@@ -25,9 +31,15 @@ function SessionChargesPanel({
 }: SessionChargesPanelProps) {
   const [charges, setCharges] = useState<Charge[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [editingChargeId, setEditingChargeId] = useState<number | null>(null);
+
+  const [adjustingMatchId, setAdjustingMatchId] = useState<number | null>(null);
+  const [halfBallAppliedMatchIds, setHalfBallAppliedMatchIds] = useState<
+    number[]
+  >([]);
   const total = charges.reduce((sum, charge) => sum + charge.amount, 0);
   const matchIds = [
     ...new Set(
@@ -46,21 +58,61 @@ function SessionChargesPanel({
   useEffect(() => {
     let ignore = false;
 
-    Promise.all([getSessionCharges(session.id), getParticipants()])
-      .then(([chargeData, participantData]) => {
-        if (!ignore) {
-          setCharges(chargeData);
-          setParticipants(participantData);
-          setLoading(false);
+    async function load() {
+      try {
+        const [chargeData, participantData] = await Promise.all([
+          getSessionCharges(session.id),
+          getParticipants(),
+        ]);
+
+        if (ignore) {
+          return;
         }
-      })
-      .catch((err) => {
+
+        setCharges(chargeData);
+        setParticipants(participantData);
+
+        const ballCharges = chargeData.filter(
+          (charge) => charge.feeType === "BALL" && charge.matchId !== null,
+        );
+
+        const matchIdsWithHalfBall = new Set<number>();
+
+        const adjustments = await Promise.all(
+          ballCharges.map(async (charge) => {
+            const history = await getChargeAdjustments(charge.id);
+
+            return {
+              matchId: charge.matchId as number,
+              alreadyHalved: history.some(
+                (adjustment) => adjustment.reason === HALF_BALL_REASON,
+              ),
+            };
+          }),
+        );
+
+        if (ignore) {
+          return;
+        }
+
+        for (const result of adjustments) {
+          if (result.alreadyHalved) {
+            matchIdsWithHalfBall.add(result.matchId);
+          }
+        }
+
+        setHalfBallAppliedMatchIds([...matchIdsWithHalfBall]);
+        setLoading(false);
+      } catch (err) {
         if (!ignore) {
           console.error(err);
-          setError("Failed to load session charges");
+          setLoadError("Failed to load session charges");
           setLoading(false);
         }
-      });
+      }
+    }
+
+    load();
 
     return () => {
       ignore = true;
@@ -89,6 +141,102 @@ function SessionChargesPanel({
     );
     setLastAdjustedChargeId(updatedCharge.id);
     setEditingChargeId(null);
+  }
+
+  async function handleHalfBall(matchId: number) {
+    const matchCharges = charges.filter((charge) => charge.matchId === matchId);
+
+    const ballCharges = matchCharges.filter(
+      (charge) => charge.feeType === "BALL",
+    );
+
+    if (ballCharges.length === 0) {
+      return;
+    }
+
+    try {
+      setAdjustingMatchId(matchId);
+      setActionError(null);
+
+      // Check adjustment history before making any changes.
+      const histories = await Promise.all(
+        ballCharges.map(async (charge) => {
+          const adjustments = await getChargeAdjustments(charge.id);
+
+          return {
+            charge,
+            alreadyHalved: adjustments.some(
+              (adjustment) => adjustment.reason === HALF_BALL_REASON,
+            ),
+          };
+        }),
+      );
+
+      const chargesToAdjust = histories
+        .filter((item) => !item.alreadyHalved)
+        .map((item) => item.charge);
+
+      // Everything in this match has already been halved.
+      if (chargesToAdjust.length === 0) {
+        setHalfBallAppliedMatchIds((current) =>
+          current.includes(matchId) ? current : [...current, matchId],
+        );
+        return;
+      }
+
+      const confirmed = window.confirm(
+        `Apply half-ball pricing to ${chargesToAdjust.length} BALL charge${
+          chargesToAdjust.length === 1 ? "" : "s"
+        } in this match?\n\n` +
+          "Each current BALL charge will be reduced to 50%.\n\n" +
+          `Reason: ${HALF_BALL_REASON}`,
+      );
+
+      if (!confirmed) {
+        return;
+      }
+
+      // Validate every charge before changing any of them.
+      for (const charge of chargesToAdjust) {
+        if (charge.amount % 2 !== 0) {
+          throw new Error(
+            `Cannot halve BALL charge #${charge.id} because ${formatCurrency(
+              charge.amount,
+            )} cannot be split evenly.`,
+          );
+        }
+      }
+
+      // Adjust every BALL charge that has not already been halved.
+      for (const charge of chargesToAdjust) {
+        await updateCharge(charge.id, {
+          amount: charge.amount / 2,
+          reason: HALF_BALL_REASON,
+        });
+      }
+
+      // Reload the session so totals and charge rows use the new amounts.
+      const updatedCharges = await getSessionCharges(session.id);
+      setCharges(updatedCharges);
+
+      // Mark this match as having received the one-time adjustment.
+      setHalfBallAppliedMatchIds((current) =>
+        current.includes(matchId) ? current : [...current, matchId],
+      );
+
+      // Open adjustment history for the last adjusted BALL charge.
+      setLastAdjustedChargeId(chargesToAdjust[chargesToAdjust.length - 1].id);
+    } catch (err) {
+      console.error(err);
+
+      setActionError(
+        err instanceof Error
+          ? err.message
+          : "Failed to apply half-ball charges",
+      );
+    } finally {
+      setAdjustingMatchId(null);
+    }
   }
 
   function renderChargeRow(charge: Charge) {
@@ -142,10 +290,10 @@ function SessionChargesPanel({
     return <p>Loading session charges...</p>;
   }
 
-  if (error) {
+  if (loadError) {
     return (
       <div className="mt-5 rounded-lg border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-950">
-        <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+        <p className="text-sm text-red-600 dark:text-red-400">{loadError}</p>
 
         <button
           type="button"
@@ -179,7 +327,13 @@ function SessionChargesPanel({
           Close
         </button>
       </div>
-
+      {actionError && (
+        <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 dark:border-red-900 dark:bg-red-950/30">
+          <p className="text-sm text-red-600 dark:text-red-400">
+            {actionError}
+          </p>
+        </div>
+      )}
       {charges.length === 0 ? (
         <p className="mt-5 text-sm text-zinc-500">No session charges yet.</p>
       ) : (
@@ -258,11 +412,29 @@ function SessionChargesPanel({
                       key={matchId}
                       className="rounded-lg bg-white dark:bg-zinc-900 p-4"
                     >
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between gap-3">
                         <p className="font-medium">Match #{index + 1}</p>
-                        <p className="font-medium">
-                          {formatCurrency(matchTotal)}
-                        </p>{" "}
+
+                        <div className="flex items-center gap-3">
+                          <p className="font-medium">
+                            {formatCurrency(matchTotal)}
+                          </p>
+                          {matchCharges.some(
+                            (charge) => charge.feeType === "BALL",
+                          ) &&
+                            !halfBallAppliedMatchIds.includes(matchId) && (
+                              <button
+                                type="button"
+                                onClick={() => handleHalfBall(matchId)}
+                                disabled={adjustingMatchId !== null}
+                                className="rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                              >
+                                {adjustingMatchId === matchId
+                                  ? "Applying..."
+                                  : "½ Ball — Interrupted"}
+                              </button>
+                            )}
+                        </div>
                       </div>
 
                       <div className="mt-3 space-y-2">

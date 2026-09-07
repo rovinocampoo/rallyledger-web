@@ -38,14 +38,30 @@ function SessionTrainingPanel({ session, onClose }: SessionTrainingPanelProps) {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
   const [charges, setCharges] = useState<Charge[]>([]);
   const [showCharges, setShowCharges] = useState(false);
   const [generatingCharges, setGeneratingCharges] = useState(false);
+
+  const [racketRentalParticipantId, setRacketRentalParticipantId] =
+    useState("");
+  const [generatingRacketRental, setGeneratingRacketRental] = useState(false);
+
+  const [ledgerParticipant, setLedgerParticipant] =
+    useState<Participant | null>(null);
+
+  const chargeRef = useRef<HTMLDivElement | null>(null);
+
   const chargedTrainingParticipantIds = new Set(
     charges
       .filter((charge) => charge.feeType === "TRAINING")
       .map((charge) => charge.participantId),
   );
+
+  const chargedParticipantIds = new Set(
+    charges.map((charge) => charge.participantId),
+  );
+
   const racketRentalParticipantIds = new Set(
     charges
       .filter((charge) => charge.feeType === "RACKET_RENTAL")
@@ -53,10 +69,7 @@ function SessionTrainingPanel({ session, onClose }: SessionTrainingPanelProps) {
   );
 
   const hasGeneratedTrainingCharges = chargedTrainingParticipantIds.size > 0;
-  const [racketRentalParticipantId, setRacketRentalParticipantId] =
-    useState("");
-  const [generatingRacketRental, setGeneratingRacketRental] = useState(false);
-  const chargeRef = useRef<HTMLDivElement | null>(null);
+
   useEffect(() => {
     if (showCharges) {
       chargeRef.current?.scrollIntoView({
@@ -65,9 +78,6 @@ function SessionTrainingPanel({ session, onClose }: SessionTrainingPanelProps) {
       });
     }
   }, [showCharges]);
-
-  const [ledgerParticipant, setLedgerParticipant] =
-    useState<Participant | null>(null);
 
   useEffect(() => {
     let ignore = false;
@@ -138,6 +148,7 @@ function SessionTrainingPanel({ session, onClose }: SessionTrainingPanelProps) {
       setError("This training session is already full.");
       return;
     }
+
     if (!selectedParticipantId) {
       return;
     }
@@ -155,6 +166,7 @@ function SessionTrainingPanel({ session, onClose }: SessionTrainingPanelProps) {
       setSelectedParticipantId("");
     } catch (err) {
       console.error(err);
+
       setError(
         err instanceof Error ? err.message : "Failed to check in participant",
       );
@@ -164,12 +176,13 @@ function SessionTrainingPanel({ session, onClose }: SessionTrainingPanelProps) {
   }
 
   async function handleCheckOut(participantId: number) {
-    if (chargedTrainingParticipantIds.has(participantId)) {
+    if (chargedParticipantIds.has(participantId)) {
       setError(
-        "Participants cannot be checked out after charges are generated.",
+        "Participants cannot be checked out after charges have been generated.",
       );
       return;
     }
+
     try {
       setSaving(true);
       setError(null);
@@ -181,6 +194,7 @@ function SessionTrainingPanel({ session, onClose }: SessionTrainingPanelProps) {
       );
     } catch (err) {
       console.error(err);
+
       setError("Failed to remove participant from training");
     } finally {
       setSaving(false);
@@ -243,6 +257,7 @@ function SessionTrainingPanel({ session, onClose }: SessionTrainingPanelProps) {
       await loadCharges();
 
       setRacketRentalParticipantId("");
+      setShowCharges(true);
     } catch (err) {
       console.error(err);
 
@@ -321,7 +336,7 @@ function SessionTrainingPanel({ session, onClose }: SessionTrainingPanelProps) {
   }
 
   return (
-    <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4">
+    <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
       <div className="flex items-start justify-between gap-4">
         <div className="text-left">
           <p className="text-sm text-zinc-600 dark:text-zinc-400">Training</p>
@@ -336,16 +351,17 @@ function SessionTrainingPanel({ session, onClose }: SessionTrainingPanelProps) {
         <button
           type="button"
           onClick={onClose}
-          className="text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white"
+          className="text-sm text-zinc-600 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white"
         >
           Close
         </button>
       </div>
 
-      <div className="mt-5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 p-4">
+      <div className="mt-5 rounded-lg border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-950">
         <p className="mb-3 text-left text-sm font-medium text-zinc-600 dark:text-zinc-400">
           Check In Player
         </p>
+
         <p className="mt-1 text-sm text-zinc-500">
           {checkedInParticipants.length}
           {session.maxPlayers !== null ? ` / ${session.maxPlayers}` : ""}{" "}
@@ -372,15 +388,17 @@ function SessionTrainingPanel({ session, onClose }: SessionTrainingPanelProps) {
             {saving ? "Saving..." : "Check In"}
           </button>
         </div>
+
         <div className="mt-3">
           <button
             type="button"
             onClick={() => setShowQuickGuest((current) => !current)}
-            className="text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white"
+            className="text-sm text-zinc-600 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white"
           >
             {showQuickGuest ? "Cancel Quick Guest" : "+ Quick Guest"}
           </button>
         </div>
+
         {showQuickGuest && (
           <div className="mt-3 flex flex-col gap-2 sm:flex-row">
             <input
@@ -394,7 +412,7 @@ function SessionTrainingPanel({ session, onClose }: SessionTrainingPanelProps) {
                 }
               }}
               placeholder="Guest name"
-              className="min-w-0 flex-1 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-sm outline-none focus:border-zinc-500"
+              className="min-w-0 flex-1 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-500 dark:border-zinc-700 dark:bg-zinc-900"
             />
 
             <button
@@ -427,7 +445,7 @@ function SessionTrainingPanel({ session, onClose }: SessionTrainingPanelProps) {
         </div>
 
         {checkedInParticipants.length === 0 ? (
-          <p className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 p-4 text-sm text-zinc-500">
+          <p className="rounded-lg border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-950">
             No participants checked in yet.
           </p>
         ) : (
@@ -435,7 +453,7 @@ function SessionTrainingPanel({ session, onClose }: SessionTrainingPanelProps) {
             {checkedInParticipants.map((participant) => (
               <div
                 key={participant.id}
-                className="flex items-center justify-between gap-3 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 p-3"
+                className="flex items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-950"
               >
                 <div className="min-w-0 text-left">
                   <p className="truncate font-medium">
@@ -451,9 +469,7 @@ function SessionTrainingPanel({ session, onClose }: SessionTrainingPanelProps) {
 
                 <button
                   type="button"
-                  disabled={
-                    saving || chargedTrainingParticipantIds.has(participant.id)
-                  }
+                  disabled={saving || chargedParticipantIds.has(participant.id)}
                   onClick={() => handleCheckOut(participant.id)}
                   className="danger-text shrink-0 px-3 py-1.5 text-sm text-red-400 disabled:opacity-50"
                 >
@@ -464,8 +480,8 @@ function SessionTrainingPanel({ session, onClose }: SessionTrainingPanelProps) {
           </div>
         )}
 
-        <div className="mt-5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 p-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-5 rounded-lg border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-950">
+          <div className="flex flex-col gap-3">
             <div className="text-left">
               <p className="text-sm font-medium">Training Charges</p>
 
@@ -475,7 +491,7 @@ function SessionTrainingPanel({ session, onClose }: SessionTrainingPanelProps) {
               </p>
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {charges.length > 0 && (
                 <button
                   type="button"
@@ -502,25 +518,64 @@ function SessionTrainingPanel({ session, onClose }: SessionTrainingPanelProps) {
               </button>
             </div>
           </div>
-                  <div className="mt-4 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 p-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-            <div className="flex-1">
-              <p className="text-left text-sm font-medium">Racket Rental</p>
+        </div>
+
+        <div className="mt-4 rounded-lg border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-950">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div className="text-left">
+              <p className="text-sm font-medium">Racket Rental</p>
 
               <p className="mt-1 text-xs text-zinc-500">
-                Add a racket rental charge to a checked-in participant.
+                Add an optional racket rental charge to a checked-in
+                participant.
               </p>
             </div>
 
             <div className="flex flex-col gap-2 sm:flex-row">
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <ParticipantPicker
-                  participants={availableRacketRentalParticipants}
-                  selectedParticipantId={racketRentalParticipantId}
-                  onSelect={setRacketRentalParticipantId}
-                  placeholder="Search player..."
-                />
-              </div>
+              <select
+                value={racketRentalParticipantId}
+                onChange={(event) =>
+                  setRacketRentalParticipantId(event.target.value)
+                }
+                disabled={
+                  saving ||
+                  creatingGuest ||
+                  generatingCharges ||
+                  generatingRacketRental ||
+                  availableRacketRentalParticipants.length === 0
+                }
+                className="rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-sm"
+              >
+                <option value="">
+                  {availableRacketRentalParticipants.length === 0
+                    ? "No participants available"
+                    : "Search player..."}
+                </option>
+
+                {availableRacketRentalParticipants.map((participant) => (
+                  <option key={participant.id} value={participant.id}>
+                    {participant.nickname ||
+                      `${participant.firstName} ${participant.lastName}`}
+                  </option>
+                ))}
+              </select>
+              <ParticipantPicker
+                participants={availableRacketRentalParticipants}
+                selectedParticipantId={racketRentalParticipantId}
+                onSelect={setRacketRentalParticipantId}
+                disabled={
+                  saving ||
+                  creatingGuest ||
+                  generatingCharges ||
+                  generatingRacketRental ||
+                  availableRacketRentalParticipants.length === 0
+                }
+                placeholder={
+                  availableRacketRentalParticipants.length === 0
+                    ? "No participants available"
+                    : "Search player..."
+                }
+              />
 
               <button
                 type="button"
@@ -537,12 +592,11 @@ function SessionTrainingPanel({ session, onClose }: SessionTrainingPanelProps) {
             </div>
           </div>
         </div>
-        </div>
 
         {showCharges && (
           <div ref={chargeRef} className="mt-4 space-y-2">
             {charges.length === 0 ? (
-              <p className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 p-4 text-sm text-zinc-500">
+              <p className="rounded-lg border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-950">
                 No charges generated yet.
               </p>
             ) : (
@@ -577,7 +631,7 @@ function SessionTrainingPanel({ session, onClose }: SessionTrainingPanelProps) {
                     </div>
 
                     <p className="shrink-0 font-medium">
-                      {formatCurrency(charge.amount)}{" "}
+                      {formatCurrency(charge.amount)}
                     </p>
                   </button>
                 );
@@ -585,6 +639,7 @@ function SessionTrainingPanel({ session, onClose }: SessionTrainingPanelProps) {
             )}
           </div>
         )}
+
         {ledgerParticipant && (
           <div className="mt-4">
             <ParticipantLedgerPanel
