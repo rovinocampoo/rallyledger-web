@@ -4,6 +4,7 @@ import type { Participant } from "../../types/participant";
 import {
   generateBallRentalCharge,
   generateRacketRentalCharge,
+  generateOutsiderCourtCharge,
   getSessionCharges,
 } from "../../api/charges";
 import { createParticipant, getParticipants } from "../../api/participants";
@@ -14,6 +15,8 @@ import {
 } from "../../api/sessionParticipants";
 
 import ParticipantPicker from "../ui/ParticipantPicker";
+import ChargeEditForm from "../ui/ChargeEditForm";
+import ChargeAdjustmentHistory from "../ui/ChargeAdjustmentHistory";
 import type { Charge } from "../../types/charge";
 import { formatCurrency, formatLabel } from "../../utils/format";
 
@@ -43,8 +46,16 @@ function SessionOutsiderPanel({ session, onClose }: SessionOutsiderPanelProps) {
   const [generatingBallRental, setGeneratingBallRental] = useState(false);
   const [racketRentalParticipantId, setRacketRentalParticipantId] =
     useState("");
-
   const [generatingRacketRental, setGeneratingRacketRental] = useState(false);
+
+  const [outsiderCourtParticipantId, setOutsiderCourtParticipantId] =
+    useState("");
+  const [generatingOutsiderCourt, setGeneratingOutsiderCourt] = useState(false);
+  const [editingChargeId, setEditingChargeId] = useState<number | null>(null);
+
+  const [lastAdjustedChargeId, setLastAdjustedChargeId] = useState<
+    number | null
+  >(null);
 
   const availableParticipants = participants.filter(
     (participant) =>
@@ -72,6 +83,20 @@ function SessionOutsiderPanel({ session, onClose }: SessionOutsiderPanelProps) {
 
   const availableRacketRenters = sessionParticipants.filter(
     (participant) => !racketRentalParticipantIds.has(participant.id),
+  );
+
+  const outsiderCourtCharges = charges.filter(
+    (charge) => charge.matchId === null && charge.feeType === "COURT",
+  );
+
+  const outsiderCourtParticipantIds = new Set(
+    outsiderCourtCharges.map((charge) => charge.participantId),
+  );
+
+  const availableOutsiderCourtParticipants = sessionParticipants.filter(
+    (participant) =>
+      participant.participantType === "NONMEMBER" &&
+      !outsiderCourtParticipantIds.has(participant.id),
   );
 
   const chargedRentalParticipantIds = new Set(
@@ -306,6 +331,37 @@ function SessionOutsiderPanel({ session, onClose }: SessionOutsiderPanelProps) {
     }
   }
 
+  async function handleOutsiderCourt() {
+    if (!outsiderCourtParticipantId) {
+      return;
+    }
+
+    try {
+      setGeneratingOutsiderCourt(true);
+      setError(null);
+
+      await generateOutsiderCourtCharge(
+        session.id,
+        Number(outsiderCourtParticipantId),
+      );
+
+      const updatedCharges = await getSessionCharges(session.id);
+
+      setCharges(updatedCharges);
+      setOutsiderCourtParticipantId("");
+    } catch (err) {
+      console.error(err);
+
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to generate outsider Court charge",
+      );
+    } finally {
+      setGeneratingOutsiderCourt(false);
+    }
+  }
+
   if (loading) {
     return <p>Loading outsider activity...</p>;
   }
@@ -509,10 +565,43 @@ function SessionOutsiderPanel({ session, onClose }: SessionOutsiderPanelProps) {
                 </p>
               </div>
 
-              <p className="font-medium">
-                {formatCurrency(ballRentalCharge.amount)}
-              </p>
+              <div className="flex shrink-0 items-center gap-2">
+                <p className="font-medium">
+                  {formatCurrency(ballRentalCharge.amount)}
+                </p>
+
+                <button
+                  type="button"
+                  onClick={() => setEditingChargeId(ballRentalCharge.id)}
+                  className="text-xs text-zinc-600 transition-colors hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white"
+                >
+                  Edit
+                </button>
+              </div>
             </div>
+            {editingChargeId === ballRentalCharge.id && (
+              <div className="mt-2">
+                <ChargeEditForm
+                  charge={ballRentalCharge}
+                  onSaved={(updatedCharge) => {
+                    setCharges((current) =>
+                      current.map((item) =>
+                        item.id === updatedCharge.id ? updatedCharge : item,
+                      ),
+                    );
+
+                    setEditingChargeId(null);
+                    setLastAdjustedChargeId(updatedCharge.id);
+                  }}
+                  onCancel={() => setEditingChargeId(null)}
+                />
+              </div>
+            )}
+
+            <ChargeAdjustmentHistory
+              chargeId={ballRentalCharge.id}
+              initiallyOpen={lastAdjustedChargeId === ballRentalCharge.id}
+            />
           </div>
         )}
       </div>
@@ -561,27 +650,163 @@ function SessionOutsiderPanel({ session, onClose }: SessionOutsiderPanelProps) {
               );
 
               return (
-                <div
-                  key={charge.id}
-                  className="flex items-center justify-between rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-3"
-                >
-                  <div className="text-left">
-                    <p className="font-medium">
-                      {renter?.nickname ||
-                        (renter
-                          ? `${renter.firstName} ${renter.lastName}`
-                          : `Participant #${charge.participantId}`)}
-                    </p>
+                <div key={charge.id}>
+                  <div className="flex items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900">
+                    <div className="min-w-0 text-left">
+                      <p className="font-medium">
+                        {renter?.nickname ||
+                          (renter
+                            ? `${renter.firstName} ${renter.lastName}`
+                            : `Participant #${charge.participantId}`)}
+                      </p>
 
-                    <p className="text-xs text-zinc-500">Racket Rental</p>
+                      <p className="text-xs text-zinc-500">Racket Rental</p>
+                    </div>
+
+                    <div className="flex shrink-0 items-center gap-2">
+                      <p className="font-medium">
+                        {formatCurrency(charge.amount)}
+                      </p>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingChargeId(charge.id);
+                          setLastAdjustedChargeId(null);
+                        }}
+                        className="text-xs text-zinc-600 transition-colors hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white"
+                      >
+                        Edit
+                      </button>
+                    </div>
                   </div>
 
-                  <p className="font-medium">{formatCurrency(charge.amount)}</p>
+                  {editingChargeId === charge.id && (
+                    <div className="mt-2">
+                      <ChargeEditForm
+                        charge={charge}
+                        onSaved={(updatedCharge) => {
+                          setCharges((current) =>
+                            current.map((item) =>
+                              item.id === updatedCharge.id
+                                ? updatedCharge
+                                : item,
+                            ),
+                          );
+
+                          setEditingChargeId(null);
+                          setLastAdjustedChargeId(updatedCharge.id);
+                        }}
+                        onCancel={() => setEditingChargeId(null)}
+                      />
+                    </div>
+                  )}
+
+                  <ChargeAdjustmentHistory
+                    chargeId={charge.id}
+                    initiallyOpen={lastAdjustedChargeId === charge.id}
+                  />
                 </div>
               );
             })}
           </div>
         )}
+      </div>
+      <div className="mt-5 rounded-lg border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-950">
+        <p className="text-left text-sm font-medium">Court Fee</p>
+
+        <p className="mt-1 text-left text-xs text-zinc-500">
+          Add one Court charge for an eligible Nonmember attendee.
+        </p>
+
+        {availableOutsiderCourtParticipants.length > 0 && (
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+            <select
+              value={outsiderCourtParticipantId}
+              onChange={(event) =>
+                setOutsiderCourtParticipantId(event.target.value)
+              }
+              className="min-w-0 flex-1 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white"
+            >
+              <option value="">Choose Nonmember...</option>
+
+              {availableOutsiderCourtParticipants.map((participant) => (
+                <option key={participant.id} value={participant.id}>
+                  {participant.nickname ||
+                    `${participant.firstName} ${participant.lastName}`}
+                </option>
+              ))}
+            </select>
+
+            <button
+              type="button"
+              onClick={handleOutsiderCourt}
+              disabled={!outsiderCourtParticipantId || generatingOutsiderCourt}
+              className="primary-action rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50"
+            >
+              {generatingOutsiderCourt ? "Generating..." : "Add Court Fee"}
+            </button>
+          </div>
+        )}
+
+        {outsiderCourtCharges.map((charge) => {
+          const participant = participants.find(
+            (item) => item.id === charge.participantId,
+          );
+
+          return (
+            <div key={charge.id}>
+              <div className="flex items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900">
+                <div className="min-w-0 text-left">
+                  <p className="font-medium">
+                    {participant?.nickname ||
+                      (participant
+                        ? `${participant.firstName} ${participant.lastName}`
+                        : `Participant #${charge.participantId}`)}
+                  </p>
+
+                  <p className="text-xs text-zinc-500">Court Fee</p>
+                </div>
+
+                <div className="flex shrink-0 items-center gap-2">
+                  <p className="font-medium">{formatCurrency(charge.amount)}</p>
+
+                  <button
+                    type="button"
+                    onClick={() => setEditingChargeId(charge.id)}
+                    className="text-xs text-zinc-600 transition-colors hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white"
+                  >
+                    Edit
+                  </button>
+                </div>
+              </div>
+
+              {editingChargeId === charge.id && (
+                <div className="mt-2">
+                  <ChargeEditForm
+                    charge={charge}
+                    onSaved={(updatedCharge) => {
+                      setCharges((current) =>
+                        current.map((item) =>
+                          item.id === updatedCharge.id ? updatedCharge : item,
+                        ),
+                      );
+
+                      setEditingChargeId(null);
+                      setLastAdjustedChargeId(updatedCharge.id);
+                    }}
+                    onCancel={() => setEditingChargeId(null)}
+                  />
+                </div>
+              )}
+
+              <ChargeAdjustmentHistory
+                chargeId={charge.id}
+                initiallyOpen={lastAdjustedChargeId === charge.id}
+              />
+            </div>
+          );
+        })}
       </div>
     </div>
   );

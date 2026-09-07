@@ -13,6 +13,20 @@ type FeeRuleFormProps = {
 
 const MATCH_TYPES = ["SINGLES", "DOUBLES", "MIXED_DOUBLES"];
 
+function feeUsesParticipantType(feeType: FeeRuleInput["feeType"]) {
+  return (
+    feeType === "COURT" ||
+    feeType === "LIGHT" ||
+    feeType === "TRAINING" ||
+    feeType === "BALL_RENTAL" ||
+    feeType === "RACKET_RENTAL"
+  );
+}
+
+function feeUsesMatchType(feeType: FeeRuleInput["feeType"]) {
+  return feeType === "BALL" || feeType === "LIGHT";
+}
+
 function FeeRuleForm({
   rule,
   categories,
@@ -25,8 +39,9 @@ function FeeRuleForm({
   const [participantType, setParticipantType] = useState(
     rule?.participantType ?? "",
   );
-  const usesParticipantType = feeType !== "BALL";
-  const usesMatchType = feeType === "BALL" || feeType === "LIGHT";
+  const usesParticipantType = feeUsesParticipantType(feeType);
+
+  const usesMatchType = feeUsesMatchType(feeType);
   const [matchType, setMatchType] = useState(rule?.matchType ?? "");
   const [amount, setAmount] = useState(rule ? String(rule.amount) : "");
   const [isActive, setIsActive] = useState(rule?.isActive ?? true);
@@ -42,7 +57,6 @@ function FeeRuleForm({
       setFormError("Amount must be a whole peso amount of 0 or greater.");
       return;
     }
-
     const input: FeeRuleInput = {
       feeType,
       participantType: usesParticipantType ? participantType || null : null,
@@ -106,8 +120,14 @@ function FeeRuleForm({
               const value = event.target.value as FeeRuleInput["feeType"];
 
               setFeeType(value);
-              setMatchType("");
-              setParticipantType("");
+
+              if (!feeUsesParticipantType(value)) {
+                setParticipantType("");
+              }
+
+              if (!feeUsesMatchType(value)) {
+                setMatchType("");
+              }
             }}
             className="mt-2 w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 px-3 py-2"
           >

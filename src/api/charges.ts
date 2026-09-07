@@ -72,3 +72,15 @@ export function generateRacketRentalCharge(
     },
   );
 }
+
+export function generateOutsiderCourtCharge(
+  sessionId: number,
+  participantId: number,
+) {
+  return apiFetch<Charge>(`/sessions/${sessionId}/outsider-court`, {
+    method: "POST",
+    body: JSON.stringify({
+      participantId,
+    }),
+  });
+}
