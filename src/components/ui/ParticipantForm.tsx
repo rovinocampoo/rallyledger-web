@@ -52,7 +52,7 @@ function ParticipantForm({
         birthday: birthday ? `${birthday}T00:00:00Z` : null,
         membershipStatus,
         participantType,
-        isTemporary,
+        isTemporary: participantType === "NONMEMBER" ? isTemporary : false,
       };
 
       let savedParticipant: Participant;
@@ -174,7 +174,7 @@ function ParticipantForm({
                 <option value="REVOKED">Revoked</option>
               </select>
             </label>
-            {participant && (
+            {participantType === "NONMEMBER" && (
               <label className="flex items-start gap-3 rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-left dark:border-zinc-800 dark:bg-zinc-950">
                 <input
                   type="checkbox"
