@@ -17,6 +17,9 @@ import {
 import type { Charge } from "../../types/charge";
 import { formatCurrency, formatLabel } from "../../utils/format";
 import ParticipantLedgerPanel from "./ParticipantLedgerPanel";
+import SessionPackagePanel from "../sessions/SessionPackagePanel";
+import type { PackageDetails } from "../../types/package";
+import { getSessionPackages } from "../../api/packages";
 
 type SessionTrainingPanelProps = {
   session: Session;
@@ -42,6 +45,7 @@ function SessionTrainingPanel({ session, onClose }: SessionTrainingPanelProps) {
   const [charges, setCharges] = useState<Charge[]>([]);
   const [showCharges, setShowCharges] = useState(false);
   const [generatingCharges, setGeneratingCharges] = useState(false);
+  const [packages, setPackages] = useState<PackageDetails[]>([]);
 
   const [racketRentalParticipantId, setRacketRentalParticipantId] =
     useState("");
@@ -86,24 +90,32 @@ function SessionTrainingPanel({ session, onClose }: SessionTrainingPanelProps) {
       getParticipants(),
       getSessionParticipants(session.id),
       getSessionCharges(session.id),
+      getSessionPackages(session.id),
     ])
-      .then(([participantData, sessionParticipantData, chargeData]) => {
-        if (ignore) {
-          return;
-        }
+      .then(
+        ([
+          participantData,
+          sessionParticipantData,
+          chargeData,
+          packageData,
+        ]) => {
+          if (ignore) {
+            return;
+          }
 
-        setParticipants(participantData);
+          setParticipants(participantData);
 
-        setCheckedInParticipantIds(
-          sessionParticipantData.map(
-            (sessionParticipant) => sessionParticipant.participantId,
-          ),
-        );
+          setCheckedInParticipantIds(
+            sessionParticipantData.map(
+              (sessionParticipant) => sessionParticipant.participantId,
+            ),
+          );
 
-        setCharges(chargeData);
-
-        setLoading(false);
-      })
+          setCharges(chargeData);
+          setPackages(packageData);
+          setLoading(false);
+        },
+      )
       .catch((err) => {
         console.error(err);
 
@@ -129,6 +141,16 @@ function SessionTrainingPanel({ session, onClose }: SessionTrainingPanelProps) {
       participants.find((participant) => participant.id === participantId),
     )
     .filter((participant): participant is Participant => Boolean(participant));
+
+  const packagedParticipantIds = new Set(
+    packages.flatMap((pkg) =>
+      pkg.participants.map((participant) => participant.participantId),
+    ),
+  );
+
+  const unpricedParticipantCount = checkedInParticipants.filter(
+    (participant) => !packagedParticipantIds.has(participant.id),
+  ).length;
 
   const availableRacketRentalParticipants = checkedInParticipants.filter(
     (participant) => !racketRentalParticipantIds.has(participant.id),
@@ -207,11 +229,18 @@ function SessionTrainingPanel({ session, onClose }: SessionTrainingPanelProps) {
       return;
     }
 
+    if (unpricedParticipantCount === 0) {
+      setError("All checked-in participants are already covered by packages.");
+      return;
+    }
+
     const confirmed = window.confirm(
       hasGeneratedTrainingCharges
-        ? `Recalculate training charges for ${checkedInParticipants.length} checked-in participants? Unedited Light charges will be rebalanced.`
-        : `Generate training charges for ${checkedInParticipants.length} checked-in participant${
-            checkedInParticipants.length === 1 ? "" : "s"
+        ? `Recalculate training charges for ${unpricedParticipantCount} participant${
+            unpricedParticipantCount === 1 ? "" : "s"
+          }? Unedited Light charges will be rebalanced.`
+        : `Generate training charges for ${unpricedParticipantCount} participant${
+            unpricedParticipantCount === 1 ? "" : "s"
           }?`,
     );
 
@@ -224,7 +253,6 @@ function SessionTrainingPanel({ session, onClose }: SessionTrainingPanelProps) {
       setError(null);
 
       await generateTrainingCharges(session.id);
-
       await loadCharges();
 
       setShowCharges(true);
@@ -505,9 +533,7 @@ function SessionTrainingPanel({ session, onClose }: SessionTrainingPanelProps) {
               <button
                 type="button"
                 onClick={() => void handleGenerateCharges()}
-                disabled={
-                  generatingCharges || checkedInParticipants.length === 0
-                }
+                disabled={generatingCharges || unpricedParticipantCount === 0}
                 className="primary-action rounded-lg px-3 py-2 text-sm font-medium disabled:opacity-50"
               >
                 {generatingCharges
@@ -648,6 +674,13 @@ function SessionTrainingPanel({ session, onClose }: SessionTrainingPanelProps) {
             />
           </div>
         )}
+        <SessionPackagePanel
+          sessionId={session.id}
+          checkedInParticipants={checkedInParticipants}
+          packages={packages}
+          onPackagesChange={setPackages}
+          onPackageCreated={loadCharges}
+        />
       </div>
     </div>
   );
