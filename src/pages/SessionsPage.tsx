@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { getSessions, deleteSession } from "../api/sessions";
-import type { Session } from "../types/session";
+import type { Session, SessionType } from "../types/session";
 import SessionCard from "../components/ui/SessionCard";
 import SessionForm from "../components/ui/SessionForm";
 import SessionParticipantsPanel from "../components/ui/SessionParticipantsPanel";
@@ -28,6 +29,8 @@ function sortSessions(items: Session[]) {
 }
 
 function SessionsPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
+
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -46,6 +49,9 @@ function SessionsPage() {
   const sessionPanelRef = useRef<HTMLDivElement | null>(null);
   const [resultsSession, setResultsSession] = useState<Session | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [initialSessionType, setInitialSessionType] = useState<
+    SessionType | undefined
+  >(undefined);
 
   useEffect(() => {
     if (
@@ -92,6 +98,78 @@ function SessionsPage() {
   }, []);
 
   useEffect(() => {
+    if (loading) {
+      return;
+    }
+
+    if (searchParams.get("action") !== "add-match") {
+      return;
+    }
+
+    const today = new Date();
+
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, "0");
+    const day = String(today.getDate()).padStart(2, "0");
+
+    const todayDate = `${year}-${month}-${day}`;
+
+    const latestRegularPlay = sessions
+      .filter(
+        (session) =>
+          session.sessionType === "REGULAR_PLAY" &&
+          session.sessionDate.slice(0, 10) === todayDate,
+      )
+      .sort((a, b) => {
+        if (a.startTime !== b.startTime) {
+          return b.startTime.localeCompare(a.startTime);
+        }
+
+        return b.id - a.id;
+      })[0];
+
+    if (!latestRegularPlay) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setActionError("No Regular Play session found for today.");
+      setSearchParams({}, { replace: true });
+      return;
+    }
+
+    setMatchSession(latestRegularPlay);
+    setTrainingSession(null);
+    setOutsiderSession(null);
+    setResultsSession(null);
+    setSelectedSession(null);
+    setChargeSession(null);
+    setLedgerParticipant(null);
+    setEditingSession(null);
+    setShowForm(false);
+
+    setSearchParams({}, { replace: true });
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+  }, [loading, searchParams, sessions, setSearchParams]);
+
+  useEffect(() => {
+    const requestedType = searchParams.get("new");
+
+    if (
+      requestedType !== "REGULAR_PLAY" &&
+      requestedType !== "TRAINING" &&
+      requestedType !== "OUTSIDER_PLAY" &&
+      requestedType !== "EVENT"
+    ) {
+      return;
+    }
+
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setEditingSession(null);
+    setInitialSessionType(requestedType);
+    setShowForm(true);
+
+    setSearchParams({}, { replace: true });
+  }, [searchParams, setSearchParams]);
+
+  useEffect(() => {
     if (!editingSession) {
       return;
     }
@@ -125,6 +203,19 @@ function SessionsPage() {
     setLedgerParticipant(participant);
   }
 
+  function handleAddSession(sessionType: SessionType = "REGULAR_PLAY") {
+    setEditingSession(null);
+    setInitialSessionType(sessionType);
+    setShowForm(true);
+  }
+
+  function handleCancelNewSession() {
+    setShowForm(false);
+    setEditingSession(null);
+    setInitialSessionType(undefined);
+    setSearchParams({}, { replace: true });
+  }
+
   function handleSessionSaved(savedSession: Session) {
     setSessions((current) => {
       const exists = current.some((session) => session.id === savedSession.id);
@@ -142,6 +233,7 @@ function SessionsPage() {
 
     setShowForm(false);
     setEditingSession(null);
+    setInitialSessionType(undefined);
   }
 
   async function handleSessionDelete(session: Session) {
@@ -192,10 +284,7 @@ function SessionsPage() {
 
           <button
             type="button"
-            onClick={() => {
-              setEditingSession(null);
-              setShowForm(true);
-            }}
+            onClick={() => handleAddSession()}
             className="primary-action w-full rounded-lg px-4 py-3 text-sm font-medium sm:w-auto sm:py-2"
           >
             Add Session
@@ -209,11 +298,9 @@ function SessionsPage() {
         {showForm && editingSession === null && (
           <div className="mt-4">
             <SessionForm
+              initialSessionType={initialSessionType}
               onSaved={handleSessionSaved}
-              onCancel={() => {
-                setShowForm(false);
-                setEditingSession(null);
-              }}
+              onCancel={handleCancelNewSession}
             />
           </div>
         )}

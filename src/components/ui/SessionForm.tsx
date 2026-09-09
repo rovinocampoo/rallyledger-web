@@ -9,6 +9,7 @@ import { formatLabel } from "../../utils/format";
 
 type SessionFormProps = {
   session?: Session;
+  initialSessionType?: SessionType;
   onSaved: (session: Session) => void;
   onCancel: () => void;
 };
@@ -23,11 +24,16 @@ function getTodayDate() {
   return `${year}-${month}-${day}`;
 }
 
-function SessionForm({ session, onSaved, onCancel }: SessionFormProps) {
+function SessionForm({
+  session,
+  initialSessionType,
+  onSaved,
+  onCancel,
+}: SessionFormProps) {
   const [name, setName] = useState(session?.name ?? "");
   const [description, setDescription] = useState(session?.description ?? "");
   const [sessionType, setSessionType] = useState<SessionType>(
-    session?.sessionType ?? "REGULAR_PLAY",
+    session?.sessionType ?? initialSessionType ?? "REGULAR_PLAY",
   );
   const [sessionDate, setSessionDate] = useState(
     session?.sessionDate.slice(0, 10) ?? getTodayDate(),
@@ -42,7 +48,6 @@ function SessionForm({ session, onSaved, onCancel }: SessionFormProps) {
   const [lightUsage, setLightUsage] = useState<LightUsage>(
     session?.lightUsage ?? "NONE",
   );
-
 
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
