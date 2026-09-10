@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { Route, Routes } from "react-router-dom";
-
 import {
   getAdminOrganizations,
   getCurrentAdmin,
@@ -20,6 +19,9 @@ import SessionsPage from "./pages/SessionsPage";
 import OutstandingPage from "./pages/OutstandingPage";
 import CourtsPage from "./pages/CourtsPage";
 import FeeRulesPage from "./pages/FeeRulesPage";
+import AdminAccessPage from "./pages/AdminAccessPage";
+import AuditLogPage from "./pages/AuditLogPage";
+import ChangePasswordPage from "./pages/ChangePasswordPage";
 import { AUTH_EXPIRED_EVENT } from "./api/client";
 
 type Theme = "light" | "dark";
@@ -196,6 +198,19 @@ function App() {
   if (!admin) {
     return <LoginPage onLoggedIn={handleLoggedIn} />;
   }
+  if (admin.mustChangePassword) {
+    return (
+      <ChangePasswordPage
+        forced
+        onPasswordChanged={() => {
+          setAdmin(null);
+          setOrganizations([]);
+          setOrganization(null);
+          setOrganizationError(null);
+        }}
+      />
+    );
+  }
 
   return (
     <Routes>
@@ -221,6 +236,26 @@ function App() {
         <Route path="/courts" element={<CourtsPage />} />
         <Route path="/sessions" element={<SessionsPage />} />
         <Route path="/fee-rules" element={<FeeRulesPage />} />
+        <Route
+          path="/change-password"
+          element={
+            <ChangePasswordPage
+              onPasswordChanged={() => {
+                setAdmin(null);
+                setOrganizations([]);
+                setOrganization(null);
+                setOrganizationError(null);
+              }}
+            />
+          }
+        />
+
+        <Route
+          path="/admin/access"
+          element={<AdminAccessPage admin={admin} />}
+        />
+
+        <Route path="/admin/audit-logs" element={<AuditLogPage />} />
       </Route>
     </Routes>
   );

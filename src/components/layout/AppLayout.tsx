@@ -43,6 +43,8 @@ function AppLayout({
     { to: "/sessions", label: "Sessions", icon: "🎾" },
     { to: "/courts", label: "Courts", icon: "🎾" },
     { to: "/fee-rules", label: "Fees", icon: "🧾" },
+    { to: "/admin/access", label: "Admin Access", icon: "🔐" },
+    { to: "/admin/audit-logs", label: "Audit Log", icon: "📊" },
   ];
 
   function closeMobileMenus() {
@@ -200,7 +202,16 @@ function AppLayout({
             <p className="mt-1 truncate text-sm text-zinc-700 dark:text-zinc-300">
               {admin.email}
             </p>
-
+            <NavLink
+              to="/change-password"
+              className={({ isActive }) =>
+                isActive
+                  ? "mt-3 block rounded-lg bg-zinc-200 px-3 py-2 text-sm text-zinc-950 dark:bg-zinc-800 dark:text-white"
+                  : "mt-3 block rounded-lg px-3 py-2 text-sm text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-white"
+              }
+            >
+              Change Password
+            </NavLink>
             <button
               type="button"
               onClick={onThemeToggle}
@@ -386,6 +397,32 @@ function AppLayout({
             >
               <span>🧾</span>
               <span>Fee Rules</span>
+            </NavLink>
+            <NavLink
+              to="/admin/access"
+              onClick={closeMobileMenus}
+              className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800"
+            >
+              <span>⚙</span>
+              <span>Admin Access</span>
+            </NavLink>
+
+            <NavLink
+              to="/admin/audit-logs"
+              onClick={closeMobileMenus}
+              className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800"
+            >
+              <span>▤</span>
+              <span>Audit Log</span>
+            </NavLink>
+
+            <NavLink
+              to="/change-password"
+              onClick={closeMobileMenus}
+              className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800"
+            >
+              <span>🔑</span>
+              <span>Change Password</span>
             </NavLink>
 
             <div className="my-2 border-t border-zinc-200 dark:border-zinc-800" />
