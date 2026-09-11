@@ -71,6 +71,7 @@ function SessionMatchesPanel({ session, onClose }: SessionMatchesPanelProps) {
   const [manageTab, setManageTab] = useState<"MATCH" | "SCORE">("MATCH");
   const createFormRef = useRef<HTMLDivElement | null>(null);
   const manageMatchRef = useRef<HTMLDivElement | null>(null);
+  const quickGuestInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (showForm && !editingMatch) {
@@ -79,7 +80,7 @@ function SessionMatchesPanel({ session, onClose }: SessionMatchesPanelProps) {
         block: "center",
       });
     }
-  }, [showForm, editingMatch]);
+  }, [showForm, editingMatch, showQuickGuest]);
 
   useEffect(() => {
     if (editingMatch) {
@@ -89,6 +90,15 @@ function SessionMatchesPanel({ session, onClose }: SessionMatchesPanelProps) {
       });
     }
   }, [editingMatch]);
+
+  useEffect(() => {
+    if (showQuickGuest) {
+      quickGuestInputRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    }
+  }, [showQuickGuest]);
 
   useEffect(() => {
     let ignore = false;
@@ -655,6 +665,7 @@ function SessionMatchesPanel({ session, onClose }: SessionMatchesPanelProps) {
           <MatchDetailsForm
             editingMatch={false}
             courtId={courtId}
+            quickGuestInputRef={quickGuestInputRef}
             setCourtId={setCourtId}
             matchType={matchType}
             setMatchType={setMatchType}
@@ -893,6 +904,7 @@ function SessionMatchesPanel({ session, onClose }: SessionMatchesPanelProps) {
                       <MatchDetailsForm
                         editingMatch={true}
                         courtId={courtId}
+                        quickGuestInputRef={quickGuestInputRef}
                         setCourtId={setCourtId}
                         matchType={matchType}
                         setMatchType={setMatchType}

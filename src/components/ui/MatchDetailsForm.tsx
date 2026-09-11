@@ -3,6 +3,7 @@ import type { Court } from "../../types/court";
 import type { Participant } from "../../types/participant";
 import ParticipantPicker from "../ui/ParticipantPicker";
 import { formatLabel } from "../../utils/format";
+import type { RefObject } from "react";
 
 type MatchDetailsFormProps = {
   editingMatch: boolean;
@@ -34,6 +35,8 @@ type MatchDetailsFormProps = {
 
   showQuickGuest: boolean;
   setShowQuickGuest: (value: boolean) => void;
+
+  quickGuestInputRef: RefObject<HTMLInputElement | null>;
 
   quickGuestName: string;
   setQuickGuestName: (value: string) => void;
@@ -71,6 +74,7 @@ function MatchDetailsForm({
   availableForPicker,
   showQuickGuest,
   setShowQuickGuest,
+  quickGuestInputRef,
   quickGuestName,
   setQuickGuestName,
   setQuickGuestTarget,
@@ -85,7 +89,9 @@ function MatchDetailsForm({
       <>
         <div className="grid gap-4 md:grid-cols-2 text-left">
           <label>
-            <span className="text-sm text-zinc-600 dark:text-zinc-400">Court</span>
+            <span className="text-sm text-zinc-600 dark:text-zinc-400">
+              Court
+            </span>
 
             <select
               value={courtId}
@@ -106,7 +112,9 @@ function MatchDetailsForm({
           </label>
 
           <label>
-            <span className="text-sm text-zinc-600 dark:text-zinc-400">Match Type</span>
+            <span className="text-sm text-zinc-600 dark:text-zinc-400">
+              Match Type
+            </span>
 
             <select
               value={matchType}
@@ -133,7 +141,9 @@ function MatchDetailsForm({
 
         <div className="mt-6 text-left">
           <div className="mb-3">
-            <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400">Players</p>
+            <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
+              Players
+            </p>
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
@@ -241,6 +251,7 @@ function MatchDetailsForm({
 
             <div className="flex flex-col gap-2 sm:flex-row">
               <input
+                ref={quickGuestInputRef}
                 type="text"
                 value={quickGuestName}
                 onChange={(event) => setQuickGuestName(event.target.value)}
@@ -273,7 +284,9 @@ function MatchDetailsForm({
         )}
       </>
       <div className="mt-4 text-left">
-        <p className="mb-2 text-sm text-zinc-600 dark:text-zinc-400">Lights Usage</p>
+        <p className="mb-2 text-sm text-zinc-600 dark:text-zinc-400">
+          Lights Usage
+        </p>
 
         <div className="grid grid-cols-3 gap-2">
           {(["NONE", "HALF", "FULL"] as const).map((usage) => (
@@ -282,9 +295,7 @@ function MatchDetailsForm({
               type="button"
               onClick={() => setLightUsage(usage)}
               className={`rounded-lg px-3 py-2 text-sm font-medium ${
-                lightUsage === usage
-                  ? "primary-action"
-                  : "secondary-action"
+                lightUsage === usage ? "primary-action" : "secondary-action"
               }`}
             >
               {usage === "NONE" ? "None" : usage === "HALF" ? "Half" : "Full"}
