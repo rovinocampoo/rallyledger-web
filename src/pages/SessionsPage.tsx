@@ -51,6 +51,7 @@ function SessionsPage({
   const [editingSession, setEditingSession] = useState<Session | null>(null);
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
   const [matchSession, setMatchSession] = useState<Session | null>(null);
+  const [selectedMatchId, setSelectedMatchId] = useState<number | null>(null);
   const [trainingSession, setTrainingSession] = useState<Session | null>(null);
   const [outsiderSession, setOutsiderSession] = useState<Session | null>(null);
   const [chargeSession, setChargeSession] = useState<Session | null>(null);
@@ -180,6 +181,57 @@ function SessionsPage({
 
     setSearchParams({}, { replace: true });
   }, [searchParams, setSearchParams]);
+
+  useEffect(() => {
+    const sessionIdParam = searchParams.get("session");
+
+    if (!sessionIdParam || loading || sessions.length === 0) {
+      return;
+    }
+
+    const sessionId = Number(sessionIdParam);
+
+    if (!Number.isInteger(sessionId)) {
+      return;
+    }
+
+    const session = sessions.find((item) => item.id === sessionId);
+
+    if (!session) {
+      return;
+    }
+
+    const matchIdParam = searchParams.get("match");
+
+    if (matchIdParam) {
+      const matchId = Number(matchIdParam);
+
+      if (!Number.isInteger(matchId)) {
+        return;
+      }
+
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSelectedMatchId(matchId);
+      setMatchSession(session);
+      setSelectedSession(null);
+      setEditingSession(null);
+      setTrainingSession(null);
+      setOutsiderSession(null);
+      setResultsSession(null);
+      setChargeSession(null);
+    } else {
+      setSelectedMatchId(null);
+      setSelectedSession(session);
+      setEditingSession(null);
+      setMatchSession(null);
+      setTrainingSession(null);
+      setOutsiderSession(null);
+      setResultsSession(null);
+      setChargeSession(null);
+    }
+
+    setSearchParams({}, { replace: true });
+  }, [loading, searchParams, sessions, setSearchParams]);
 
   useEffect(() => {
     if (!editingSession) {
@@ -371,6 +423,7 @@ function SessionsPage({
                 }}
                 onManageMatches={(session) => {
                   setMatchSession(session);
+                  setSelectedMatchId(null);
 
                   setTrainingSession(null);
                   setOutsiderSession(null);
@@ -432,7 +485,11 @@ function SessionsPage({
                   <SessionMatchesPanel
                     session={session}
                     admin={admin}
-                    onClose={() => setMatchSession(null)}
+                    selectedMatchId={selectedMatchId}
+                    onClose={() => {
+                      setMatchSession(null);
+                      setSelectedMatchId(null);
+                    }}
                   />
                 </div>
               )}

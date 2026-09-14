@@ -31,12 +31,14 @@ import type { AdminUser } from "../../api/auth";
 type SessionMatchesPanelProps = {
   session: Session;
   admin: AdminUser;
+  selectedMatchId?: number | null;
   onClose: () => void;
 };
 
 function SessionMatchesPanel({
   session,
   admin,
+  selectedMatchId = null,
   onClose,
 }: SessionMatchesPanelProps) {
   const canDeleteMatches = admin.role === "OWNER" || admin.role === "ADMIN";
@@ -79,6 +81,7 @@ function SessionMatchesPanel({
   const createFormRef = useRef<HTMLDivElement | null>(null);
   const manageMatchRef = useRef<HTMLDivElement | null>(null);
   const quickGuestInputRef = useRef<HTMLInputElement | null>(null);
+  const autoOpenedMatchRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (showForm && !editingMatch) {
@@ -470,6 +473,7 @@ function SessionMatchesPanel({
     }
   }
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   function handleEditMatch(match: Match) {
     const matchParticipants = participantsByMatch[match.id] ?? [];
 
@@ -501,6 +505,27 @@ function SessionMatchesPanel({
 
     setError(null);
   }
+
+  useEffect(() => {
+    if (!selectedMatchId || loading || matches.length === 0) {
+      return;
+    }
+
+    if (autoOpenedMatchRef.current === selectedMatchId) {
+      return;
+    }
+
+    const match = matches.find((item) => item.id === selectedMatchId);
+
+    if (!match) {
+      return;
+    }
+
+    autoOpenedMatchRef.current = selectedMatchId;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    handleEditMatch(match);
+  }, [selectedMatchId, loading, matches, handleEditMatch]);
+
   function getSessionMatchNumber(matchId: number) {
     const index = matches.findIndex((match) => match.id === matchId);
 

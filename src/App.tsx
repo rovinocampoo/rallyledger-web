@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Route, Routes } from "react-router-dom";
+import { Route, Routes, useNavigate } from "react-router-dom";
 import {
   getAdminOrganizations,
   getCurrentAdmin,
@@ -28,6 +28,7 @@ import OrganizationSettingsPage from "./pages/OrganizationSettingsPage";
 import AuditLogPage from "./pages/AuditLogPage";
 import ChangePasswordPage from "./pages/ChangePasswordPage";
 import { AUTH_EXPIRED_EVENT } from "./api/client";
+import CalendarPage from "./pages/CalendarPage";
 
 type Theme = "light" | "dark";
 
@@ -41,6 +42,7 @@ function App() {
     null,
   );
   const [authLoading, setAuthLoading] = useState(true);
+  const navigate = useNavigate();
   const [theme, setTheme] = useState<Theme>(() => {
     const savedTheme = localStorage.getItem("rallyledger-theme");
 
@@ -322,6 +324,21 @@ function App() {
           />
         )}
         <Route path="/admin/audit-logs" element={<AuditLogPage />} />
+        <Route
+          path="/calendar"
+          element={
+            <CalendarPage
+              onSessionSelected={(session) => {
+                navigate(`/sessions?session=${session.id}`);
+              }}
+              onMatchSelected={(match) => {
+                navigate(
+                  `/sessions?session=${match.sessionId}&match=${match.id}`,
+                );
+              }}
+            />
+          }
+        />
         <Route
           path="/organization-settings"
           element={

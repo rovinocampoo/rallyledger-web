@@ -43,6 +43,7 @@ function AppLayout({
     { to: "/outstanding", label: "Balance", icon: "₱", end: true },
     { to: "/participants", label: "Players", icon: "👥" },
     { to: "/sessions", label: "Sessions", icon: "🎾" },
+    { to: "/calendar", label: "Calendar", icon: "📆" },
     { to: "/courts", label: "Courts", icon: "🎾" },
     { to: "/fee-rules", label: "Fees", icon: "🧾" },
     ...(admin.role === "OWNER"
@@ -407,6 +408,15 @@ function AppLayout({
               <span>Players</span>
             </NavLink>
 
+              <NavLink
+              to="/sessions"
+              onClick={closeMobileMenus}
+              className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800"
+            >
+              <span>🎾</span>
+              <span>Sessions</span>
+            </NavLink>
+
             <NavLink
               to="/courts"
               onClick={closeMobileMenus}
@@ -453,7 +463,6 @@ function AppLayout({
                 <span>Organization Settings</span>
               </NavLink>
             )}
-
             <NavLink
               to="/change-password"
               onClick={closeMobileMenus}
@@ -505,7 +514,7 @@ function AppLayout({
           </NavLink>
 
           <NavLink
-            to="/sessions"
+            to="/calendar"
             className={({ isActive }) =>
               `flex flex-col items-center justify-center gap-1 text-[11px] ${
                 isActive
@@ -514,8 +523,8 @@ function AppLayout({
               }`
             }
           >
-            <span className="text-lg leading-none">🎾</span>
-            <span>Sessions</span>
+            <span className="text-lg leading-none">📆</span>
+            <span>Calendar</span>
           </NavLink>
 
           <div className="relative flex items-center justify-center">
