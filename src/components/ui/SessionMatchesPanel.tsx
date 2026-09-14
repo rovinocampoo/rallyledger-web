@@ -26,13 +26,20 @@ import {
 } from "../../api/sessionParticipants";
 import MatchDetailsForm from "./MatchDetailsForm";
 import MatchSetsPanel from "./MatchSetsPanel";
+import type { AdminUser } from "../../api/auth";
 
 type SessionMatchesPanelProps = {
   session: Session;
+  admin: AdminUser;
   onClose: () => void;
 };
 
-function SessionMatchesPanel({ session, onClose }: SessionMatchesPanelProps) {
+function SessionMatchesPanel({
+  session,
+  admin,
+  onClose,
+}: SessionMatchesPanelProps) {
+  const canDeleteMatches = admin.role === "OWNER" || admin.role === "ADMIN";
   const [matches, setMatches] = useState<Match[]>([]);
   const [editingMatch, setEditingMatch] = useState<Match | null>(null);
   const [courts, setCourts] = useState<Court[]>([]);
@@ -816,14 +823,16 @@ function SessionMatchesPanel({ session, onClose }: SessionMatchesPanelProps) {
                     </button>
                   </div>
                   <div className="mt-4 grid grid-cols-2 gap-2 border-t border-zinc-200 dark:border-zinc-800 pt-4">
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteMatch(match)}
-                      disabled={hasCharges}
-                      className="rounded-lg border border-red-900/60 px-3 py-2 text-sm text-red-400 transition hover:bg-red-950/30 disabled:cursor-not-allowed disabled:opacity-40"
-                    >
-                      Delete
-                    </button>
+                    {canDeleteMatches && (
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteMatch(match)}
+                        disabled={hasCharges}
+                        className="rounded-lg border border-red-900/60 px-3 py-2 text-sm text-red-400 transition hover:bg-red-950/30 disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        Delete
+                      </button>
+                    )}
 
                     {!hasCharges ? (
                       <button
@@ -943,6 +952,7 @@ function SessionMatchesPanel({ session, onClose }: SessionMatchesPanelProps) {
                       <MatchSetsPanel
                         key={editingMatch.id}
                         match={editingMatch}
+                        canDelete={canDeleteMatches}
                         onClose={() => {
                           setEditingMatch(null);
                           setManageTab("SCORE");

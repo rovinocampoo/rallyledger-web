@@ -21,12 +21,14 @@ import ParticipantPicker from "../ui/ParticipantPicker";
 type MatchParticipantsPanelProps = {
   match: Match;
   session: Session;
+  canRemove: boolean;
   onClose: () => void;
 };
 
 function MatchParticipantsPanel({
   match,
   session,
+  canRemove,
   onClose,
 }: MatchParticipantsPanelProps) {
   const [matchParticipants, setMatchParticipants] = useState<
@@ -189,7 +191,9 @@ function MatchParticipantsPanel({
   if (loading) {
     return (
       <div className="mt-5 min-w-0 overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 p-4">
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">Loading match players...</p>
+        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          Loading match players...
+        </p>
       </div>
     );
   }
@@ -198,7 +202,9 @@ function MatchParticipantsPanel({
     <div className="mt-5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 p-4">
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">Match Players</p>
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+            Match Players
+          </p>
 
           <h3 className="text-lg font-semibold">Match #{match.id}</h3>
 
@@ -284,17 +290,19 @@ function MatchParticipantsPanel({
                     </div>
 
                     <div className="mt-3 grid grid-cols-2 gap-2">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          handleRemoveParticipant(
-                            matchParticipant.participantId,
-                          )
-                        }
-                        className="rounded-lg border border-red-900/60 px-3 py-2 text-xs text-red-400 hover:bg-red-950/30"
-                      >
-                        Remove
-                      </button>
+                      {canRemove && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleRemoveParticipant(
+                              matchParticipant.participantId,
+                            )
+                          }
+                          className="rounded-lg border border-red-900/60 px-3 py-2 text-xs text-red-400 hover:bg-red-950/30"
+                        >
+                          Remove
+                        </button>
+                      )}
 
                       <button
                         type="button"

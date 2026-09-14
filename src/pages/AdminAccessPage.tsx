@@ -232,6 +232,7 @@ function AdminAccessPage({ admin }: AdminAccessPageProps) {
                 className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-sm dark:border-zinc-700 dark:bg-zinc-950"
               >
                 <option value="ADMIN">ADMIN</option>
+                <option value="COORDINATOR">COORDINATOR</option>
                 <option value="OWNER">OWNER</option>
               </select>
             </label>
@@ -314,6 +315,7 @@ function AdminAccessPage({ admin }: AdminAccessPageProps) {
                       className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
                     >
                       <option value="ADMIN">ADMIN</option>
+                      <option value="COORDINATOR">COORDINATOR</option>
                       <option value="OWNER">OWNER</option>
                     </select>
 

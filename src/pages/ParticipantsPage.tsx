@@ -10,6 +10,7 @@ import { getParticipantCategories } from "../api/participantCategories";
 import type { ParticipantCategory } from "../types/participantCategory";
 import ParticipantCategoryManager from "../components/ui/ParticipantCategoryManager";
 import { getParticipantCategoryLabel } from "../utils/participantCategory";
+import type { AdminUser } from "../api/auth";
 
 type SortKey = "type" | "name" | "nickname";
 type SortDirection = "asc" | "desc";
@@ -22,7 +23,13 @@ function normalizeSearchText(value: string | null | undefined) {
     .trim();
 }
 
-function ParticipantsPage() {
+type ParticipantsPageProps = {
+  admin: AdminUser;
+};
+
+function ParticipantsPage({ admin }: ParticipantsPageProps) {
+  const canManageParticipants =
+    admin.role === "OWNER" || admin.role === "ADMIN";
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [categories, setCategories] = useState<ParticipantCategory[]>([]);
   const [editingParticipant, setEditingParticipant] =
@@ -270,28 +277,33 @@ function ParticipantsPage() {
           </p>
         </div>
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
-          <button
-            type="button"
-            onClick={() => {
-              setShowCategories((current) => !current);
-              setShowForm(false);
-              setEditingParticipant(null);
-            }}
-            className="secondary-action w-full rounded-lg px-4 py-2 text-sm font-medium sm:w-auto"
-          >
-            Manage Categories
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setEditingParticipant(null);
-              setShowForm(true);
-              setShowCategories(false);
-            }}
-            className="primary-action w-full rounded-lg px-4 py-2 text-sm font-medium sm:w-auto"
-          >
-            Add Participant
-          </button>
+          {canManageParticipants && (
+            <button
+              type="button"
+              onClick={() => {
+                setShowCategories((current) => !current);
+                setShowForm(false);
+                setEditingParticipant(null);
+              }}
+              className="secondary-action w-full rounded-lg px-4 py-2 text-sm font-medium sm:w-auto"
+            >
+              Manage Categories
+            </button>
+          )}
+
+          {canManageParticipants && (
+            <button
+              type="button"
+              onClick={() => {
+                setEditingParticipant(null);
+                setShowForm(true);
+                setShowCategories(false);
+              }}
+              className="primary-action w-full rounded-lg px-4 py-2 text-sm font-medium sm:w-auto"
+            >
+              Add Participant
+            </button>
+          )}
         </div>
       </div>
       {actionError && (
@@ -302,12 +314,13 @@ function ParticipantsPage() {
       {showCategories && (
         <ParticipantCategoryManager
           categories={categories}
+          canManage={canManageParticipants}
           onChanged={loadCategories}
           onClose={() => setShowCategories(false)}
         />
       )}
 
-      {showForm && editingParticipant === null && (
+      {canManageParticipants && showForm && editingParticipant === null && (
         <div className="mb-6">
           <ParticipantForm
             categories={categories}
@@ -370,6 +383,7 @@ function ParticipantsPage() {
                   categories,
                   participant.participantType,
                 )}
+                canManage={canManageParticipants}
                 onEdit={(participant) => {
                   setEditingParticipant(participant);
                   setShowForm(true);
@@ -383,24 +397,27 @@ function ParticipantsPage() {
                 }}
               />
 
-              {showForm && editingParticipant?.id === participant.id && (
-                <div className="p-3">
-                  <ParticipantForm
-                    participant={editingParticipant}
-                    categories={categories}
-                    onSaved={handleParticipantSaved}
-                    onCancel={() => {
-                      setShowForm(false);
-                      setEditingParticipant(null);
-                    }}
-                  />
-                </div>
-              )}
+              {canManageParticipants &&
+                showForm &&
+                editingParticipant?.id === participant.id && (
+                  <div className="p-3">
+                    <ParticipantForm
+                      participant={editingParticipant}
+                      categories={categories}
+                      onSaved={handleParticipantSaved}
+                      onCancel={() => {
+                        setShowForm(false);
+                        setEditingParticipant(null);
+                      }}
+                    />
+                  </div>
+                )}
 
               {ledgerParticipantId === participant.id && (
                 <div className="p-3">
                   <ParticipantLedgerPanel
                     participant={participant}
+                    admin={admin}
                     onClose={() => setLedgerParticipantId(null)}
                   />
                 </div>

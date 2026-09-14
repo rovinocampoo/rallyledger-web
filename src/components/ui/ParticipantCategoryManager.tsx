@@ -8,12 +8,14 @@ import type { ParticipantCategory } from "../../types/participantCategory";
 
 type ParticipantCategoryManagerProps = {
   categories: ParticipantCategory[];
-  onChanged: () => Promise<void>;
+  canManage: boolean;
+  onChanged: () => void;
   onClose: () => void;
 };
 
 function ParticipantCategoryManager({
   categories,
+  canManage,
   onChanged,
   onClose,
 }: ParticipantCategoryManagerProps) {
@@ -121,13 +123,15 @@ function ParticipantCategoryManager({
           placeholder="New category name"
           className="min-w-0 flex-1 rounded-lg border border-zinc-300 bg-zinc-50 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950"
         />
-        <button
-          type="submit"
-          disabled={submitting}
-          className="primary-action rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50"
-        >
-          Add Category
-        </button>
+        {canManage && (
+          <button
+            type="submit"
+            disabled={submitting}
+            className="primary-action rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50"
+          >
+            Add Category
+          </button>
+        )}
       </form>
 
       <div className="mt-5 overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-800">
@@ -136,7 +140,7 @@ function ParticipantCategoryManager({
             key={category.id}
             className="border-b border-zinc-200 p-3 text-left last:border-b-0 dark:border-zinc-800"
           >
-            {editingId === category.id ? (
+            {canManage && editingId === category.id ? (
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                 <input
                   type="text"
@@ -150,9 +154,7 @@ function ParticipantCategoryManager({
                     type="checkbox"
                     checked={editingActive}
                     disabled={category.isSystem}
-                    onChange={(event) =>
-                      setEditingActive(event.target.checked)
-                    }
+                    onChange={(event) => setEditingActive(event.target.checked)}
                   />
                   Active
                 </label>
@@ -187,27 +189,31 @@ function ParticipantCategoryManager({
                 </div>
 
                 <div className="flex shrink-0 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditingId(category.id);
-                      setEditingName(category.name);
-                      setEditingActive(category.isActive);
-                      setError(null);
-                    }}
-                    className="secondary-action rounded-lg px-3 py-1.5 text-sm"
-                  >
-                    Edit
-                  </button>
-                  {!category.isSystem && (
-                    <button
-                      type="button"
-                      disabled={submitting}
-                      onClick={() => void handleDelete(category)}
-                      className="danger-action rounded-lg px-3 py-1.5 text-sm disabled:opacity-50"
-                    >
-                      Delete
-                    </button>
+                  {canManage && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingId(category.id);
+                          setEditingName(category.name);
+                          setEditingActive(category.isActive);
+                          setError(null);
+                        }}
+                        className="secondary-action rounded-lg px-3 py-1.5 text-sm"
+                      >
+                        Edit
+                      </button>
+                      {!category.isSystem && (
+                        <button
+                          type="button"
+                          disabled={submitting}
+                          onClick={() => void handleDelete(category)}
+                          className="danger-action rounded-lg px-3 py-1.5 text-sm disabled:opacity-50"
+                        >
+                          Delete
+                        </button>
+                      )}
+                    </>
                   )}
                 </div>
               </div>

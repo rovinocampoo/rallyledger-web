@@ -13,6 +13,7 @@ import { getParticipants } from "../api/participants";
 import SessionTrainingPanel from "../components/ui/SessionTrainingPanel";
 import SessionOutsiderPanel from "../components/sessions/SessionOutsiderPanel";
 import SessionResultsPanel from "../components/sessions/SessionResultsPanel";
+import type { AdminUser } from "../api/auth";
 
 function sortSessions(items: Session[]) {
   return [...items].sort((a, b) => {
@@ -28,7 +29,12 @@ function sortSessions(items: Session[]) {
   });
 }
 
-function SessionsPage() {
+type SessionsPageProps = {
+  admin: AdminUser;
+};
+
+function SessionsPage({ admin }: SessionsPageProps) {
+  const canDeleteSessions = admin.role === "OWNER" || admin.role === "ADMIN";
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -146,7 +152,6 @@ function SessionsPage() {
     setShowForm(false);
 
     setSearchParams({}, { replace: true });
-    // eslint-disable-next-line react-hooks/set-state-in-effect
   }, [loading, searchParams, sessions, setSearchParams]);
 
   useEffect(() => {
@@ -318,6 +323,7 @@ function SessionsPage() {
             >
               <SessionCard
                 session={session}
+                canDelete={canDeleteSessions}
                 onEdit={(session) => {
                   setEditingSession(session);
                   setShowForm(true);
@@ -418,6 +424,7 @@ function SessionsPage() {
                 <div ref={sessionPanelRef}>
                   <SessionMatchesPanel
                     session={session}
+                    admin={admin}
                     onClose={() => setMatchSession(null)}
                   />
                 </div>
@@ -426,6 +433,7 @@ function SessionsPage() {
                 <div ref={sessionPanelRef}>
                   <SessionTrainingPanel
                     session={session}
+                    admin={admin}
                     onClose={() => setTrainingSession(null)}
                   />
                 </div>
@@ -434,6 +442,7 @@ function SessionsPage() {
                 <div ref={sessionPanelRef}>
                   <SessionOutsiderPanel
                     session={session}
+                    admin={admin}
                     onClose={() => setOutsiderSession(null)}
                   />
                 </div>
@@ -460,6 +469,7 @@ function SessionsPage() {
                 returnToChargeSession?.id === session.id && (
                   <ParticipantLedgerPanel
                     participant={ledgerParticipant}
+                    admin={admin}
                     onClose={() => {
                       setLedgerParticipant(null);
 

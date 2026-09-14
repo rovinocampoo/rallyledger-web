@@ -1,10 +1,16 @@
 import { useEffect, useState } from "react";
+import type { AdminUser } from "../api/auth";
 import { deleteCourt, getCourts } from "../api/courts";
 import type { Court } from "../types/court";
 import CourtCard from "../components/ui/CourtCard";
 import CourtForm from "../components/ui/CourtForm";
 
-function CourtsPage() {
+type CourtsPageProps = {
+  admin: AdminUser;
+};
+
+function CourtsPage({ admin }: CourtsPageProps) {
+  const canManageCourts = admin.role === "OWNER" || admin.role === "ADMIN";
   const [courts, setCourts] = useState<Court[]>([]);
   const [editingCourt, setEditingCourt] = useState<Court | null>(null);
   const [showForm, setShowForm] = useState(false);
@@ -121,17 +127,19 @@ function CourtsPage() {
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => {
-            setEditingCourt(null);
-            setShowForm(true);
-            setActionError(null);
-          }}
-          className="primary-action w-full rounded-lg px-4 py-3 text-sm font-medium sm:w-auto sm:py-2"
-        >
-          Add Court
-        </button>
+        {canManageCourts && (
+          <button
+            type="button"
+            onClick={() => {
+              setEditingCourt(null);
+              setShowForm(true);
+              setActionError(null);
+            }}
+            className="primary-action w-full rounded-lg px-4 py-3 text-sm font-medium sm:w-auto sm:py-2"
+          >
+            Add Court
+          </button>
+        )}
       </div>
       {actionError && (
         <p className="mb-4 text-sm text-red-400">{actionError}</p>
@@ -154,6 +162,7 @@ function CourtsPage() {
             <div key={court.id} id={`court-${court.id}`} className="space-y-3">
               <CourtCard
                 court={court}
+                canManage={canManageCourts}
                 onEdit={(court) => {
                   setEditingCourt(court);
                   setShowForm(true);

@@ -3,6 +3,7 @@ import { formatDate, formatLabel } from "../../utils/format";
 
 type SessionCardProps = {
   session: Session;
+  canDelete: boolean;
   onEdit: (session: Session) => void;
   onDelete: (session: Session) => void;
   onManagePlayers: (session: Session) => void;
@@ -15,6 +16,7 @@ type SessionCardProps = {
 
 function SessionCard({
   session,
+  canDelete,
   onEdit,
   onDelete,
   onManagePlayers,
@@ -67,13 +69,15 @@ function SessionCard({
           Edit
         </button>
 
-        <button
-          type="button"
-          onClick={() => onDelete(session)}
-          className="danger-action w-full rounded-lg border border-red-300 px-3 py-2 text-sm text-red-600 dark:border-red-900/60 dark:text-red-400 sm:w-auto"
-        >
-          Delete
-        </button>
+        {canDelete && (
+          <button
+            type="button"
+            onClick={() => onDelete(session)}
+            className="danger-action w-full rounded-lg border border-red-300 px-3 py-2 text-sm text-red-600 dark:border-red-900/60 dark:text-red-400 sm:w-auto"
+          >
+            Delete
+          </button>
+        )}
         {session.sessionType === "REGULAR_PLAY" && (
           <>
             <button

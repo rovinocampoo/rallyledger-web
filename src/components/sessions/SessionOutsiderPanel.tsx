@@ -17,15 +17,23 @@ import {
 import ParticipantPicker from "../ui/ParticipantPicker";
 import ChargeEditForm from "../ui/ChargeEditForm";
 import ChargeAdjustmentHistory from "../ui/ChargeAdjustmentHistory";
+import type { AdminUser } from "../../api/auth";
 import type { Charge } from "../../types/charge";
 import { formatCurrency, formatLabel } from "../../utils/format";
 
 type SessionOutsiderPanelProps = {
   session: Session;
+  admin: AdminUser;
   onClose: () => void;
 };
 
-function SessionOutsiderPanel({ session, onClose }: SessionOutsiderPanelProps) {
+function SessionOutsiderPanel({
+  session,
+  admin,
+  onClose,
+}: SessionOutsiderPanelProps) {
+  const canRemoveParticipants =
+    admin.role === "OWNER" || admin.role === "ADMIN";
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [sessionParticipantIds, setSessionParticipantIds] = useState<number[]>(
     [],
@@ -486,16 +494,18 @@ function SessionOutsiderPanel({ session, onClose }: SessionOutsiderPanelProps) {
               </p>
             </div>
 
-            <button
-              type="button"
-              onClick={() => handleRemoveParticipant(participant.id)}
-              disabled={
-                saving || chargedRentalParticipantIds.has(participant.id)
-              }
-              className="danger-text text-sm disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Remove
-            </button>
+            {canRemoveParticipants && (
+              <button
+                type="button"
+                onClick={() => handleRemoveParticipant(participant.id)}
+                disabled={
+                  saving || chargedRentalParticipantIds.has(participant.id)
+                }
+                className="danger-text text-sm disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Remove
+              </button>
+            )}
           </div>
         ))}
       </div>

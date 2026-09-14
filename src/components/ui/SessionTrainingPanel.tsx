@@ -20,13 +20,19 @@ import ParticipantLedgerPanel from "./ParticipantLedgerPanel";
 import SessionPackagePanel from "../sessions/SessionPackagePanel";
 import type { PackageDetails } from "../../types/package";
 import { getSessionPackages } from "../../api/packages";
+import type { AdminUser } from "../../api/auth";
 
 type SessionTrainingPanelProps = {
   session: Session;
+  admin: AdminUser;
   onClose: () => void;
 };
 
-function SessionTrainingPanel({ session, onClose }: SessionTrainingPanelProps) {
+function SessionTrainingPanel({
+  session,
+  admin,
+  onClose,
+}: SessionTrainingPanelProps) {
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [checkedInParticipantIds, setCheckedInParticipantIds] = useState<
     number[]
@@ -670,6 +676,7 @@ function SessionTrainingPanel({ session, onClose }: SessionTrainingPanelProps) {
           <div className="mt-4">
             <ParticipantLedgerPanel
               participant={ledgerParticipant}
+              admin={admin}
               onClose={() => setLedgerParticipant(null)}
             />
           </div>

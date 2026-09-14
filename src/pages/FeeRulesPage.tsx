@@ -6,6 +6,7 @@ import { formatLabel } from "../utils/format";
 import FeeRuleCard from "../components/ui/FeeRuleCard";
 import { getParticipantCategories } from "../api/participantCategories";
 import type { ParticipantCategory } from "../types/participantCategory";
+import type { AdminUser } from "../api/auth";
 
 const FEE_TYPES = [
   "BALL",
@@ -41,7 +42,12 @@ function getFeeDescription(feeType: (typeof FEE_TYPES)[number]) {
   }
 }
 
-function FeeRulesPage() {
+type FeeRulesPageProps = {
+  admin: AdminUser;
+};
+
+function FeeRulesPage({ admin }: FeeRulesPageProps) {
+  const canManageFeeRules = admin.role === "OWNER" || admin.role === "ADMIN";
   const [rules, setRules] = useState<FeeRule[]>([]);
   const [categories, setCategories] = useState<ParticipantCategory[]>([]);
   const [editingRule, setEditingRule] = useState<FeeRule | null>(null);
@@ -179,13 +185,15 @@ function FeeRulesPage() {
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={handleAdd}
-          className="primary-action w-full rounded-lg px-4 py-3 text-sm font-medium sm:w-auto sm:py-2"
-        >
-          Add Fee Rule
-        </button>
+        {canManageFeeRules && (
+          <button
+            type="button"
+            onClick={handleAdd}
+            className="primary-action w-full rounded-lg px-4 py-3 text-sm font-medium sm:w-auto sm:py-2"
+          >
+            Add Fee Rule
+          </button>
+        )}
       </div>
 
       {error && (
@@ -226,7 +234,7 @@ function FeeRulesPage() {
                 <span>Match Type</span>
                 <span>Amount</span>
                 <span>Status</span>
-                <span className="text-right">Actions</span>
+                {canManageFeeRules && <span className="text-right">Actions</span>}{" "}
               </div>
 
               {/* MOBILE CARDS + DESKTOP ROWS */}
@@ -241,20 +249,22 @@ function FeeRulesPage() {
                       <FeeRuleCard
                         rule={rule}
                         categories={categories}
+                        canManage={canManageFeeRules}
                         onEdit={handleEdit}
                         onDelete={handleDelete}
                       />
-
-                      {showForm && editingRule?.id === rule.id && (
-                        <div className="mt-3 md:mt-0 md:border-t md:border-zinc-200 md:bg-zinc-50 md:p-4 dark:md:border-zinc-800 dark:md:bg-zinc-950">
-                          <FeeRuleForm
-                            rule={editingRule}
-                            categories={categories}
-                            onSaved={handleSaved}
-                            onCancel={handleCancel}
-                          />
-                        </div>
-                      )}
+                      {canManageFeeRules &&
+                        showForm &&
+                        editingRule?.id === rule.id && (
+                          <div className="mt-3 md:mt-0 md:border-t md:border-zinc-200 md:bg-zinc-50 md:p-4 dark:md:border-zinc-800 dark:md:bg-zinc-950">
+                            <FeeRuleForm
+                              rule={editingRule}
+                              categories={categories}
+                              onSaved={handleSaved}
+                              onCancel={handleCancel}
+                            />
+                          </div>
+                        )}
                     </div>
                   ))
                 )}

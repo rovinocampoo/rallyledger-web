@@ -11,12 +11,14 @@ import { updateMatch } from "../../api/matches";
 
 type MatchSetsPanelProps = {
   match: Match;
+  canDelete: boolean;
   onClose: () => void;
   onMatchUpdated: (updatedMatch: Match) => void;
 };
 
 function MatchSetsPanel({
   match,
+  canDelete,
   onClose,
   onMatchUpdated,
 }: MatchSetsPanelProps) {
@@ -335,7 +337,7 @@ function MatchSetsPanel({
           </button>
         )}
       </form>
-      
+
       <div className="mt-5 space-y-2">
         {sets.length === 0 ? (
           <p className="text-sm text-zinc-500">No sets recorded yet.</p>
@@ -356,14 +358,16 @@ function MatchSetsPanel({
                 Edit
               </button>
 
-              <button
-                type="button"
-                onClick={() => handleDelete(set.setNumber)}
-                disabled={set.setNumber !== latestSetNumber}
-                className="danger-text text-sm disabled:cursor-not-allowed disabled:opacity-30"
-              >
-                Delete
-              </button>
+              {canDelete && (
+                <button
+                  type="button"
+                  onClick={() => handleDelete(set.setNumber)}
+                  disabled={set.setNumber !== latestSetNumber}
+                  className="danger-text text-sm disabled:cursor-not-allowed disabled:opacity-30"
+                >
+                  Delete
+                </button>
+              )}
             </div>
           ))
         )}

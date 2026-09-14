@@ -11,9 +11,11 @@ import {
 } from "../../utils/format";
 import { createPayment, deletePayment } from "../../api/payments";
 import ChargeAdjustmentHistory from "./ChargeAdjustmentHistory";
+import type { AdminUser } from "../../api/auth";
 
 type ParticipantLedgerPanelProps = {
   participant: Participant;
+  admin: AdminUser;
   onClose: () => void;
   onLedgerChanged?: () => void | Promise<void>;
 };
@@ -342,9 +344,11 @@ function LedgerStatement({
 
 function ParticipantLedgerPanel({
   participant,
+  admin,
   onClose,
   onLedgerChanged,
 }: ParticipantLedgerPanelProps) {
+  const canDeletePayments = admin.role === "OWNER" || admin.role === "ADMIN";
   const [ledger, setLedger] = useState<ParticipantLedger | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -1191,13 +1195,15 @@ function ParticipantLedgerPanel({
                       {formatCurrency(payment.amount)}
                     </p>
 
-                    <button
-                      type="button"
-                      onClick={() => handleDeletePayment(payment.id)}
-                      className="danger-text text-xs text-red-400"
-                    >
-                      Delete
-                    </button>
+                    {canDeletePayments && (
+                      <button
+                        type="button"
+                        onClick={() => handleDeletePayment(payment.id)}
+                        className="danger-text text-xs text-red-400"
+                      >
+                        Delete
+                      </button>
+                    )}
                   </div>
                 </div>
               ))

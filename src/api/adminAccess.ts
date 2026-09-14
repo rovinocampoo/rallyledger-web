@@ -1,7 +1,6 @@
 import { apiFetch } from "./client";
 
-export type AdminRole = "OWNER" | "ADMIN";
-
+export type AdminRole = "OWNER" | "ADMIN" | "COORDINATOR";
 export type AdminAccess = {
   adminUserId: number;
   organizationId: number;
@@ -27,10 +26,7 @@ export function createAdminAccess(data: CreateAdminAccessInput) {
   });
 }
 
-export function updateAdminAccessRole(
-  adminUserId: number,
-  role: AdminRole,
-) {
+export function updateAdminAccessRole(adminUserId: number, role: AdminRole) {
   return apiFetch<AdminAccess>(`/admin/access/${adminUserId}`, {
     method: "PATCH",
     body: JSON.stringify({

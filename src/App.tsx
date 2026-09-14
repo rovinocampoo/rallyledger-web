@@ -231,11 +231,20 @@ function App() {
         }
       >
         <Route path="/" element={<DashboardPage />} />
-        <Route path="/outstanding" element={<OutstandingPage />} />
-        <Route path="/participants" element={<ParticipantsPage />} />
-        <Route path="/courts" element={<CourtsPage />} />
-        <Route path="/sessions" element={<SessionsPage />} />
-        <Route path="/fee-rules" element={<FeeRulesPage />} />
+        <Route
+          path="/outstanding"
+          element={<OutstandingPage admin={admin} />}
+        />{" "}
+        <Route
+          path="/participants"
+          element={<ParticipantsPage admin={admin} />}
+        />{" "}
+        <Route path="/courts" element={<CourtsPage admin={admin} />} />
+        <Route path="/sessions" element={<SessionsPage admin={admin} />} />
+        <Route
+          path="/fee-rules"
+          element={<FeeRulesPage admin={admin} />}
+        />{" "}
         <Route
           path="/change-password"
           element={
@@ -249,12 +258,12 @@ function App() {
             />
           }
         />
-
-        <Route
-          path="/admin/access"
-          element={<AdminAccessPage admin={admin} />}
-        />
-
+        {admin.role === "OWNER" && (
+          <Route
+            path="/admin/access"
+            element={<AdminAccessPage admin={admin} />}
+          />
+        )}
         <Route path="/admin/audit-logs" element={<AuditLogPage />} />
       </Route>
     </Routes>

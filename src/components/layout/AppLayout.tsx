@@ -43,7 +43,9 @@ function AppLayout({
     { to: "/sessions", label: "Sessions", icon: "🎾" },
     { to: "/courts", label: "Courts", icon: "🎾" },
     { to: "/fee-rules", label: "Fees", icon: "🧾" },
-    { to: "/admin/access", label: "Admin Access", icon: "🔐" },
+    ...(admin.role === "OWNER"
+      ? [{ to: "/admin/access", label: "Admin Access", icon: "🔐" }]
+      : []),
     { to: "/admin/audit-logs", label: "Audit Log", icon: "📊" },
   ];
 
@@ -398,14 +400,16 @@ function AppLayout({
               <span>🧾</span>
               <span>Fee Rules</span>
             </NavLink>
-            <NavLink
-              to="/admin/access"
-              onClick={closeMobileMenus}
-              className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800"
-            >
-              <span>⚙</span>
-              <span>Admin Access</span>
-            </NavLink>
+            {admin.role === "OWNER" && (
+              <NavLink
+                to="/admin/access"
+                onClick={closeMobileMenus}
+                className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800"
+              >
+                <span>⚙</span>
+                <span>Admin Access</span>
+              </NavLink>
+            )}
 
             <NavLink
               to="/admin/audit-logs"

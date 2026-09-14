@@ -7,6 +7,7 @@ type ParticipantCardProps = {
   onEdit: (participant: Participant) => void;
   onDelete: (participant: Participant) => void;
   onViewLedger: (participant: Participant) => void;
+  canManage: boolean;
 };
 
 function ParticipantCard({
@@ -15,6 +16,7 @@ function ParticipantCard({
   onEdit,
   onDelete,
   onViewLedger,
+  canManage,
 }: ParticipantCardProps) {
   const typeStyles: Record<string, string> = {
     MEMBER: "bg-emerald-500/10 text-emerald-400",
@@ -89,21 +91,24 @@ function ParticipantCard({
         </div>
 
         <div className="mt-4 grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={() => onEdit(participant)}
-            className="rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-700 transition-colors hover:bg-zinc-100 hover:text-zinc-950 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white"
-          >
-            Edit
-          </button>
-
-          <button
-            type="button"
-            onClick={() => onDelete(participant)}
-            className="danger-action rounded-lg border border-red-900 px-3 py-2 text-sm text-red-400"
-          >
-            Delete
-          </button>
+          {canManage && (
+            <button
+              type="button"
+              onClick={() => onEdit(participant)}
+              className="rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-700 transition-colors hover:bg-zinc-100 hover:text-zinc-950 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white"
+            >
+              Edit
+            </button>
+          )}
+          {canManage && (
+            <button
+              type="button"
+              onClick={() => onDelete(participant)}
+              className="danger-action rounded-lg border border-red-900 px-3 py-2 text-sm text-red-400"
+            >
+              Delete
+            </button>
+          )}
 
           <button
             type="button"
@@ -148,22 +153,24 @@ function ParticipantCard({
         </p>
 
         <div className="flex shrink-0 gap-2">
-          <button
-            type="button"
-            onClick={() => onEdit(participant)}
-            className="rounded-lg border border-zinc-300 px-3 py-1.5 text-sm text-zinc-700 transition-colors hover:bg-zinc-100 hover:text-zinc-950 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white"
-          >
-            Edit
-          </button>
-
-          <button
-            type="button"
-            onClick={() => onDelete(participant)}
-            className="danger-action rounded-lg border border-red-900 px-3 py-1.5 text-sm text-red-400"
-          >
-            Delete
-          </button>
-
+          {canManage && (
+            <button
+              type="button"
+              onClick={() => onEdit(participant)}
+              className="rounded-lg border border-zinc-300 px-3 py-1.5 text-sm text-zinc-700 transition-colors hover:bg-zinc-100 hover:text-zinc-950 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white"
+            >
+              Edit
+            </button>
+          )}
+          {canManage && (
+            <button
+              type="button"
+              onClick={() => onDelete(participant)}
+              className="danger-action rounded-lg border border-red-900 px-3 py-1.5 text-sm text-red-400"
+            >
+              Delete
+            </button>
+          )}
           <button
             type="button"
             onClick={() => onViewLedger(participant)}

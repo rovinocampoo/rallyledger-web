@@ -3,11 +3,12 @@ import { formatLabel } from "../../utils/format";
 
 type CourtCardProps = {
   court: Court;
+  canManage: boolean;
   onEdit: (court: Court) => void;
   onDelete: (court: Court) => void;
 };
 
-function CourtCard({ court, onEdit, onDelete }: CourtCardProps) {
+function CourtCard({ court, canManage, onEdit, onDelete }: CourtCardProps) {
   return (
     <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -29,23 +30,25 @@ function CourtCard({ court, onEdit, onDelete }: CourtCardProps) {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-2 sm:flex sm:shrink-0">
-          <button
-            type="button"
-            onClick={() => onEdit(court)}
-            className="transition-colors rounded-lg border border-zinc-300 dark:border-zinc-700 px-4 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800"
-          >
-            Edit
-          </button>
+        {canManage && (
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:shrink-0">
+            <button
+              type="button"
+              onClick={() => onEdit(court)}
+              className="transition-colors rounded-lg border border-zinc-300 dark:border-zinc-700 px-4 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800"
+            >
+              Edit
+            </button>
 
-          <button
-            type="button"
-            onClick={() => onDelete(court)}
-            className="danger-action rounded-lg border border-red-900/60 px-4 py-2 text-sm text-red-400"
-          >
-            Delete
-          </button>
-        </div>
+            <button
+              type="button"
+              onClick={() => onDelete(court)}
+              className="danger-action rounded-lg border border-red-900/60 px-4 py-2 text-sm text-red-400"
+            >
+              Delete
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

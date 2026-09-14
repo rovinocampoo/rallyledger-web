@@ -1,11 +1,15 @@
 import { apiFetch } from "./client";
-import type { OrganizationAccess } from "../types/organization";
+import type {
+  OrganizationAccess,
+  OrganizationRole,
+} from "../types/organization";
 
 export type AdminUser = {
   id: number;
   organizationId: number;
   email: string;
   mustChangePassword: boolean;
+  role: OrganizationRole;
 };
 
 export type LoginInput = {

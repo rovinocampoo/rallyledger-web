@@ -6,8 +6,7 @@ export type Organization = {
   updatedAt: string;
 };
 
-export type OrganizationRole = "OWNER" | "ADMIN";
-
+export type OrganizationRole = "OWNER" | "ADMIN" | "COORDINATOR";
 export type OrganizationAccess = {
   id: number;
   name: string;

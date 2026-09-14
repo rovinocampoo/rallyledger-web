@@ -8,6 +8,7 @@ type FeeRuleCardProps = {
   categories: ParticipantCategory[];
   onEdit: (rule: FeeRule) => void;
   onDelete: (rule: FeeRule) => void;
+  canManage: boolean;
 };
 
 function FeeRuleCard({
@@ -15,6 +16,7 @@ function FeeRuleCard({
   categories,
   onEdit,
   onDelete,
+  canManage,
 }: FeeRuleCardProps) {
   return (
     <>
@@ -47,21 +49,24 @@ function FeeRuleCard({
         </p>
 
         <div className="mt-4 grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={() => onEdit(rule)}
-            className="transition-colors rounded-lg border border-zinc-300 dark:border-zinc-700 px-3 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800"
-          >
-            Edit
-          </button>
-
-          <button
-            type="button"
-            onClick={() => onDelete(rule)}
-            className="danger-action rounded-lg border border-red-900/60 px-4 py-2 text-sm text-red-400"
-          >
-            Delete
-          </button>
+          {canManage && (
+            <button
+              type="button"
+              onClick={() => onEdit(rule)}
+              className="transition-colors rounded-lg border border-zinc-300 dark:border-zinc-700 px-3 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800"
+            >
+              Edit
+            </button>
+          )}
+          {canManage && (
+            <button
+              type="button"
+              onClick={() => onDelete(rule)}
+              className="danger-action rounded-lg border border-red-900/60 px-4 py-2 text-sm text-red-400"
+            >
+              Delete
+            </button>
+          )}
         </div>
       </div>
 
@@ -90,21 +95,24 @@ function FeeRuleCard({
         </span>
 
         <div className="flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={() => onEdit(rule)}
-            className="secondary-action rounded-lg px-3 py-1.5 text-sm"
-          >
-            Edit
-          </button>
-
-          <button
-            type="button"
-            onClick={() => onDelete(rule)}
-            className="danger-action rounded-lg px-3 py-1.5 text-sm"
-          >
-            Delete
-          </button>
+          {canManage && (
+            <button
+              type="button"
+              onClick={() => onEdit(rule)}
+              className="secondary-action rounded-lg px-3 py-1.5 text-sm"
+            >
+              Edit
+            </button>
+          )}
+          {canManage && (
+            <button
+              type="button"
+              onClick={() => onDelete(rule)}
+              className="danger-action rounded-lg px-3 py-1.5 text-sm"
+            >
+              Delete
+            </button>
+          )}
         </div>
       </div>
     </>
