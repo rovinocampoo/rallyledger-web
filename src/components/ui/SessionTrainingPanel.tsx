@@ -21,16 +21,21 @@ import SessionPackagePanel from "../sessions/SessionPackagePanel";
 import type { PackageDetails } from "../../types/package";
 import { getSessionPackages } from "../../api/packages";
 import type { AdminUser } from "../../api/auth";
+import type { Organization } from "../../types/organization";
 
 type SessionTrainingPanelProps = {
   session: Session;
   admin: AdminUser;
+  organization: Organization | null;
+  organizationLogo: string | null;
   onClose: () => void;
 };
 
 function SessionTrainingPanel({
   session,
   admin,
+  organization,
+  organizationLogo,
   onClose,
 }: SessionTrainingPanelProps) {
   const [participants, setParticipants] = useState<Participant[]>([]);
@@ -677,6 +682,8 @@ function SessionTrainingPanel({
             <ParticipantLedgerPanel
               participant={ledgerParticipant}
               admin={admin}
+              organization={organization}
+              organizationLogo={organizationLogo}
               onClose={() => setLedgerParticipant(null)}
             />
           </div>

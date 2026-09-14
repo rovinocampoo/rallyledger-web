@@ -12,12 +12,19 @@ import { escapeCsvValue } from "../utils/csv";
 import { useSearchParams } from "react-router-dom";
 
 import type { AdminUser } from "../api/auth";
+import type { Organization } from "../types/organization";
 
 type OutstandingPageProps = {
   admin: AdminUser;
+  organization: Organization | null;
+  organizationLogo: string | null;
 };
 
-function OutstandingPage({ admin }: OutstandingPageProps) {
+function OutstandingPage({
+  admin,
+  organization,
+  organizationLogo,
+}: OutstandingPageProps) {
   const [outstanding, setOutstanding] = useState<OutstandingParticipant[]>([]);
 
   const [participants, setParticipants] = useState<Participant[]>([]);
@@ -311,6 +318,8 @@ function OutstandingPage({ admin }: OutstandingPageProps) {
                 {ledgerParticipantId === item.participantId && participant && (
                   <ParticipantLedgerPanel
                     participant={participant}
+                    organization={organization}
+                    organizationLogo={organizationLogo}
                     admin={admin}
                     onClose={() => setLedgerParticipantId(null)}
                     onLedgerChanged={refreshOutstanding}

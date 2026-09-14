@@ -9,7 +9,11 @@ import {
 } from "./api/auth";
 
 import type { Organization, OrganizationAccess } from "./types/organization";
-import { getCurrentOrganization } from "./api/organization";
+import {
+  getCurrentOrganization,
+  getOrganizationLogo,
+} from "./api/organization";
+import { blobToDataUrl } from "./utils/image";
 
 import AppLayout from "./components/layout/AppLayout";
 import LoginPage from "./pages/LoginPage";
@@ -20,6 +24,7 @@ import OutstandingPage from "./pages/OutstandingPage";
 import CourtsPage from "./pages/CourtsPage";
 import FeeRulesPage from "./pages/FeeRulesPage";
 import AdminAccessPage from "./pages/AdminAccessPage";
+import OrganizationSettingsPage from "./pages/OrganizationSettingsPage";
 import AuditLogPage from "./pages/AuditLogPage";
 import ChangePasswordPage from "./pages/ChangePasswordPage";
 import { AUTH_EXPIRED_EVENT } from "./api/client";
@@ -29,6 +34,7 @@ type Theme = "light" | "dark";
 function App() {
   const [admin, setAdmin] = useState<AdminUser | null>(null);
   const [organization, setOrganization] = useState<Organization | null>(null);
+  const [organizationLogo, setOrganizationLogo] = useState<string | null>(null);
   const [organizations, setOrganizations] = useState<OrganizationAccess[]>([]);
   const [organizationSwitching, setOrganizationSwitching] = useState(false);
   const [organizationError, setOrganizationError] = useState<string | null>(
@@ -46,6 +52,25 @@ function App() {
       ? "dark"
       : "light";
   });
+
+  async function loadOrganizationBranding(organizationId: number) {
+    try {
+      const logoBlob = await getOrganizationLogo();
+
+      if (!logoBlob) {
+        setOrganizationLogo(null);
+        return;
+      }
+
+      setOrganizationLogo(await blobToDataUrl(logoBlob));
+    } catch (err) {
+      console.error(
+        `Failed to load logo for organization ${organizationId}`,
+        err,
+      );
+      setOrganizationLogo(null);
+    }
+  }
 
   useEffect(() => {
     let ignore = false;
@@ -66,6 +91,8 @@ function App() {
               getCurrentOrganization(),
               getAdminOrganizations(),
             ]);
+
+          await loadOrganizationBranding(currentOrganization.id);
 
           if (!ignore) {
             setOrganization(currentOrganization);
@@ -114,6 +141,7 @@ function App() {
       setOrganizations([]);
       setOrganizationError(null);
       setOrganization(null);
+      setOrganizationLogo(null);
     }
 
     window.addEventListener(AUTH_EXPIRED_EVENT, handleAuthExpired);
@@ -134,10 +162,14 @@ function App() {
 
       setOrganization(currentOrganization);
       setOrganizations(accessibleOrganizations);
+
+      await loadOrganizationBranding(currentOrganization.id);
     } catch (err) {
       console.error("Failed to load organization information", err);
+
       setOrganization(null);
       setOrganizations([]);
+      setOrganizationLogo(null);
     }
   }
 
@@ -151,9 +183,9 @@ function App() {
       setOrganizations([]);
       setOrganizationError(null);
       setOrganization(null);
+      setOrganizationLogo(null);
     }
   }
-
   async function handleOrganizationChange(organizationId: number) {
     if (organizationId === admin?.organizationId) {
       return;
@@ -163,6 +195,9 @@ function App() {
       setOrganizationSwitching(true);
       setOrganizationError(null);
 
+      // Immediately remove the previous organization's branding.
+      setOrganizationLogo(null);
+
       await switchOrganization(organizationId);
 
       const [updatedAdmin, currentOrganization] = await Promise.all([
@@ -170,14 +205,17 @@ function App() {
         getCurrentOrganization(),
       ]);
 
-      setOrganization(currentOrganization);
       setAdmin(updatedAdmin);
+      setOrganization(currentOrganization);
+
+      await loadOrganizationBranding(currentOrganization.id);
     } catch (err) {
       console.error(err);
 
       setOrganizationError(
         err instanceof Error ? err.message : "Failed to switch organization",
       );
+      setOrganizationLogo(null);
     } finally {
       setOrganizationSwitching(false);
     }
@@ -220,6 +258,7 @@ function App() {
             key={admin.organizationId}
             admin={admin}
             organization={organization}
+            organizationLogo={organizationLogo}
             organizations={organizations}
             organizationSwitching={organizationSwitching}
             organizationError={organizationError}
@@ -233,18 +272,36 @@ function App() {
         <Route path="/" element={<DashboardPage />} />
         <Route
           path="/outstanding"
-          element={<OutstandingPage admin={admin} />}
+          element={
+            <OutstandingPage
+              admin={admin}
+              organization={organization}
+              organizationLogo={organizationLogo}
+            />
+          }
         />{" "}
         <Route
           path="/participants"
-          element={<ParticipantsPage admin={admin} />}
+          element={
+            <ParticipantsPage
+              admin={admin}
+              organization={organization}
+              organizationLogo={organizationLogo}
+            />
+          }
         />{" "}
         <Route path="/courts" element={<CourtsPage admin={admin} />} />
-        <Route path="/sessions" element={<SessionsPage admin={admin} />} />
         <Route
-          path="/fee-rules"
-          element={<FeeRulesPage admin={admin} />}
-        />{" "}
+          path="/sessions"
+          element={
+            <SessionsPage
+              admin={admin}
+              organization={organization}
+              organizationLogo={organizationLogo}
+            />
+          }
+        />
+        <Route path="/fee-rules" element={<FeeRulesPage admin={admin} />} />{" "}
         <Route
           path="/change-password"
           element={
@@ -265,6 +322,20 @@ function App() {
           />
         )}
         <Route path="/admin/audit-logs" element={<AuditLogPage />} />
+        <Route
+          path="/organization-settings"
+          element={
+            <OrganizationSettingsPage
+              admin={admin}
+              organization={organization}
+              organizationLogo={organizationLogo}
+              onOrganizationChanged={setOrganization}
+              onLogoChanged={() =>
+                loadOrganizationBranding(admin.organizationId)
+              }
+            />
+          }
+        />
       </Route>
     </Routes>
   );

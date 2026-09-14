@@ -11,9 +11,13 @@ import { getMatchSets } from "../../api/matchSets";
 import { getMatchParticipants } from "../../api/matchParticipants";
 import { getParticipants } from "../../api/participants";
 import { formatDate, formatLabel } from "../../utils/format";
+import type { Organization } from "../../types/organization";
+import OrganizationBrand from "../ui/OrganizationBrand";
 
 type SessionResultsPanelProps = {
   session: Session;
+  organization: Organization | null;
+  organizationLogo: string | null;
   onClose: () => void;
 };
 
@@ -23,7 +27,12 @@ type MatchResultData = {
   matchParticipants: MatchParticipant[];
 };
 
-function SessionResultsPanel({ session, onClose }: SessionResultsPanelProps) {
+function SessionResultsPanel({
+  session,
+  onClose,
+  organization,
+  organizationLogo,
+}: SessionResultsPanelProps) {
   const [results, setResults] = useState<MatchResultData[]>([]);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [loading, setLoading] = useState(true);
@@ -119,7 +128,7 @@ function SessionResultsPanel({ session, onClose }: SessionResultsPanelProps) {
   function buildResultsText() {
     const lines: string[] = [];
 
-    lines.push("RALLYLEDGER");
+    lines.push(organization?.name ?? "RallyLedger");
     lines.push(session.name);
     lines.push(
       `${formatDate(session.sessionDate)} • ${session.startTime} - ${session.endTime}`,
@@ -227,7 +236,7 @@ function SessionResultsPanel({ session, onClose }: SessionResultsPanelProps) {
 
       URL.revokeObjectURL(url);
 
-      setShareMessage("Results PNG downloadefd.");
+      setShareMessage("Results PNG downloaded.");
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") {
         return;
@@ -504,14 +513,20 @@ function SessionResultsPanel({ session, onClose }: SessionResultsPanelProps) {
           <div ref={shareRef} className="w-[760px] bg-white p-8 text-black">
             {/* HEADER */}
             <div className="mb-6 border-b border-zinc-200 pb-5">
-              <p className="text-3xl font-bold leading-tight">{session.name}</p>
+              <OrganizationBrand
+                name={organization?.name ?? "RallyLedger"}
+                logoDataUrl={organizationLogo}
+              />
+
+              <p className="mt-5 text-3xl font-bold leading-tight">
+                {session.name}
+              </p>
 
               <p className="mt-1 text-sm text-zinc-500">
                 {formatDate(session.sessionDate)}
                 {" · "}
                 {session.startTime}–{session.endTime}
               </p>
-
               <div className="mt-4 flex gap-6 text-sm">
                 <div>
                   <p className="text-xs uppercase tracking-wide text-zinc-600 dark:text-zinc-400">

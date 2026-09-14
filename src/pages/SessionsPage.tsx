@@ -14,6 +14,7 @@ import SessionTrainingPanel from "../components/ui/SessionTrainingPanel";
 import SessionOutsiderPanel from "../components/sessions/SessionOutsiderPanel";
 import SessionResultsPanel from "../components/sessions/SessionResultsPanel";
 import type { AdminUser } from "../api/auth";
+import type { Organization } from "../types/organization";
 
 function sortSessions(items: Session[]) {
   return [...items].sort((a, b) => {
@@ -31,9 +32,15 @@ function sortSessions(items: Session[]) {
 
 type SessionsPageProps = {
   admin: AdminUser;
+  organization: Organization | null;
+  organizationLogo: string | null;
 };
 
-function SessionsPage({ admin }: SessionsPageProps) {
+function SessionsPage({
+  admin,
+  organization,
+  organizationLogo,
+}: SessionsPageProps) {
   const canDeleteSessions = admin.role === "OWNER" || admin.role === "ADMIN";
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -434,6 +441,8 @@ function SessionsPage({ admin }: SessionsPageProps) {
                   <SessionTrainingPanel
                     session={session}
                     admin={admin}
+                    organization={organization}
+                    organizationLogo={organizationLogo}
                     onClose={() => setTrainingSession(null)}
                   />
                 </div>
@@ -451,6 +460,8 @@ function SessionsPage({ admin }: SessionsPageProps) {
                 <div ref={sessionPanelRef}>
                   <SessionResultsPanel
                     session={session}
+                    organization={organization}
+                    organizationLogo={organizationLogo}
                     onClose={() => setResultsSession(null)}
                   />
                 </div>
@@ -469,6 +480,8 @@ function SessionsPage({ admin }: SessionsPageProps) {
                 returnToChargeSession?.id === session.id && (
                   <ParticipantLedgerPanel
                     participant={ledgerParticipant}
+                    organization={organization}
+                    organizationLogo={organizationLogo}
                     admin={admin}
                     onClose={() => {
                       setLedgerParticipant(null);

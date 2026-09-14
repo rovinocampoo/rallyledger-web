@@ -13,6 +13,7 @@ export type AppOutletContext = {
 type AppLayoutProps = {
   admin: AdminUser;
   organization: Organization | null;
+  organizationLogo: string | null;
   organizations: OrganizationAccess[];
   organizationSwitching: boolean;
   organizationError: string | null;
@@ -25,6 +26,7 @@ type AppLayoutProps = {
 function AppLayout({
   admin,
   organization,
+  organizationLogo,
   organizations,
   organizationSwitching,
   organizationError,
@@ -47,6 +49,15 @@ function AppLayout({
       ? [{ to: "/admin/access", label: "Admin Access", icon: "🔐" }]
       : []),
     { to: "/admin/audit-logs", label: "Audit Log", icon: "📊" },
+    ...(admin.role === "OWNER" || admin.role === "ADMIN"
+      ? [
+          {
+            to: "/organization-settings",
+            label: "Organization Settings",
+            icon: "🏢",
+          },
+        ]
+      : []),
   ];
 
   function closeMobileMenus() {
@@ -64,17 +75,20 @@ function AppLayout({
       <div className="flex min-h-screen w-full min-w-0">
         {/* Desktop sidebar */}
         <aside className="fixed inset-y-0 left-0 z-40 hidden w-56 overflow-y-auto border-r border-zinc-200 bg-white px-5 py-6 dark:border-zinc-800 dark:bg-zinc-950 md:flex md:flex-col">
-          <div className="min-w-0">
-            <h1
-              className="truncate text-base font-semibold text-zinc-950 dark:text-zinc-100"
-              title={organization?.name}
-            >
-              {organization?.name ?? "Organization"}
-            </h1>
+          <div className="flex items-center gap-3">
+            {organizationLogo ? (
+              <img
+                src={organizationLogo}
+                alt={`${organization?.name ?? "Organization"} logo`}
+                className="h-8 w-8 rounded object-contain"
+              />
+            ) : (
+              <div className="h-8 w-8 rounded border border-zinc-200 bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900" />
+            )}
 
-            <p className="mt-1 text-xs text-zinc-500">Powered by RallyLedger</p>
+            <span>{organization?.name ?? "Organization"}</span>
           </div>
-
+          <p className="mt-1 text-xs text-zinc-500">Powered by RallyLedger</p>
           {organizations.length > 1 && (
             <label className="mt-4 block">
               <span className="text-xs text-zinc-500">Organization</span>
@@ -256,9 +270,19 @@ function AppLayout({
                 </select>
               </label>
             ) : (
-              <p className="min-w-0 flex-1 truncate text-sm font-semibold">
-                {organization?.name ?? "Organization"}
-              </p>
+              <div className="flex items-center gap-3">
+                {organizationLogo ? (
+                  <img
+                    src={organizationLogo}
+                    alt={`${organization?.name ?? "Organization"} logo`}
+                    className="h-8 w-8 rounded object-contain"
+                  />
+                ) : (
+                  <div className="h-8 w-8 rounded border border-zinc-200 bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900" />
+                )}
+
+                <span>{organization?.name ?? "Organization"}</span>
+              </div>
             )}
 
             <button
@@ -419,6 +443,16 @@ function AppLayout({
               <span>▤</span>
               <span>Audit Log</span>
             </NavLink>
+
+            {(admin.role === "OWNER" || admin.role === "ADMIN") && (
+              <NavLink
+                to="/organization-settings"
+                className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800"
+              >
+                <span>🏢</span>
+                <span>Organization Settings</span>
+              </NavLink>
+            )}
 
             <NavLink
               to="/change-password"

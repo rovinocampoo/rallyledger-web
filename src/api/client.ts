@@ -1,13 +1,13 @@
-const API_URL = import.meta.env.VITE_API_URL.replace(/\/$/, "")
-export const AUTH_EXPIRED_EVENT = "rallyledger:auth-expired"
+const API_URL = import.meta.env.VITE_API_URL.replace(/\/$/, "");
+export const AUTH_EXPIRED_EVENT = "rallyledger:auth-expired";
 
 export class ApiError extends Error {
-  status: number
+  status: number;
 
   constructor(status: number, message: string) {
     super(message);
     this.name = "ApiError";
-    this.status = status
+    this.status = status;
   }
 }
 
@@ -15,54 +15,83 @@ export async function apiFetch<T>(
   path: string,
   options?: RequestInit,
 ): Promise<T> {
+  const headers = new Headers(options?.headers);
+
+  if (!(options?.body instanceof FormData)) {
+    headers.set("Content-Type", "application/json");
+  }
+
   const response = await fetch(`${API_URL}${path}`, {
     ...options,
-
-    // IMPORTANT:
-    // tells the browser to send/receive our HttpOnly session cookie
     credentials: "include",
+    headers,
+  });
 
-    headers: {
-      "Content-Type": "application/json",
-      ...options?.headers,
-    },
-  })
-
-if (!response.ok) {
-
-    if (
-    response.status === 401 &&
-    path !== "/auth/login"
-  ) {
-    window.dispatchEvent(new Event(AUTH_EXPIRED_EVENT));
-  }
-
-  const errorText = await response.text()
-
-  let message = errorText || `API request failed: ${response.status}`
-
-  try {
-    const errorData = JSON.parse(errorText)
-
-    if (typeof errorData.error === "string") {
-      message = errorData.error
+  if (!response.ok) {
+    if (response.status === 401 && path !== "/auth/login") {
+      window.dispatchEvent(new Event(AUTH_EXPIRED_EVENT));
     }
-  } catch {
-    // Response was not JSON.
-  }
 
-  throw new ApiError(response.status, message)
-}
+    const errorText = await response.text();
+
+    let message = errorText || `API request failed: ${response.status}`;
+
+    try {
+      const errorData = JSON.parse(errorText);
+
+      if (typeof errorData.error === "string") {
+        message = errorData.error;
+      }
+    } catch {
+      // Response was not JSON.
+    }
+
+    throw new ApiError(response.status, message);
+  }
 
   if (response.status === 204) {
-    return undefined as T
+    return undefined as T;
   }
 
-  const text = await response.text()
+  const text = await response.text();
 
   if (!text) {
-    return undefined as T
+    return undefined as T;
   }
 
-  return JSON.parse(text) as T
+  return JSON.parse(text) as T;
+}
+
+export async function apiFetchBlob(path: string): Promise<Blob | null> {
+  const response = await fetch(`${API_URL}${path}`, {
+    credentials: "include",
+  });
+
+  if (response.status === 204) {
+    return null;
+  }
+
+  if (!response.ok) {
+    if (response.status === 401 && path !== "/auth/login") {
+      window.dispatchEvent(new Event(AUTH_EXPIRED_EVENT));
+    }
+
+    const errorText = await response.text();
+
+    let message = errorText || `API request failed: ${response.status}`;
+
+    try {
+      const errorData = JSON.parse(errorText);
+
+      if (typeof errorData.error === "string") {
+        message = errorData.error;
+      }
+    } catch {
+      // Response was not JSON.
+    }
+
+    throw new ApiError(response.status, message);
+  }
+
+  return response.blob();
 }

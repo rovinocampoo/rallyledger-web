@@ -11,6 +11,7 @@ import type { ParticipantCategory } from "../types/participantCategory";
 import ParticipantCategoryManager from "../components/ui/ParticipantCategoryManager";
 import { getParticipantCategoryLabel } from "../utils/participantCategory";
 import type { AdminUser } from "../api/auth";
+import type { Organization } from "../types/organization";
 
 type SortKey = "type" | "name" | "nickname";
 type SortDirection = "asc" | "desc";
@@ -25,9 +26,11 @@ function normalizeSearchText(value: string | null | undefined) {
 
 type ParticipantsPageProps = {
   admin: AdminUser;
+  organization: Organization | null;
+  organizationLogo: string | null;
 };
 
-function ParticipantsPage({ admin }: ParticipantsPageProps) {
+function ParticipantsPage({ admin, organization, organizationLogo }: ParticipantsPageProps) {
   const canManageParticipants =
     admin.role === "OWNER" || admin.role === "ADMIN";
   const [participants, setParticipants] = useState<Participant[]>([]);
@@ -418,6 +421,8 @@ function ParticipantsPage({ admin }: ParticipantsPageProps) {
                   <ParticipantLedgerPanel
                     participant={participant}
                     admin={admin}
+                    organization={organization}
+                    organizationLogo={organizationLogo}
                     onClose={() => setLedgerParticipantId(null)}
                   />
                 </div>
