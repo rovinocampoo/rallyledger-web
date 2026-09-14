@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/react/daygrid";
 import timeGridPlugin from "@fullcalendar/react/timegrid";
@@ -83,6 +83,9 @@ function CalendarPage({
   );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const loadedSessionIdsRef = useRef(new Set<number>());
+  const loadingSessionIdsRef = useRef(new Set<number>());
+  const participantByIdRef = useRef(new Map<number, string>());
 
   useEffect(() => {
     const observer = new MutationObserver(() => {
@@ -96,6 +99,7 @@ function CalendarPage({
 
     return () => observer.disconnect();
   }, []);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -105,72 +109,14 @@ function CalendarPage({
         setError(null);
 
         const sessions = await getSessions();
-        const participants = await getParticipants();
-
-        const participantById = new Map(
-          participants.map((participant) => [
-            participant.id,
-            participant.nickname,
-          ]),
-        );
-
-        const results = await Promise.all(
-          sessions.map(async (session) => {
-            try {
-              const matches = await getSessionMatches(session.id);
-
-              const matchesWithParticipants = await Promise.all(
-                matches.map(async (match) => {
-                  const matchParticipants = await getMatchParticipants(
-                    match.id,
-                  );
-
-                  const teamA = matchParticipants
-                    .filter((participant) => participant.teamSide === "A")
-                    .map((participant) =>
-                      participantById.get(participant.participantId),
-                    )
-                    .filter((nickname): nickname is string =>
-                      Boolean(nickname),
-                    );
-
-                  const teamB = matchParticipants
-                    .filter((participant) => participant.teamSide === "B")
-                    .map((participant) =>
-                      participantById.get(participant.participantId),
-                    )
-                    .filter((nickname): nickname is string =>
-                      Boolean(nickname),
-                    );
-
-                  return {
-                    match,
-                    teamA,
-                    teamB,
-                  };
-                }),
-              );
-
-              return {
-                session,
-                matches: matchesWithParticipants,
-              };
-            } catch (err) {
-              console.error(
-                `Failed to load matches for session ${session.id}`,
-                err,
-              );
-
-              return {
-                session,
-                matches: [],
-              };
-            }
-          }),
-        );
 
         if (!cancelled) {
-          setCalendarData(results);
+          setCalendarData(
+            sessions.map((session) => ({
+              session,
+              matches: [],
+            })),
+          );
         }
       } catch (err) {
         console.error(err);
@@ -191,6 +137,93 @@ function CalendarPage({
       cancelled = true;
     };
   }, []);
+
+  async function loadMatchesForRange(startDate: string, endDate: string) {
+    const visibleSessions = calendarData.filter((item) => {
+      const date = item.session.sessionDate.slice(0, 10);
+
+      return date >= startDate && date < endDate;
+    });
+
+    const sessionsToLoad = visibleSessions.filter(
+      (item) =>
+        !loadedSessionIdsRef.current.has(item.session.id) &&
+        !loadingSessionIdsRef.current.has(item.session.id),
+    );
+
+    if (sessionsToLoad.length === 0) {
+      return;
+    }
+
+    // Load participant names only when matches are actually needed.
+    if (participantByIdRef.current.size === 0) {
+      const participants = await getParticipants();
+
+      participantByIdRef.current = new Map(
+        participants.map((participant) => [
+          participant.id,
+          participant.nickname,
+        ]),
+      );
+    }
+
+    await Promise.all(
+      sessionsToLoad.map(async ({ session }) => {
+        loadingSessionIdsRef.current.add(session.id);
+
+        try {
+          const matches = await getSessionMatches(session.id);
+
+          const matchesWithParticipants = await Promise.all(
+            matches.map(async (match) => {
+              const matchParticipants = await getMatchParticipants(match.id);
+
+              const teamA = matchParticipants
+                .filter((participant) => participant.teamSide === "A")
+                .map((participant) =>
+                  participantByIdRef.current.get(participant.participantId),
+                )
+                .filter((nickname): nickname is string => Boolean(nickname));
+
+              const teamB = matchParticipants
+                .filter((participant) => participant.teamSide === "B")
+                .map((participant) =>
+                  participantByIdRef.current.get(participant.participantId),
+                )
+                .filter((nickname): nickname is string => Boolean(nickname));
+
+              return {
+                match,
+                teamA,
+                teamB,
+              };
+            }),
+          );
+
+          loadedSessionIdsRef.current.add(session.id);
+
+          setCalendarData((current) =>
+            current.map((item) =>
+              item.session.id === session.id
+                ? {
+                    ...item,
+                    matches: matchesWithParticipants,
+                  }
+                : item,
+            ),
+          );
+        } catch (err) {
+          console.error(
+            `Failed to load calendar matches for session ${session.id}`,
+            err,
+          );
+        } finally {
+          loadingSessionIdsRef.current.delete(session.id);
+        }
+      }),
+    );
+  }
+
   const totalSessions = calendarData.length;
   const totalMatches = calendarData.reduce(
     (total, item) => total + item.matches.length,
@@ -289,22 +322,28 @@ function CalendarPage({
         <div className="p-3 sm:p-5">
           <FullCalendar
             plugins={[classicThemePlugin, dayGridPlugin, timeGridPlugin]}
-            initialView="dayGridMonth"
+            initialView="timeGridDay"
             colorScheme={isDarkMode ? "dark" : "light"}
+            views={{
+              timeGridThreeDay: {
+                type: "timeGrid",
+                duration: { days: 3 },
+              },
+            }}
             headerToolbar={{
               start: "prev,next",
               center: "title",
-              end: "today dayGridMonth,timeGridWeek,timeGridDay",
+              end: "today dayGridMonth,timeGridThreeDay,timeGridDay",
             }}
             buttons={{
               today: { text: "Today" },
               dayGridMonth: { text: "Month" },
-              timeGridWeek: { text: "Week" },
+              timeGridThreeDay: { text: "3 Days" },
               timeGridDay: { text: "Day" },
             }}
             events={(_, successCallback) => {
               const showMatches =
-                calendarView === "timeGridWeek" ||
+                calendarView === "timeGridThreeDay" ||
                 calendarView === "timeGridDay";
 
               const calendarEvents = calendarData.flatMap(
@@ -365,7 +404,21 @@ function CalendarPage({
               successCallback(calendarEvents);
             }}
             datesSet={(info) => {
-              setCalendarView(info.view.type);
+              const viewType = info.view.type;
+
+              setCalendarView(viewType);
+
+              const showMatches =
+                viewType === "timeGridThreeDay" || viewType === "timeGridDay";
+
+              if (!showMatches) {
+                return;
+              }
+
+              void loadMatchesForRange(
+                info.startStr.slice(0, 10),
+                info.endStr.slice(0, 10),
+              );
             }}
             nowIndicator
             allDaySlot={false}
