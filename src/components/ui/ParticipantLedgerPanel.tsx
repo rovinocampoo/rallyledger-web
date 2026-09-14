@@ -9,9 +9,15 @@ import {
   formatLabel,
   formatDate,
 } from "../../utils/format";
-import { createPayment, deletePayment } from "../../api/payments";
-import ChargeAdjustmentHistory from "./ChargeAdjustmentHistory";
+import {
+  createPayment,
+  deletePayment,
+  correctPayment,
+  getPaymentCorrections,
+} from "../../api/payments";
 import type { AdminUser } from "../../api/auth";
+import ChargeAdjustmentHistory from "./ChargeAdjustmentHistory";
+import type { Payment, PaymentCorrection } from "../../types/payment";
 
 type ParticipantLedgerPanelProps = {
   participant: Participant;
@@ -348,6 +354,7 @@ function ParticipantLedgerPanel({
   onClose,
   onLedgerChanged,
 }: ParticipantLedgerPanelProps) {
+  const canCorrectPayments = admin.role === "OWNER" || admin.role === "ADMIN";
   const canDeletePayments = admin.role === "OWNER" || admin.role === "ADMIN";
   const [ledger, setLedger] = useState<ParticipantLedger | null>(null);
   const [loading, setLoading] = useState(true);
@@ -372,6 +379,20 @@ function ParticipantLedgerPanel({
   const statementRef = useRef<HTMLDivElement | null>(null);
   const [showChargeDetails, setShowChargeDetails] = useState(false);
   const [showPaymentDetails, setShowPaymentDetails] = useState(false);
+  const [correctingPaymentId, setCorrectingPaymentId] = useState<number | null>(
+    null,
+  );
+  const [correctionAmount, setCorrectionAmount] = useState("");
+  const [correctionMethod, setCorrectionMethod] = useState("CASH");
+  const [correctionReference, setCorrectionReference] = useState("");
+  const [correctionDate, setCorrectionDate] = useState("");
+  const [correctionReason, setCorrectionReason] = useState("");
+  const [correctionError, setCorrectionError] = useState<string | null>(null);
+  const [submittingCorrection, setSubmittingCorrection] = useState(false);
+
+  const [paymentCorrections, setPaymentCorrections] = useState<
+    Record<number, PaymentCorrection[]>
+  >({});
 
   async function loadLedger() {
     try {
@@ -467,6 +488,75 @@ function ParticipantLedgerPanel({
     } catch (err) {
       console.error(err);
       setPaymentError("Failed to delete payment");
+    }
+  }
+
+  async function handleCorrectPayment(payment: Payment) {
+    if (!canCorrectPayments) {
+      return;
+    }
+
+    const correctedAmount = Number(correctionAmount);
+
+    if (!Number.isFinite(correctedAmount) || correctedAmount <= 0) {
+      setCorrectionError("Amount must be greater than zero.");
+      return;
+    }
+
+    if (!correctionDate) {
+      setCorrectionError("Please select a payment date.");
+      return;
+    }
+
+    if (!correctionReason.trim()) {
+      setCorrectionError("A correction reason is required.");
+      return;
+    }
+
+    try {
+      setSubmittingCorrection(true);
+      setCorrectionError(null);
+
+      const updatedPayment = await correctPayment(payment.id, {
+        amount: correctedAmount,
+        paymentMethod: correctionMethod,
+        reference: correctionReference.trim() || null,
+        paymentDate: correctionDate,
+        reason: correctionReason.trim(),
+      });
+
+      setLedger((current) =>
+        current
+          ? {
+              ...current,
+              payments: current.payments.map((item) =>
+                item.id === updatedPayment.id ? updatedPayment : item,
+              ),
+            }
+          : current,
+      );
+
+      const corrections = await getPaymentCorrections(payment.id);
+
+      setPaymentCorrections((current) => ({
+        ...current,
+        [payment.id]: corrections,
+      }));
+
+      setCorrectingPaymentId(null);
+      setCorrectionError(null);
+
+      if (onLedgerChanged) {
+        await onLedgerChanged();
+      }
+    } catch (err) {
+      console.error(err);
+
+      setCorrectionError(
+        err instanceof Error ? err.message : "Failed to correct payment",
+      );
+    } finally {
+      setSubmittingCorrection(false);
     }
   }
 
@@ -1169,44 +1259,307 @@ function ParticipantLedgerPanel({
                 No payments yet.
               </p>
             ) : (
-              statementPayments.map((payment) => (
-                <div
-                  key={payment.id}
-                  className="flex items-center justify-between gap-4 bg-white px-4 py-3 dark:bg-zinc-900"
-                >
-                  <div className="min-w-0 text-left">
-                    <p className="font-medium">
-                      {formatLabel(payment.paymentMethod)}
-                    </p>
+              statementPayments.map((payment) => {
+                const corrections = paymentCorrections[payment.id] ?? [];
+                const isCorrecting = correctingPaymentId === payment.id;
 
-                    <p className="text-xs text-zinc-500">
-                      {formatDate(payment.paymentDate)}
-                    </p>
+                return (
+                  <div
+                    key={payment.id}
+                    className="bg-white px-4 py-4 dark:bg-zinc-900"
+                  >
+                    {/* Payment summary */}
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="min-w-0 text-left">
+                        <p className="font-medium">
+                          {formatLabel(payment.paymentMethod)}
+                        </p>
 
-                    {payment.reference && (
-                      <p className="mt-1 truncate text-xs text-zinc-500">
-                        Ref: {payment.reference}
-                      </p>
+                        <p className="text-xs text-zinc-500">
+                          {formatDate(payment.paymentDate)}
+                        </p>
+
+                        {payment.reference && (
+                          <p className="mt-1 truncate text-xs text-zinc-500">
+                            Ref: {payment.reference}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-3">
+                        <p className="font-semibold">
+                          {formatCurrency(payment.amount)}
+                        </p>
+
+                        {canCorrectPayments && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCorrectingPaymentId(payment.id);
+                              setCorrectionAmount(String(payment.amount));
+                              setCorrectionMethod(payment.paymentMethod);
+                              setCorrectionReference(payment.reference ?? "");
+                              setCorrectionDate(payment.paymentDate);
+                              setCorrectionReason("");
+                              setCorrectionError(null);
+                            }}
+                            className="text-xs text-zinc-600 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white"
+                          >
+                            Correct
+                          </button>
+                        )}
+
+                        {canDeletePayments && (
+                          <button
+                            type="button"
+                            onClick={() => void handleDeletePayment(payment.id)}
+                            className="text-xs text-red-400 hover:text-red-300"
+                          >
+                            Delete
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Correction form */}
+                    {canCorrectPayments && isCorrecting && (
+                      <div className="mt-4 rounded-lg border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-950">
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <p className="font-semibold">Correct Payment</p>
+                            <p className="mt-1 text-xs text-zinc-500">
+                              This change will be recorded in the payment
+                              correction history.
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="mt-4 grid gap-4 md:grid-cols-2">
+                          <label>
+                            <span className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+                              Amount
+                            </span>
+
+                            <input
+                              type="number"
+                              min="1"
+                              required
+                              value={correctionAmount}
+                              onChange={(event) =>
+                                setCorrectionAmount(event.target.value)
+                              }
+                              className="mt-2 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                            />
+                          </label>
+
+                          <label>
+                            <span className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+                              Payment Method
+                            </span>
+
+                            <select
+                              value={correctionMethod}
+                              onChange={(event) =>
+                                setCorrectionMethod(event.target.value)
+                              }
+                              className="mt-2 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                            >
+                              <option value="CASH">Cash</option>
+                              <option value="GCASH">GCash</option>
+                              <option value="MAYA">Maya</option>
+                              <option value="BANK_TRANSFER">
+                                Bank Transfer
+                              </option>
+                              <option value="CUSTOM">Custom</option>
+                            </select>
+                          </label>
+
+                          <label>
+                            <span className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+                              Payment Date
+                            </span>
+
+                            <input
+                              type="date"
+                              required
+                              max={getTodayDate()}
+                              value={correctionDate}
+                              onChange={(event) =>
+                                setCorrectionDate(event.target.value)
+                              }
+                              className="mt-2 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                            />
+                          </label>
+
+                          <label>
+                            <span className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+                              Reference
+                            </span>
+
+                            <input
+                              type="text"
+                              value={correctionReference}
+                              onChange={(event) =>
+                                setCorrectionReference(event.target.value)
+                              }
+                              className="mt-2 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                            />
+                          </label>
+
+                          <label className="md:col-span-2">
+                            <span className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+                              Reason
+                            </span>
+
+                            <textarea
+                              required
+                              rows={3}
+                              value={correctionReason}
+                              onChange={(event) =>
+                                setCorrectionReason(event.target.value)
+                              }
+                              placeholder="Explain why this payment is being corrected."
+                              className="mt-2 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                            />
+                          </label>
+                        </div>
+
+                        {correctionError && (
+                          <p className="mt-3 text-sm text-red-400">
+                            {correctionError}
+                          </p>
+                        )}
+
+                        <div className="mt-4 flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            disabled={submittingCorrection}
+                            onClick={() => void handleCorrectPayment(payment)}
+                            className="primary-action rounded-lg px-4 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            {submittingCorrection
+                              ? "Saving..."
+                              : "Save Correction"}
+                          </button>
+
+                          <button
+                            type="button"
+                            disabled={submittingCorrection}
+                            onClick={() => {
+                              setCorrectingPaymentId(null);
+                              setCorrectionError(null);
+                            }}
+                            className="secondary-action rounded-lg px-4 py-2 text-sm"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Correction history */}
+                    {canCorrectPayments && (
+                      <div className="mt-3">
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            try {
+                              const loadedCorrections =
+                                await getPaymentCorrections(payment.id);
+
+                              setPaymentCorrections((current) => ({
+                                ...current,
+                                [payment.id]: loadedCorrections,
+                              }));
+                            } catch (err) {
+                              console.error(err);
+                              setCorrectionError(
+                                "Failed to load correction history",
+                              );
+                            }
+                          }}
+                          className="text-xs text-zinc-500 hover:text-zinc-950 dark:hover:text-white"
+                        >
+                          {corrections.length > 0
+                            ? "Refresh Correction History"
+                            : "View Correction History"}
+                        </button>
+
+                        {corrections.length > 0 && (
+                          <div className="mt-3 rounded-lg border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-950">
+                            <p className="text-xs font-semibold">
+                              Correction History
+                            </p>
+
+                            <div className="mt-3 space-y-3">
+                              {corrections.map((correction) => (
+                                <div
+                                  key={correction.id}
+                                  className="border-t border-zinc-200 pt-3 first:border-t-0 first:pt-0 dark:border-zinc-800"
+                                >
+                                  <div className="flex flex-col gap-1 text-xs">
+                                    <p className="font-medium text-zinc-700 dark:text-zinc-300">
+                                      {formatCurrency(
+                                        correction.previousAmount,
+                                      )}{" "}
+                                      → {formatCurrency(correction.newAmount)}
+                                    </p>
+
+                                    {correction.previousPaymentMethod !==
+                                      correction.newPaymentMethod && (
+                                      <p className="text-zinc-500">
+                                        Method:{" "}
+                                        {formatLabel(
+                                          correction.previousPaymentMethod,
+                                        )}{" "}
+                                        →{" "}
+                                        {formatLabel(
+                                          correction.newPaymentMethod,
+                                        )}
+                                      </p>
+                                    )}
+
+                                    {correction.previousPaymentDate !==
+                                      correction.newPaymentDate && (
+                                      <p className="text-zinc-500">
+                                        Date:{" "}
+                                        {formatDate(
+                                          correction.previousPaymentDate,
+                                        )}{" "}
+                                        →{" "}
+                                        {formatDate(correction.newPaymentDate)}
+                                      </p>
+                                    )}
+
+                                    {correction.previousReference !==
+                                      correction.newReference && (
+                                      <p className="text-zinc-500">
+                                        Reference:{" "}
+                                        {correction.previousReference || "None"}{" "}
+                                        → {correction.newReference || "None"}
+                                      </p>
+                                    )}
+
+                                    <p className="mt-1 text-zinc-500">
+                                      Reason: {correction.reason}
+                                    </p>
+
+                                    <p className="text-zinc-500">
+                                      {new Date(
+                                        correction.createdAt,
+                                      ).toLocaleString()}
+                                    </p>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
-
-                  <div className="flex shrink-0 items-center gap-3">
-                    <p className="font-semibold">
-                      {formatCurrency(payment.amount)}
-                    </p>
-
-                    {canDeletePayments && (
-                      <button
-                        type="button"
-                        onClick={() => handleDeletePayment(payment.id)}
-                        className="danger-text text-xs text-red-400"
-                      >
-                        Delete
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         )}
