@@ -3,6 +3,8 @@ import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/react/daygrid";
 import timeGridPlugin from "@fullcalendar/react/timegrid";
 import classicThemePlugin from "@fullcalendar/react/themes/classic";
+import interactionPlugin from "@fullcalendar/react/interaction";
+import SessionForm from "../components/ui/SessionForm";
 
 import "@fullcalendar/react/skeleton.css";
 import "@fullcalendar/react/themes/classic/theme.css";
@@ -72,6 +74,21 @@ function addMinutesToTime(time: string, minutesToAdd: number) {
   )}:00`;
 }
 
+function formatDateForInput(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function formatTimeForInput(date: Date) {
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+
+  return `${hours}:${minutes}`;
+}
+
 function CalendarPage({
   onSessionSelected,
   onMatchSelected,
@@ -83,6 +100,13 @@ function CalendarPage({
   );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const [createSessionDraft, setCreateSessionDraft] = useState<{
+    sessionDate: string;
+    startTime: string;
+    endTime: string;
+  } | null>(null);
+
   const loadedSessionIdsRef = useRef(new Set<number>());
   const loadingSessionIdsRef = useRef(new Set<number>());
   const participantByIdRef = useRef(new Map<number, string>());
@@ -137,6 +161,61 @@ function CalendarPage({
       cancelled = true;
     };
   }, []);
+  function handleCalendarDateClick(info: {
+    date: Date;
+    allDay: boolean;
+    view: {
+      type: string;
+      calendar: {
+        changeView: (viewName: string, date?: Date) => void;
+      };
+    };
+  }) {
+    if (info.allDay || info.view.type === "dayGridMonth") {
+      info.view.calendar.changeView("timeGridDay", info.date);
+      return;
+    }
+
+    const startTime = formatTimeForInput(info.date);
+
+    const endTime = addMinutesToTime(startTime, 60).slice(0, 5);
+
+    setCreateSessionDraft({
+      sessionDate: formatDateForInput(info.date),
+      startTime,
+      endTime,
+    });
+  }
+
+  function handleCalendarSelect(info: {
+    start: Date;
+    end: Date;
+    allDay: boolean;
+    view: {
+      calendar: {
+        unselect: () => void;
+      };
+    };
+  }) {
+    if (info.allDay) {
+      info.view.calendar.unselect();
+      return;
+    }
+
+    const startDate = formatDateForInput(info.start);
+    const endDate = formatDateForInput(info.end);
+
+    if (startDate !== endDate) {
+      info.view.calendar.unselect();
+      return;
+    }
+
+    setCreateSessionDraft({
+      sessionDate: startDate,
+      startTime: formatTimeForInput(info.start),
+      endTime: formatTimeForInput(info.end),
+    });
+  }
 
   async function loadMatchesForRange(startDate: string, endDate: string) {
     const visibleSessions = calendarData.filter((item) => {
@@ -296,7 +375,8 @@ function CalendarPage({
                 Schedule
               </p>
               <p className="mt-0.5 text-xs text-zinc-500">
-                Click a session or match to open it.
+                Click a session or match to open it. Click a time to add a
+                session. Drag across time to choose its duration.
               </p>
             </div>
 
@@ -321,7 +401,16 @@ function CalendarPage({
 
         <div className="p-3 sm:p-5">
           <FullCalendar
-            plugins={[classicThemePlugin, dayGridPlugin, timeGridPlugin]}
+            plugins={[
+              classicThemePlugin,
+              dayGridPlugin,
+              timeGridPlugin,
+              interactionPlugin,
+            ]}
+            selectable
+            selectMirror
+            dateClick={handleCalendarDateClick}
+            select={handleCalendarSelect}
             initialView="timeGridDay"
             colorScheme={isDarkMode ? "dark" : "light"}
             views={{
@@ -442,6 +531,15 @@ function CalendarPage({
             eventContent={(info) => {
               const kind = info.event.extendedProps.kind;
 
+              // FullCalendar's selectMirror event does not have our custom props.
+              if (!kind) {
+                return (
+                  <div className="px-1 text-[10px] font-medium opacity-70">
+                    New Session
+                  </div>
+                );
+              }
+
               if (kind === "match") {
                 const teamA = info.event.extendedProps.teamA as string[];
                 const teamB = info.event.extendedProps.teamB as string[];
@@ -461,29 +559,77 @@ function CalendarPage({
                 );
               }
 
-              const session = info.event.extendedProps.session as Session;
+              if (kind === "session") {
+                const session = info.event.extendedProps.session as Session;
 
-              return (
-                <div className="rl-calendar-session-content">
-                  <div className="rl-calendar-session-top">
-                    <span className="rl-calendar-time">
-                      {session.startTime}
-                    </span>
+                return (
+                  <div className="rl-calendar-session-content">
+                    <div className="rl-calendar-session-top">
+                      <span className="rl-calendar-time">
+                        {session.startTime}
+                      </span>
 
-                    <span className="rl-calendar-session-name">
-                      {session.name}
-                    </span>
+                      <span className="rl-calendar-session-name">
+                        {session.name}
+                      </span>
+                    </div>
+
+                    <div className="rl-calendar-session-type">
+                      {formatSessionType(session.sessionType)}
+                    </div>
                   </div>
+                );
+              }
 
-                  <div className="rl-calendar-session-type">
-                    {formatSessionType(session.sessionType)}
-                  </div>
-                </div>
-              );
+              return null;
             }}
           />
         </div>
       </div>
+      {createSessionDraft && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-zinc-200 bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="flex items-center justify-between border-b border-zinc-200 px-5 py-4 dark:border-zinc-800">
+              <div>
+                <h2 className="text-lg font-semibold text-zinc-950 dark:text-white">
+                  Add Session
+                </h2>
+
+                <p className="mt-0.5 text-xs text-zinc-500">
+                  Create a session directly from the calendar.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setCreateSessionDraft(null)}
+                className="rounded-lg px-2 py-1 text-sm text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-zinc-800 dark:hover:text-white"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="p-5">
+              <SessionForm
+                key={`${createSessionDraft.sessionDate}-${createSessionDraft.startTime}-${createSessionDraft.endTime}`}
+                initialValues={createSessionDraft}
+                onSaved={(savedSession) => {
+                  setCalendarData((current) => [
+                    ...current,
+                    {
+                      session: savedSession,
+                      matches: [],
+                    },
+                  ]);
+
+                  setCreateSessionDraft(null);
+                }}
+                onCancel={() => setCreateSessionDraft(null)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

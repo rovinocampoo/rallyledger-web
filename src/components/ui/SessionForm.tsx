@@ -10,6 +10,11 @@ import { formatLabel } from "../../utils/format";
 type SessionFormProps = {
   session?: Session;
   initialSessionType?: SessionType;
+  initialValues?: {
+    sessionDate?: string;
+    startTime?: string;
+    endTime?: string;
+  };
   onSaved: (session: Session) => void;
   onCancel: () => void;
 };
@@ -27,6 +32,7 @@ function getTodayDate() {
 function SessionForm({
   session,
   initialSessionType,
+  initialValues,
   onSaved,
   onCancel,
 }: SessionFormProps) {
@@ -36,10 +42,16 @@ function SessionForm({
     session?.sessionType ?? initialSessionType ?? "REGULAR_PLAY",
   );
   const [sessionDate, setSessionDate] = useState(
-    session?.sessionDate.slice(0, 10) ?? getTodayDate(),
+    session?.sessionDate.slice(0, 10) ??
+      initialValues?.sessionDate ??
+      getTodayDate(),
   );
-  const [startTime, setStartTime] = useState(session?.startTime ?? "");
-  const [endTime, setEndTime] = useState(session?.endTime ?? "");
+  const [startTime, setStartTime] = useState(
+    session?.startTime ?? initialValues?.startTime ?? "",
+  );
+  const [endTime, setEndTime] = useState(
+    session?.endTime ?? initialValues?.endTime ?? "",
+  );
   const [maxPlayers, setMaxPlayers] = useState(
     session?.maxPlayers?.toString() ?? "",
   );
