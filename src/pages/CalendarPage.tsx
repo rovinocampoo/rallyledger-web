@@ -409,6 +409,7 @@ function CalendarPage({
             ]}
             selectable
             selectMirror
+            selectLongPressDelay={500}
             dateClick={handleCalendarDateClick}
             select={handleCalendarSelect}
             initialView="timeGridDay"
