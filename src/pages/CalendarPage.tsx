@@ -587,7 +587,7 @@ function CalendarPage({
         </div>
       </div>
       {createSessionDraft && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
           <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-zinc-200 bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-900">
             <div className="flex items-center justify-between border-b border-zinc-200 px-5 py-4 dark:border-zinc-800">
               <div>
