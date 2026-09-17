@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import type { AdminUser } from "../../api/auth";
 import type {
@@ -37,6 +37,8 @@ function AppLayout({
 }: AppLayoutProps) {
   const [sessionMenuOpen, setSessionMenuOpen] = useState(false);
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
+  const [mobileNavVisible, setMobileNavVisible] = useState(true);
+  const lastScrollYRef = useRef(0);
 
   const navItems = [
     { to: "/", label: "Home", icon: "🏠", end: true },
@@ -60,6 +62,34 @@ function AppLayout({
         ]
       : []),
   ];
+
+  useEffect(() => {
+    lastScrollYRef.current = window.scrollY;
+
+    function handleScroll() {
+      const currentScrollY = window.scrollY;
+      const lastScrollY = lastScrollYRef.current;
+
+      if (currentScrollY <= 20) {
+        // Always show the navbar near the top.
+        setMobileNavVisible(true);
+      } else if (currentScrollY - lastScrollY > 8) {
+        // Scrolling down.
+        setMobileNavVisible(false);
+      } else if (lastScrollY - currentScrollY > 8) {
+        // Scrolling up.
+        setMobileNavVisible(true);
+      }
+
+      lastScrollYRef.current = currentScrollY;
+    }
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, []);
 
   function closeMobileMenus() {
     setSessionMenuOpen(false);
@@ -408,7 +438,7 @@ function AppLayout({
               <span>Players</span>
             </NavLink>
 
-              <NavLink
+            <NavLink
               to="/sessions"
               onClick={closeMobileMenus}
               className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800"
@@ -496,7 +526,13 @@ function AppLayout({
       )}
 
       {/* Mobile bottom navigation */}
-      <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-zinc-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/95 md:hidden">
+      <nav
+        className={`fixed inset-x-0 bottom-0 z-50 border-t border-zinc-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur transition-transform duration-300 ease-out dark:border-zinc-800 dark:bg-zinc-950/95 md:hidden ${
+          mobileNavVisible || sessionMenuOpen || moreMenuOpen
+            ? "translate-y-0"
+            : "translate-y-full"
+        }`}
+      >
         <div className="grid h-16 grid-cols-5">
           <NavLink
             to="/"
