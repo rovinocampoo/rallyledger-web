@@ -37,10 +37,22 @@ function LoginPage({ onLoggedIn }: LoginPageProps) {
   return (
     <div className="flex min-h-screen w-full items-center justify-center bg-zinc-50 dark:bg-zinc-950 px-4 text-zinc-900 dark:text-white">
       <div className="w-full max-w-sm">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold">RallyLedger</h1>
+        <div className="mb-8 text-center">
+          <div className="mb-6 flex justify-center">
+            <img
+              src="/branding/login-light.png"
+              alt="RallyLedger"
+              className="h-50 w-auto object-contain dark:hidden sm:h-70"
+            />
 
-          <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+            <img
+              src="/branding/login-dark.png"
+              alt="RallyLedger"
+              className="hidden h-50 w-auto object-contain dark:block sm:h-70"
+            />
+          </div>
+
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">
             Sign in to manage your tennis club.
           </p>
         </div>

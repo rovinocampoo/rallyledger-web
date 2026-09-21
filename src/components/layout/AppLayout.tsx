@@ -106,20 +106,43 @@ function AppLayout({
       <div className="flex min-h-screen w-full min-w-0">
         {/* Desktop sidebar */}
         <aside className="fixed inset-y-0 left-0 z-40 hidden w-56 overflow-y-auto border-r border-zinc-200 bg-white px-5 py-6 dark:border-zinc-800 dark:bg-zinc-950 md:flex md:flex-col">
-          <div className="flex items-center gap-3">
-            {organizationLogo ? (
-              <img
-                src={organizationLogo}
-                alt={`${organization?.name ?? "Organization"} logo`}
-                className="h-8 w-8 rounded object-contain"
-              />
-            ) : (
-              <div className="h-8 w-8 rounded border border-zinc-200 bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900" />
-            )}
+          <div className="border-b border-zinc-200 pb-5 dark:border-zinc-800">
+            {/* Organization branding */}
+            <div className="flex items-center gap-3">
+              {organizationLogo ? (
+                <img
+                  src={organizationLogo}
+                  alt={`${organization?.name ?? "Organization"} logo`}
+                  className="h-9 w-9 rounded object-contain"
+                />
+              ) : (
+                <div className="h-9 w-9 rounded border border-zinc-200 bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900" />
+              )}
 
-            <span>{organization?.name ?? "Organization"}</span>
+              <span className="truncate text-sm font-semibold">
+                {organization?.name ?? "Organization"}
+              </span>
+            </div>
+
+            {/* Powered by RallyLedger */}
+            <div className="mt-2 ml-3 flex items-center gap-1.5">
+              <span className="text-[9px] text-zinc-400 dark:text-zinc-500">
+                powered by
+              </span>
+
+              <img
+                src="/branding/login-light-horizontal.png"
+                alt="RallyLedger"
+                className="h-4 w-auto object-contain opacity-60 dark:hidden"
+              />
+
+              <img
+                src="/branding/login-dark-horizontal.png"
+                alt="RallyLedger"
+                className="hidden h-4 w-auto object-contain opacity-60 dark:block"
+              />
+            </div>
           </div>
-          <p className="mt-1 text-xs text-zinc-500">Powered by RallyLedger</p>
           {organizations.length > 1 && (
             <label className="mt-4 block">
               <span className="text-xs text-zinc-500">Organization</span>
