@@ -67,14 +67,29 @@ function LandingPage() {
                 ONE CLUB. ONE LEDGER.
               </div>
 
-              <div className="absolute left-[14%] right-[14%] top-[23%] h-[43%] rotate-[-1deg] border-[5px] border-[#103f25] bg-[#dfff28] shadow-[0_8px_0_rgba(16,63,37,0.1)] [transform:perspective(500px)_rotateX(13deg)_rotate(-1deg)] dark:border-zinc-950">
-                <div className="absolute left-[25%] top-[12%] bottom-[12%] w-[3px] bg-[#103f25] dark:bg-zinc-950" />
-                <div className="absolute right-[25%] top-[12%] bottom-[12%] w-[3px] bg-[#103f25] dark:bg-zinc-950" />
-                <div className="absolute inset-x-0 top-[49%] h-[5px] bg-[#103f25] dark:bg-zinc-950" />
+              <div className="absolute left-[14%] right-[14%] top-[23%] h-[43%] rotate-[-1deg] border-[4px] border-[#103f25] bg-[#dfff28] shadow-[0_8px_0_rgba(16,63,37,0.1)] [transform:perspective(500px)_rotateX(13deg)_rotate(-1deg)] dark:border-zinc-950">
+                {/* service box vertical*/}
+                <div className="absolute left-[20%] top-[10%] bottom-[10%] w-[2px] bg-[#103f25] dark:bg-zinc-950" />
+                <div className="absolute right-[20%] top-[10%] bottom-[10%] w-[2px] bg-[#103f25] dark:bg-zinc-950" />
 
-                <div className="absolute -left-[4%] -right-[4%] top-[47%] h-[34px] border-y-4 border-[#103f25] bg-[repeating-linear-gradient(90deg,#103f25_0_4px,transparent_4px_13px)] dark:border-zinc-950 dark:bg-[repeating-linear-gradient(90deg,#09090b_0_4px,transparent_4px_13px)]" />
+                {/* service box horizontal */}
+                <div className="absolute inset-x-0 left-[20%] right-[20%] top-[49%] h-[2px] bg-[#103f25] dark:bg-zinc-950" />
+
+                {/* middle line */}
+                <div className="absolute left-[50%] top-[10%] bottom-[10%] w-[2px] bg-[#103f25] dark:bg-zinc-950" />
+                
+                {/* Baseline center marks */}
+                <div className="absolute left-[0%] top-[49%] h-[2px] w-[5px] bg-[#103f25] dark:bg-zinc-950" />
+                <div className="absolute right-[0%] top-[49%] h-[2px] w-[5px] bg-[#103f25] dark:bg-zinc-950" />
+
+                {/* singles outside */}
+                <div className="absolute left-[0%] right-[0%] top-[10%] border-t-2 border-[#103f25] dark:border-zinc-950" />
+                <div className="absolute left-[0%] right-[0%] bottom-[10%] border-t-2 border-[#103f25] dark:border-zinc-950" />
+
+                {/* racket strings */}
+                <div className="absolute top-[-2%] bottom-[-2%] left-[45%] w-[34px] border-x-4 border-[#103f25] bg-[repeating-linear-gradient(45deg,transparent_0_7px,rgba(16,63,37,.7)_7px_9px),repeating-linear-gradient(-45deg,transparent_0_7px,rgba(16,63,37,.7)_7px_9px)] dark:border-zinc-950 dark:bg-[repeating-linear-gradient(22deg,transparent_0_7px,rgba(9,9,11,.7)_7px_9px),repeating-linear-gradient(110deg,transparent_0_7px,rgba(9,9,11,.7)_7px_9px)],repeating-linear-gradient(-45deg,transparent_0_7px,rgba(9,9,11,.7)_7px_9px)]" />
               </div>
-
+              {/* top right ball */}
               <div className="absolute right-[12%] top-[9%] h-[74px] w-[74px] rotate-[14deg] rounded-full border-[5px] border-[#103f25] bg-[#dfff28] dark:border-zinc-950">
                 <div className="absolute left-[3px] top-[4px] h-8 w-[52px] rotate-[30deg] rounded-[50%] border-[3px] border-[#103f25] border-b-transparent border-l-transparent border-r-transparent dark:border-zinc-950 dark:border-b-transparent dark:border-l-transparent dark:border-r-transparent" />
                 <div className="absolute bottom-[4px] right-[1px] h-8 w-[52px] rotate-[210deg] rounded-[50%] border-[3px] border-[#103f25] border-b-transparent border-l-transparent border-r-transparent dark:border-zinc-950 dark:border-b-transparent dark:border-l-transparent dark:border-r-transparent" />
@@ -85,7 +100,12 @@ function LandingPage() {
               </div>
 
               <div className="absolute bottom-[7%] right-[12%] h-[280px] w-[145px] rotate-[20deg]">
-                <div className="relative mx-auto h-[145px] w-[108px] rounded-[50%] border-[8px] border-[#103f25] bg-[repeating-linear-gradient(22deg,transparent_0_13px,rgba(16,63,37,.75)_13px_17px),repeating-linear-gradient(110deg,transparent_0_13px,rgba(16,63,37,.75)_13px_17px)] dark:border-zinc-950 dark:bg-[repeating-linear-gradient(22deg,transparent_0_13px,rgba(9,9,11,.75)_13px_17px),repeating-linear-gradient(110deg,transparent_0_13px,rgba(9,9,11,.75)_13px_17px)]">
+                <div
+                  className="relative mx-auto h-[145px] w-[108px] rounded-[50%] border-[8px] border-[#103f25] 
+                bg-[repeating-linear-gradient(22deg,transparent_0_7px,rgba(16,63,37,.7)_7px_9px),repeating-linear-gradient(110deg,transparent_0_7px,rgba(16,63,37,.7)_7px_9px)] 
+                dark:border-zinc-950 
+                dark:bg-[repeating-linear-gradient(22deg,transparent_0_7px,rgba(9,9,11,.75)_7px_9px),repeating-linear-gradient(110deg,transparent_0_7px,rgba(9,9,11,.75)_7px_9px)]"
+                >
                   <div className="absolute inset-[11px] rounded-[50%] border-2 border-[#103f25] dark:border-zinc-950" />
                 </div>
 
