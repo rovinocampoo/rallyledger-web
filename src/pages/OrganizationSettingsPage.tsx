@@ -1,11 +1,16 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
+  deleteOrganizationGcashQR,
   deleteOrganizationLogo,
+  getOrganizationGcashQR,
   updateOrganization,
+  updateOrganizationGcashNumber,
+  uploadOrganizationGcashQR,
   uploadOrganizationLogo,
 } from "../api/organization";
 import type { AdminUser } from "../api/auth";
 import type { Organization } from "../types/organization";
+import { blobToDataUrl } from "../utils/image";
 
 type OrganizationSettingsPageProps = {
   admin: AdminUser;
@@ -24,6 +29,7 @@ function OrganizationSettingsPage({
 }: OrganizationSettingsPageProps) {
   const canEdit = admin.role === "OWNER" || admin.role === "ADMIN";
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const gcashQrInputRef = useRef<HTMLInputElement | null>(null);
 
   const [name, setName] = useState(organization?.name ?? "");
   const [slug, setSlug] = useState(organization?.slug ?? "");
@@ -31,6 +37,54 @@ function OrganizationSettingsPage({
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [gcashQr, setGcashQr] = useState<string | null>(null);
+  const [gcashQrLoading, setGcashQrLoading] = useState(true);
+  const [gcashQrUploading, setGcashQrUploading] = useState(false);
+  const [gcashNumber, setGcashNumber] = useState(
+    organization?.gcashNumber ?? "",
+  );
+  const [gcashNumberSaving, setGcashNumberSaving] = useState(false);
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadGcashQr() {
+      try {
+        setGcashQrLoading(true);
+
+        const blob = await getOrganizationGcashQR();
+
+        if (!blob) {
+          if (!ignore) {
+            setGcashQr(null);
+          }
+          return;
+        }
+
+        const dataUrl = await blobToDataUrl(blob);
+
+        if (!ignore) {
+          setGcashQr(dataUrl);
+        }
+      } catch (err) {
+        console.error("Failed to load GCash QR", err);
+
+        if (!ignore) {
+          setGcashQr(null);
+        }
+      } finally {
+        if (!ignore) {
+          setGcashQrLoading(false);
+        }
+      }
+    }
+
+    void loadGcashQr();
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   if (!organization) {
     return (
@@ -131,6 +185,90 @@ function OrganizationSettingsPage({
       );
     } finally {
       setUploading(false);
+    }
+  }
+
+  async function handleGcashQrChange(
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) {
+    const file = event.target.files?.[0];
+
+    event.target.value = "";
+
+    if (!file) {
+      return;
+    }
+
+    if (file.size > 1024 * 1024) {
+      setError("GCash QR must be 1 MB or smaller.");
+      return;
+    }
+
+    if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
+      setError("GCash QR must be PNG, JPEG, or WebP.");
+      return;
+    }
+
+    try {
+      setGcashQrUploading(true);
+      setError(null);
+      setMessage(null);
+
+      await uploadOrganizationGcashQR(file);
+
+      const blob = await getOrganizationGcashQR();
+
+      if (blob) {
+        setGcashQr(await blobToDataUrl(blob));
+      } else {
+        setGcashQr(null);
+      }
+
+      setMessage("GCash QR updated.");
+    } catch (err) {
+      console.error(err);
+
+      setError(
+        err instanceof Error ? err.message : "Failed to upload GCash QR.",
+      );
+    } finally {
+      setGcashQrUploading(false);
+    }
+  }
+
+  async function handleRemoveGcashQr() {
+    try {
+      setGcashQrUploading(true);
+      setError(null);
+      setMessage(null);
+
+      await deleteOrganizationGcashQR();
+      setGcashQr(null);
+
+      setMessage("GCash QR removed.");
+    } catch (err) {
+      console.error(err);
+
+      setError(
+        err instanceof Error ? err.message : "Failed to remove GCash QR.",
+      );
+    } finally {
+      setGcashQrUploading(false);
+    }
+  }
+  async function handleSaveGcashNumber() {
+    setGcashNumberSaving(true);
+    setError(null);
+    setMessage(null);
+
+    try {
+      await updateOrganizationGcashNumber(gcashNumber.trim());
+      setMessage("GCash number updated.");
+    } catch (err) {
+      console.error(err);
+      setError("Failed to update GCash number.");
+    } finally {
+      setGcashNumberSaving(false);
     }
   }
 
@@ -332,7 +470,115 @@ function OrganizationSettingsPage({
           </div>
         </section>
       </div>
+      {/* GCash Payment */}
+      <section className="rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+        <div className="border-b border-zinc-200 px-5 py-4 dark:border-zinc-800 sm:px-6">
+          <h2 className="font-semibold text-zinc-950 dark:text-white">
+            GCash Payment
+          </h2>
 
+          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+            Add your organization&apos;s GCash QR code for participant ledger
+            payments.
+          </p>
+        </div>
+        <div className="p-5 sm:p-6">
+          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-200">
+            GCash Number
+          </label>
+          <div className="mt-3 flex gap-3">
+            <input
+              type="text"
+              value={gcashNumber}
+              onChange={(event) => setGcashNumber(event.target.value)}
+              disabled={!canEdit || gcashNumberSaving}
+              placeholder="09XXXXXXXXX"
+              className="min-w-0 flex-1 rounded-xl border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-500 disabled:bg-zinc-100"
+            />
+
+            <button
+              type="button"
+              onClick={handleSaveGcashNumber}
+              disabled={!canEdit || gcashNumberSaving}
+              className="rounded-xl bg-zinc-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+            >
+              {gcashNumberSaving ? "Saving..." : "Save"}
+            </button>
+          </div>
+          <p className="mt-2 text-xs text-zinc-500">
+            This number will appear on participant ledger PNGs when a GCash QR
+            is configured.
+          </p>
+        </div>
+
+        <div className="p-5 sm:p-6">
+          <div className="flex min-h-64 items-center justify-center rounded-2xl border border-zinc-200 bg-zinc-50 p-6 dark:border-zinc-800 dark:bg-zinc-950">
+            {gcashQrLoading ? (
+              <p className="text-sm text-zinc-500">Loading QR code...</p>
+            ) : gcashQr ? (
+              <img
+                src={gcashQr}
+                alt="Organization GCash QR code"
+                className="h-56 w-56 object-contain"
+              />
+            ) : (
+              <div className="text-center">
+                <p className="text-sm font-medium text-zinc-500">
+                  No GCash QR configured
+                </p>
+
+                <p className="mt-1 text-xs text-zinc-400">
+                  It will appear on exported participant ledger PNGs once
+                  uploaded.
+                </p>
+              </div>
+            )}
+          </div>
+
+          {canEdit && (
+            <div className="mt-5 space-y-2">
+              <button
+                type="button"
+                disabled={gcashQrUploading}
+                onClick={() => gcashQrInputRef.current?.click()}
+                className="primary-action w-full rounded-xl px-4 py-2.5 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {gcashQrUploading
+                  ? "Uploading..."
+                  : gcashQr
+                    ? "Replace GCash QR"
+                    : "Upload GCash QR"}
+              </button>
+
+              <input
+                ref={gcashQrInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                className="hidden"
+                disabled={gcashQrUploading}
+                onChange={(event) => void handleGcashQrChange(event)}
+              />
+
+              {gcashQr && (
+                <button
+                  type="button"
+                  disabled={gcashQrUploading}
+                  onClick={() => void handleRemoveGcashQr()}
+                  className="w-full rounded-xl border border-zinc-300 px-4 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                >
+                  Remove GCash QR
+                </button>
+              )}
+
+              <p className="pt-2 text-center text-xs leading-5 text-zinc-500 dark:text-zinc-400">
+                PNG, JPEG, or WebP
+                <br />
+                Maximum file size: 1 MB
+              </p>
+            </div>
+          )}
+        </div>
+      </section>
       {/* Preview */}
       <section className="rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
         <div className="border-b border-zinc-200 px-5 py-4 dark:border-zinc-800 sm:px-6">

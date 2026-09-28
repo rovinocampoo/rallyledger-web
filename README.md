@@ -3,8 +3,10 @@
 Responsive administration interface for **RallyLedger**, a multi-organization tennis club operations and financial ledger platform.
 
 **Release:** v1.0.0
+
 **Live application:** https://rallyledger-web.vercel.app
-**Developer:** [Kharl Rovin Ocampo](https://github.com/kurovin)
+
+**Developer:** Kharl Rovin Ocampo (https://github.com/kurovin)
 
 ## Overview
 
@@ -60,6 +62,8 @@ The current legal pages are Pass 1 shells. Substantive legal content will be fin
 * Club switching
 * Organization-aware headings and branding
 * Organization logo support
+* Organization GCash number configuration
+* Organization GCash QR code management
 * Protected application interface
 
 Authentication tokens are never stored in `localStorage`.
@@ -178,6 +182,7 @@ credentials: "include"
 * Compact charge and payment tables
 * Copy-as-text ledger statements
 * PNG ledger export
+* GCash payment number and QR code in ledger PNG exports
 * Outstanding-balances CSV export for Excel and Google Sheets
 
 ### Administration
@@ -189,6 +194,7 @@ credentials: "include"
 * Unified organization audit log
 * Organization settings
 * Organization branding
+* Organization GCash number and QR configuration
 
 ### Calendar
 
@@ -237,6 +243,7 @@ Create `.env.local` for local development:
 
 ```env
 VITE_API_URL=http://localhost:8080
+
 VITE_GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
 ```
 
@@ -244,6 +251,7 @@ Production normally uses:
 
 ```env
 VITE_API_URL=/api
+
 VITE_GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
 ```
 
@@ -265,7 +273,9 @@ Clone and install:
 
 ```bash
 git clone https://github.com/kurovin/rallyledger-web.git
+
 cd rallyledger-web
+
 npm install
 ```
 
@@ -285,6 +295,7 @@ When testing Google login, add each development origin, such as:
 
 ```text
 http://localhost:5173
+
 http://localhost
 ```
 
@@ -296,7 +307,9 @@ Before committing:
 
 ```bash
 npm run lint
+
 npm run build
+
 git diff --check
 ```
 
@@ -336,6 +349,7 @@ Production configuration must include:
 
 ```text
 VITE_API_URL=/api
+
 VITE_GOOGLE_CLIENT_ID=<web OAuth client ID>
 ```
 
@@ -384,7 +398,7 @@ Additional workflow items being tracked include:
 
 `v1.0.0` is the first production release and is currently deployed for active club use.
 
-The application now includes the public RallyLedger site, administrator authentication, multi-organization administration, participants, courts, sessions, matches, fee rules, products, charges, payments, ledgers, organization administration, and audit history.
+The application now includes the public RallyLedger site, administrator authentication, multi-organization administration, participants, courts, sessions, matches, fee rules, products, charges, payments, ledgers, organization administration, GCash payment information, and audit history.
 
 The next major product phase is **V1.2: audited payment corrections, financial reporting, and accounting close/lock**.
 
