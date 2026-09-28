@@ -60,7 +60,7 @@ function LandingPage() {
             aria-hidden="true"
             className="relative grid min-h-[410px] place-items-center sm:min-h-[500px]"
           >
-            <div className="relative aspect-[1/1.08] w-[min(470px,94%)] rotate-[2.5deg] overflow-hidden rounded-[44%_56%_50%_50%/43%_43%_57%_57%] border-[3px] border-[#103f25] bg-[#fffdf5] shadow-[16px_16px_0_#dfff28] dark:border-zinc-200 dark:bg-zinc-900">
+            <div className="relative aspect-[1/1.08] w-[min(470px,94%)] rotate-[2.5deg] overflow-hidden rounded-[44%_56%_50%_50%/43%_43%_57%_57%] border-[3px] border-[#103f25] bg-[#fffdf5] shadow-[16px_16px_0_#dfff28] transition duration-300 hover:rotate-[-2deg] hover:scale-[1.02] dark:border-zinc-200 dark:bg-zinc-900">
               <div className="absolute inset-5 rounded-[inherit] border-2 border-dashed border-[#103f25]/30 dark:border-zinc-400/30" />
 
               <div className="absolute left-[9%] top-[11%] z-10 rotate-[-9deg] border-[3px] border-[#103f25] bg-[#dfff28] px-3 py-2 text-sm font-black dark:border-zinc-950 dark:text-zinc-950">
@@ -77,7 +77,7 @@ function LandingPage() {
 
                 {/* middle line */}
                 <div className="absolute left-[50%] top-[10%] bottom-[10%] w-[2px] bg-[#103f25] dark:bg-zinc-950" />
-                
+
                 {/* Baseline center marks */}
                 <div className="absolute left-[0%] top-[49%] h-[2px] w-[5px] bg-[#103f25] dark:bg-zinc-950" />
                 <div className="absolute right-[0%] top-[49%] h-[2px] w-[5px] bg-[#103f25] dark:bg-zinc-950" />

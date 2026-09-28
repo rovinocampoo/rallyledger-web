@@ -101,20 +101,41 @@ function LoginPage({ onLoggedIn }: LoginPageProps) {
               <div className="relative h-64 w-64 rotate-[3deg] rounded-[42%_58%_50%_50%/48%_45%_55%_52%] border-[3px] border-[#f1eee5] bg-[#fffdf5] shadow-[12px_12px_0_#dfff28] transition duration-300 hover:rotate-[-2deg] hover:scale-[1.02]">
                 <div className="absolute inset-5 rounded-[inherit] border-2 border-dashed border-[#103f25]/25" />
 
-                <div className="absolute left-[16%] right-[16%] top-[24%] h-[42%] border-[4px] border-[#103f25] bg-[#dfff28]">
-                  <div className="absolute left-1/4 top-[12%] bottom-[12%] w-1 bg-[#103f25]" />
-                  <div className="absolute right-1/4 top-[12%] bottom-[12%] w-1 bg-[#103f25]" />
-                  <div className="absolute inset-x-0 top-1/2 h-1 bg-[#103f25]" />
+                {/* Tennis court */}
+                <div className="absolute left-[12%] right-[12%] top-[25%] h-[42%] rotate-[-1deg] border-[3px] border-[#103f25] bg-[#dfff28] [transform:perspective(500px)_rotateX(10deg)_rotate(-1deg)]">
+                  {/* Service box vertical */}
+                  <div className="absolute left-[20%] top-[10%] bottom-[10%] w-[2px] bg-[#103f25]" />
+                  <div className="absolute right-[20%] top-[10%] bottom-[10%] w-[2px] bg-[#103f25]" />
 
-                  <div className="absolute -left-2 -right-2 top-1/2 h-5 border-y-2 border-[#103f25] bg-[repeating-linear-gradient(90deg,#103f25_0_3px,transparent_3px_10px)]" />
+                  {/* Service box horizontal */}
+                  <div className="absolute left-[20%] right-[20%] top-[49%] h-[2px] bg-[#103f25]" />
+
+                  {/* Middle line */}
+                  <div className="absolute left-[50%] top-[10%] bottom-[10%] w-[2px] -translate-x-1/2 bg-[#103f25]" />
+
+                  {/* Baseline center marks */}
+                  <div className="absolute left-0 top-[49%] h-[2px] w-[5px] bg-[#103f25]" />
+                  <div className="absolute right-0 top-[49%] h-[2px] w-[5px] bg-[#103f25]" />
+
+                  {/* Singles outside */}
+                  <div className="absolute left-0 right-0 top-[10%] border-t-2 border-[#103f25]" />
+                  <div className="absolute left-0 right-0 bottom-[10%] border-t-2 border-[#103f25]" />
+
+                  {/* Vertical net */}
+                  <div className="absolute top-[-4%] bottom-[-4%] left-[45%] w-[18px] border-x-2 border-[#103f25] bg-[repeating-linear-gradient(45deg,transparent_0_5px,rgba(16,63,37,.55)_5px_7px),repeating-linear-gradient(-45deg,transparent_0_5px,rgba(16,63,37,.55)_5px_7px)]" />
                 </div>
 
-                <div className="absolute right-[12%] top-[12%] h-12 w-12 rounded-full border-4 border-[#103f25] bg-[#dfff28] transition-transform duration-300 group-hover:rotate-12" />
+                {/* Top right ball */}
+                <div className="absolute right-[12%] top-[12%] h-12 w-12 rounded-full border-4 border-[#103f25] bg-[#dfff28]">
+                  <div className="absolute left-[2px] top-[3px] h-5 w-8 rotate-[30deg] rounded-[50%] border-2 border-[#103f25] border-b-transparent border-l-transparent border-r-transparent" />
+                </div>
 
+                {/* Score */}
                 <div className="absolute bottom-[11%] left-[13%] rounded-lg border-2 border-[#103f25] bg-[#f1eee5] px-3 py-2 text-sm font-black text-[#103f25]">
                   40 — 15
                 </div>
 
+                {/* Direction */}
                 <div className="absolute bottom-[8%] right-[8%] text-3xl font-black text-[#103f25]">
                   ↗
                 </div>
