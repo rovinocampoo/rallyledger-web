@@ -12,6 +12,8 @@ import ParticipantCategoryManager from "../components/ui/ParticipantCategoryMana
 import { getParticipantCategoryLabel } from "../utils/participantCategory";
 import type { AdminUser } from "../api/auth";
 import type { Organization } from "../types/organization";
+import { getProducts } from "../api/products";
+import type { Product } from "../types/product";
 
 type SortKey = "type" | "name" | "nickname";
 type SortDirection = "asc" | "desc";
@@ -30,11 +32,16 @@ type ParticipantsPageProps = {
   organizationLogo: string | null;
 };
 
-function ParticipantsPage({ admin, organization, organizationLogo }: ParticipantsPageProps) {
+function ParticipantsPage({
+  admin,
+  organization,
+  organizationLogo,
+}: ParticipantsPageProps) {
   const canManageParticipants =
     admin.role === "OWNER" || admin.role === "ADMIN";
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [categories, setCategories] = useState<ParticipantCategory[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [editingParticipant, setEditingParticipant] =
     useState<Participant | null>(null);
   const [loading, setLoading] = useState(true);
@@ -72,14 +79,16 @@ function ParticipantsPage({ admin, organization, organizationLogo }: Participant
 
     async function loadParticipants() {
       try {
-        const [participantData, categoryData] = await Promise.all([
+        const [participantData, categoryData, productData] = await Promise.all([
           getParticipants(),
           getParticipantCategories(),
+          getProducts(),
         ]);
 
         if (!ignore) {
           setParticipants(participantData);
           setCategories(categoryData);
+          setProducts(productData);
         }
       } catch (err) {
         if (!ignore) {
@@ -423,6 +432,7 @@ function ParticipantsPage({ admin, organization, organizationLogo }: Participant
                     admin={admin}
                     organization={organization}
                     organizationLogo={organizationLogo}
+                    products={products}
                     onClose={() => setLedgerParticipantId(null)}
                   />
                 </div>

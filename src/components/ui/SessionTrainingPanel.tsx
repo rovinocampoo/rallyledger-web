@@ -22,6 +22,8 @@ import type { PackageDetails } from "../../types/package";
 import { getSessionPackages } from "../../api/packages";
 import type { AdminUser } from "../../api/auth";
 import type { Organization } from "../../types/organization";
+import { getProducts } from "../../api/products";
+import type { Product } from "../../types/product";
 
 type SessionTrainingPanelProps = {
   session: Session;
@@ -54,6 +56,7 @@ function SessionTrainingPanel({
   const [error, setError] = useState<string | null>(null);
 
   const [charges, setCharges] = useState<Charge[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [showCharges, setShowCharges] = useState(false);
   const [generatingCharges, setGeneratingCharges] = useState(false);
   const [packages, setPackages] = useState<PackageDetails[]>([]);
@@ -102,6 +105,7 @@ function SessionTrainingPanel({
       getSessionParticipants(session.id),
       getSessionCharges(session.id),
       getSessionPackages(session.id),
+      getProducts(),
     ])
       .then(
         ([
@@ -109,6 +113,7 @@ function SessionTrainingPanel({
           sessionParticipantData,
           chargeData,
           packageData,
+          productData,
         ]) => {
           if (ignore) {
             return;
@@ -124,6 +129,7 @@ function SessionTrainingPanel({
 
           setCharges(chargeData);
           setPackages(packageData);
+          setProducts(productData);
           setLoading(false);
         },
       )
@@ -684,6 +690,7 @@ function SessionTrainingPanel({
               admin={admin}
               organization={organization}
               organizationLogo={organizationLogo}
+              products={products}
               onClose={() => setLedgerParticipant(null)}
             />
           </div>

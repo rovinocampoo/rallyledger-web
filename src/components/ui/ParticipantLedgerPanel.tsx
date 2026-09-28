@@ -3,6 +3,7 @@ import { toBlob } from "html-to-image";
 import { getParticipantLedger } from "../../api/ledger";
 import type { Participant } from "../../types/participant";
 import type { ParticipantLedger } from "../../types/ledger";
+import type { Product } from "../../types/product";
 import {
   formatCurrency,
   formatFullName,
@@ -20,6 +21,7 @@ import ChargeAdjustmentHistory from "./ChargeAdjustmentHistory";
 import type { Payment, PaymentCorrection } from "../../types/payment";
 import type { Organization } from "../../types/organization";
 import OrganizationBrand from "./OrganizationBrand";
+import type { Charge } from "../../types/charge";
 
 type ParticipantLedgerPanelProps = {
   participant: Participant;
@@ -27,6 +29,7 @@ type ParticipantLedgerPanelProps = {
   onClose: () => void;
   organization: Organization | null;
   organizationLogo: string | null;
+  products: Product[];
   onLedgerChanged?: () => void | Promise<void>;
 };
 
@@ -41,6 +44,7 @@ type LedgerStatementProps = {
   closingBalance: number;
   organizationName: string;
   organizationLogo: string | null;
+  products: Product[];
 };
 
 type StatementPeriod =
@@ -138,6 +142,17 @@ function getStatementPeriodLabel(period: StatementPeriod) {
   return "This Month";
 }
 
+function getChargeLabel(charge: Charge, products: Product[]) {
+  if (charge.feeType === "PRODUCT" && charge.productId != null) {
+    return (
+      products.find((product) => product.id === charge.productId)?.name ??
+      "Product"
+    );
+  }
+
+  return formatLabel(charge.feeType);
+}
+
 function waitForRender() {
   return new Promise<void>((resolve) => {
     requestAnimationFrame(() => {
@@ -157,6 +172,7 @@ function LedgerStatement({
   closingBalance,
   organizationName,
   organizationLogo,
+  products,
 }: LedgerStatementProps) {
   const chargesByType = charges.reduce<Record<string, number>>(
     (totals, charge) => {
@@ -304,8 +320,9 @@ function LedgerStatement({
               key={charge.id}
               className="grid grid-cols-[minmax(0,1fr)_160px_120px] gap-4 border-t border-zinc-200 px-4 py-3"
             >
-              <span className="font-medium">{formatLabel(charge.feeType)}</span>
-
+              <span className="font-medium">
+                {getChargeLabel(charge, products)}
+              </span>
               <span className="text-zinc-600">
                 {formatDate(charge.chargeDate)}
               </span>
@@ -366,6 +383,7 @@ function ParticipantLedgerPanel({
   onClose,
   organization,
   organizationLogo,
+  products,
   onLedgerChanged,
 }: ParticipantLedgerPanelProps) {
   const canCorrectPayments = admin.role === "OWNER" || admin.role === "ADMIN";
@@ -581,9 +599,8 @@ function ParticipantLedgerPanel({
 
     const chargeLines = statementCharges.map(
       (charge) =>
-        `${formatDate(charge.chargeDate)} — ${formatLabel(charge.feeType)}: ${formatCurrency(charge.amount)}`,
+        `${formatDate(charge.chargeDate)} — ${getChargeLabel(charge, products)}: ${formatCurrency(charge.amount)}`,
     );
-
     const chargeTypeLines = Object.entries(chargesByType)
       .sort(([typeA], [typeB]) => typeA.localeCompare(typeB))
       .map(
@@ -1152,7 +1169,7 @@ function ParticipantLedgerPanel({
                                 className="flex items-center justify-between text-xs"
                               >
                                 <span className="text-zinc-500">
-                                  {formatLabel(charge.feeType)}
+                                  {getChargeLabel(charge, products)}
                                 </span>
 
                                 <span>{formatCurrency(charge.amount)}</span>
@@ -1216,7 +1233,7 @@ function ParticipantLedgerPanel({
                   <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 md:grid-cols-[minmax(0,1fr)_160px_120px]">
                     <div className="min-w-0">
                       <p className="truncate font-medium">
-                        {formatLabel(charge.feeType)}
+                        {getChargeLabel(charge, products)}
                       </p>
 
                       <p className="mt-1 text-xs text-zinc-500 md:hidden">
@@ -1592,6 +1609,7 @@ function ParticipantLedgerPanel({
               closingBalance={closingBalance}
               organizationName={organization?.name ?? "RallyLedger"}
               organizationLogo={organizationLogo}
+              products={products}
             />
           </div>
         </div>

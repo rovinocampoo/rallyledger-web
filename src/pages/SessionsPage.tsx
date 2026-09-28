@@ -21,6 +21,8 @@ import { generateSessionMatchCharges, getSessionCharges } from "../api/charges";
 import SessionChargeReviewModal, {
   type SessionChargeReviewMatch,
 } from "../components/ui/SessionChargeReviewModal";
+import { getProducts } from "../api/products";
+import type { Product } from "../types/product";
 function sortSessions(items: Session[]) {
   return [...items].sort((a, b) => {
     if (a.sessionDate !== b.sessionDate) {
@@ -60,6 +62,7 @@ function SessionsPage({
   const [trainingSession, setTrainingSession] = useState<Session | null>(null);
   const [outsiderSession, setOutsiderSession] = useState<Session | null>(null);
   const [chargeSession, setChargeSession] = useState<Session | null>(null);
+  const [products, setProducts] = useState<Product[]>([]);
   const [ledgerParticipant, setLedgerParticipant] =
     useState<Participant | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
@@ -114,11 +117,12 @@ function SessionsPage({
   useEffect(() => {
     let ignore = false;
 
-    Promise.all([getSessions(), getParticipants()])
-      .then(([sessionData, participantData]) => {
+    Promise.all([getSessions(), getParticipants(), getProducts()])
+      .then(([sessionData, participantData, productData]) => {
         if (!ignore) {
           setSessions(sortSessions(sessionData));
           setParticipants(participantData);
+          setProducts(productData);
           setLoading(false);
         }
       })
@@ -871,6 +875,7 @@ function SessionsPage({
                     organization={organization}
                     organizationLogo={organizationLogo}
                     admin={admin}
+                    products={products}
                     onClose={() => {
                       setLedgerParticipant(null);
 

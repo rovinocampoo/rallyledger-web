@@ -14,6 +14,9 @@ import { useSearchParams } from "react-router-dom";
 import type { AdminUser } from "../api/auth";
 import type { Organization } from "../types/organization";
 
+import { getProducts } from "../api/products";
+import type { Product } from "../types/product";
+
 type OutstandingPageProps = {
   admin: AdminUser;
   organization: Organization | null;
@@ -32,6 +35,7 @@ function OutstandingPage({
   const [ledgerParticipantId, setLedgerParticipantId] = useState<number | null>(
     null,
   );
+  const [products, setProducts] = useState<Product[]>([]);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -48,11 +52,12 @@ function OutstandingPage({
   useEffect(() => {
     let ignore = false;
 
-    Promise.all([getOutstanding(limit), getParticipants()])
-      .then(([outstandingData, participantData]) => {
+    Promise.all([getOutstanding(limit), getParticipants(), getProducts()])
+      .then(([outstandingData, participantData, productData]) => {
         if (!ignore) {
           setOutstanding(outstandingData);
           setParticipants(participantData);
+          setProducts(productData);
           setError(null);
           setLoading(false);
         }
@@ -321,6 +326,7 @@ function OutstandingPage({
                     organization={organization}
                     organizationLogo={organizationLogo}
                     admin={admin}
+                    products={products}
                     onClose={() => setLedgerParticipantId(null)}
                     onLedgerChanged={refreshOutstanding}
                   />

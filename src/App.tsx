@@ -22,6 +22,7 @@ import ParticipantsPage from "./pages/ParticipantsPage";
 import SessionsPage from "./pages/SessionsPage";
 import OutstandingPage from "./pages/OutstandingPage";
 import CourtsPage from "./pages/CourtsPage";
+import ProductsPage from "./pages/ProductsPage";
 import FeeRulesPage from "./pages/FeeRulesPage";
 import AdminAccessPage from "./pages/AdminAccessPage";
 import OrganizationSettingsPage from "./pages/OrganizationSettingsPage";
@@ -293,6 +294,7 @@ function App() {
           }
         />{" "}
         <Route path="/courts" element={<CourtsPage admin={admin} />} />
+        <Route path="/products" element={<ProductsPage admin={admin} />} />
         <Route
           path="/sessions"
           element={
