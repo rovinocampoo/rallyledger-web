@@ -1,4 +1,5 @@
 import { useState, type SubmitEvent } from "react";
+import { useNavigate } from "react-router-dom";
 import { login, type AdminUser } from "../api/auth";
 import GoogleLoginButton from "../components/auth/GoogleLoginButton";
 
@@ -11,6 +12,7 @@ function LoginPage({ onLoggedIn }: LoginPageProps) {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -35,7 +37,15 @@ function LoginPage({ onLoggedIn }: LoginPageProps) {
   }
 
   return (
-    <div className="flex min-h-screen w-full items-center justify-center bg-zinc-50 dark:bg-zinc-950 px-4 text-zinc-900 dark:text-white">
+    <div className="relative flex min-h-screen w-full items-center justify-center bg-zinc-50 px-4 text-zinc-900 dark:bg-zinc-950 dark:text-white">
+      <button
+        type="button"
+        onClick={() => navigate("/")}
+        className="absolute left-5 top-5 inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-600 transition hover:bg-zinc-200 hover:text-zinc-950 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-white"
+      >
+        <span aria-hidden="true">←</span>
+        Back
+      </button>
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
           <div className="mb-6 flex justify-center">

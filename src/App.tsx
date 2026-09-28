@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Route, Routes, useNavigate } from "react-router-dom";
+import { Navigate, Route, Routes, useNavigate } from "react-router-dom";
 import {
   getAdminOrganizations,
   getCurrentAdmin,
@@ -16,6 +16,14 @@ import {
 import { blobToDataUrl } from "./utils/image";
 
 import AppLayout from "./components/layout/AppLayout";
+import PublicLayout from "./components/layout/PublicLayout";
+import LandingPage from "./pages/public/LandingPage";
+import WalkthroughPage from "./pages/public/WalkthroughPage";
+import FaqPage from "./pages/public/FaqPage";
+import PrivacyPage from "./pages/public/PrivacyPage";
+import TermsPage from "./pages/public/TermsPage";
+import CookiesPage from "./pages/public/CookiesPage";
+import DisclaimerPage from "./pages/public/DisclaimerPage";
 import LoginPage from "./pages/LoginPage";
 import DashboardPage from "./pages/DashboardPage";
 import ParticipantsPage from "./pages/ParticipantsPage";
@@ -237,7 +245,26 @@ function App() {
   }
 
   if (!admin) {
-    return <LoginPage onLoggedIn={handleLoggedIn} />;
+    return (
+      <Routes>
+        <Route element={<PublicLayout />}>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/walkthrough" element={<WalkthroughPage />} />
+          <Route path="/faq" element={<FaqPage />} />
+          <Route path="/privacy" element={<PrivacyPage />} />
+          <Route path="/terms" element={<TermsPage />} />
+          <Route path="/cookies" element={<CookiesPage />} />
+          <Route path="/disclaimer" element={<DisclaimerPage />} />
+        </Route>
+
+        <Route
+          path="/login"
+          element={<LoginPage onLoggedIn={handleLoggedIn} />}
+        />
+
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    );
   }
   if (admin.mustChangePassword) {
     return (
@@ -255,6 +282,17 @@ function App() {
 
   return (
     <Routes>
+      <Route element={<PublicLayout />}>
+        <Route path="/walkthrough" element={<WalkthroughPage />} />
+        <Route path="/faq" element={<FaqPage />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
+        <Route path="/terms" element={<TermsPage />} />
+        <Route path="/cookies" element={<CookiesPage />} />
+        <Route path="/disclaimer" element={<DisclaimerPage />} />
+      </Route>
+
+      <Route path="/login" element={<Navigate to="/" replace />} />
+
       <Route
         element={
           <AppLayout
@@ -282,7 +320,7 @@ function App() {
               organizationLogo={organizationLogo}
             />
           }
-        />{" "}
+        />
         <Route
           path="/participants"
           element={
@@ -292,7 +330,7 @@ function App() {
               organizationLogo={organizationLogo}
             />
           }
-        />{" "}
+        />
         <Route path="/courts" element={<CourtsPage admin={admin} />} />
         <Route path="/products" element={<ProductsPage admin={admin} />} />
         <Route
@@ -305,7 +343,7 @@ function App() {
             />
           }
         />
-        <Route path="/fee-rules" element={<FeeRulesPage admin={admin} />} />{" "}
+        <Route path="/fee-rules" element={<FeeRulesPage admin={admin} />} />
         <Route
           path="/change-password"
           element={
