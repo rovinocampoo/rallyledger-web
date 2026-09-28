@@ -550,113 +550,115 @@ function SessionResultsPanel({
 
             {/* MATCHES */}
             <div className="grid grid-cols-2 items-start gap-x-5 gap-y-5">
-              {results.map(({ match, sets, matchParticipants }, index) => {
-                const orderedSets = getOrderedSets(sets);
+              {[...results]
+                .reverse()
+                .map(({ match, sets, matchParticipants }, index) => {
+                  const orderedSets = getOrderedSets(sets);
 
-                const teamAPlayers = matchParticipants
-                  .filter((participant) => participant.teamSide === "A")
-                  .map((participant) =>
-                    getParticipantName(participant.participantId),
-                  );
+                  const teamAPlayers = matchParticipants
+                    .filter((participant) => participant.teamSide === "A")
+                    .map((participant) =>
+                      getParticipantName(participant.participantId),
+                    );
 
-                const teamBPlayers = matchParticipants
-                  .filter((participant) => participant.teamSide === "B")
-                  .map((participant) =>
-                    getParticipantName(participant.participantId),
-                  );
+                  const teamBPlayers = matchParticipants
+                    .filter((participant) => participant.teamSide === "B")
+                    .map((participant) =>
+                      getParticipantName(participant.participantId),
+                    );
 
-                const teamAScores = orderedSets.map((set) => set.teamAScore);
+                  const teamAScores = orderedSets.map((set) => set.teamAScore);
 
-                const teamBScores = orderedSets.map((set) => set.teamBScore);
+                  const teamBScores = orderedSets.map((set) => set.teamBScore);
 
-                return (
-                  <div key={match.id}>
-                    <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
-                      Match {index + 1} · {formatLabel(match.matchType)}
-                    </p>
+                  return (
+                    <div key={match.id}>
+                      <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+                        Match {index + 1} · {formatLabel(match.matchType)}
+                      </p>
 
-                    <div className="overflow-hidden rounded-lg border border-zinc-300 bg-white">
-                      {/* TEAM A */}
-                      <div className="grid grid-cols-[1fr_auto]">
-                        <div className="flex min-h-[64px] flex-col justify-center px-4 py-2">
-                          {teamAPlayers.length > 0 ? (
-                            teamAPlayers.map((name) => (
-                              <p
-                                key={name}
-                                className="text-[14px] font-medium leading-5"
-                              >
-                                {name}
+                      <div className="overflow-hidden rounded-lg border border-zinc-300 bg-white">
+                        {/* TEAM A */}
+                        <div className="grid grid-cols-[1fr_auto]">
+                          <div className="flex min-h-[64px] flex-col justify-center px-4 py-2">
+                            {teamAPlayers.length > 0 ? (
+                              teamAPlayers.map((name) => (
+                                <p
+                                  key={name}
+                                  className="text-[14px] font-medium leading-5"
+                                >
+                                  {name}
+                                </p>
+                              ))
+                            ) : (
+                              <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                                No players
                               </p>
-                            ))
-                          ) : (
-                            <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                              No players
-                            </p>
-                          )}
+                            )}
+                          </div>
+
+                          <div className="flex min-w-[92px] items-center justify-center gap-3 border-l border-zinc-300 px-3">
+                            {teamAScores.length > 0 ? (
+                              teamAScores.map((score, scoreIndex) => (
+                                <span
+                                  key={scoreIndex}
+                                  className="min-w-[14px] text-center text-lg font-bold"
+                                >
+                                  {score}
+                                </span>
+                              ))
+                            ) : (
+                              <span className="text-zinc-600 dark:text-zinc-400">
+                                —
+                              </span>
+                            )}
+                          </div>
                         </div>
 
-                        <div className="flex min-w-[92px] items-center justify-center gap-3 border-l border-zinc-300 px-3">
-                          {teamAScores.length > 0 ? (
-                            teamAScores.map((score, scoreIndex) => (
-                              <span
-                                key={scoreIndex}
-                                className="min-w-[14px] text-center text-lg font-bold"
-                              >
-                                {score}
+                        {/* TEAM B */}
+                        <div className="grid grid-cols-[1fr_auto] border-t border-zinc-300">
+                          <div className="flex min-h-[64px] flex-col justify-center px-4 py-2">
+                            {teamBPlayers.length > 0 ? (
+                              teamBPlayers.map((name) => (
+                                <p
+                                  key={name}
+                                  className="text-[14px] font-medium leading-5"
+                                >
+                                  {name}
+                                </p>
+                              ))
+                            ) : (
+                              <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                                No players
+                              </p>
+                            )}
+                          </div>
+
+                          <div className="flex min-w-[92px] items-center justify-center gap-3 border-l border-zinc-300 px-3">
+                            {teamBScores.length > 0 ? (
+                              teamBScores.map((score, scoreIndex) => (
+                                <span
+                                  key={scoreIndex}
+                                  className="min-w-[14px] text-center text-lg font-bold"
+                                >
+                                  {score}
+                                </span>
+                              ))
+                            ) : (
+                              <span className="text-zinc-600 dark:text-zinc-400">
+                                —
                               </span>
-                            ))
-                          ) : (
-                            <span className="text-zinc-600 dark:text-zinc-400">
-                              —
-                            </span>
-                          )}
+                            )}
+                          </div>
                         </div>
                       </div>
 
-                      {/* TEAM B */}
-                      <div className="grid grid-cols-[1fr_auto] border-t border-zinc-300">
-                        <div className="flex min-h-[64px] flex-col justify-center px-4 py-2">
-                          {teamBPlayers.length > 0 ? (
-                            teamBPlayers.map((name) => (
-                              <p
-                                key={name}
-                                className="text-[14px] font-medium leading-5"
-                              >
-                                {name}
-                              </p>
-                            ))
-                          ) : (
-                            <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                              No players
-                            </p>
-                          )}
-                        </div>
-
-                        <div className="flex min-w-[92px] items-center justify-center gap-3 border-l border-zinc-300 px-3">
-                          {teamBScores.length > 0 ? (
-                            teamBScores.map((score, scoreIndex) => (
-                              <span
-                                key={scoreIndex}
-                                className="min-w-[14px] text-center text-lg font-bold"
-                              >
-                                {score}
-                              </span>
-                            ))
-                          ) : (
-                            <span className="text-zinc-600 dark:text-zinc-400">
-                              —
-                            </span>
-                          )}
-                        </div>
-                      </div>
+                      <p className="mt-1.5 text-[11px] text-zinc-600 dark:text-zinc-400">
+                        {getCompactWinnerLabel(match, matchParticipants)}
+                      </p>
                     </div>
-
-                    <p className="mt-1.5 text-[11px] text-zinc-600 dark:text-zinc-400">
-                      {getCompactWinnerLabel(match, matchParticipants)}
-                    </p>
-                  </div>
-                );
-              })}
+                  );
+                })}
             </div>
 
             <p className="mt-8 text-center text-xs text-zinc-600 dark:text-zinc-400">

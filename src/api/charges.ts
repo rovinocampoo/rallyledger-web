@@ -2,12 +2,17 @@ import type {
   Charge,
   ChargeAdjustment,
   UpdateChargeInput,
-} from "../types/charge";import { apiFetch } from "./client";
-
-
+} from "../types/charge";
+import { apiFetch } from "./client";
 
 export function generateMatchCharges(matchId: number) {
   return apiFetch<void>(`/matches/${matchId}/charges`, {
+    method: "POST",
+  });
+}
+
+export function generateSessionMatchCharges(sessionId: number) {
+  return apiFetch<Charge[]>(`/sessions/${sessionId}/match-charges`, {
     method: "POST",
   });
 }
@@ -20,10 +25,7 @@ export function getSessionCharges(sessionId: number) {
   return apiFetch<Charge[]>(`/sessions/${sessionId}/charges`);
 }
 
-export function updateCharge(
-  chargeId: number,
-  data: UpdateChargeInput,
-) {
+export function updateCharge(chargeId: number, data: UpdateChargeInput) {
   return apiFetch<Charge>(`/charges/${chargeId}`, {
     method: "PATCH",
     body: JSON.stringify(data),
@@ -31,48 +33,37 @@ export function updateCharge(
 }
 
 export function getChargeAdjustments(chargeId: number) {
-  return apiFetch<ChargeAdjustment[]>(
-    `/charges/${chargeId}/adjustments`,
-  );
+  return apiFetch<ChargeAdjustment[]>(`/charges/${chargeId}/adjustments`);
 }
 
 export function generateTrainingCharges(sessionId: number) {
-  return apiFetch<Charge[]>(
-    `/sessions/${sessionId}/training-charges`,
-    {
-      method: "POST",
-    },
-  );
+  return apiFetch<Charge[]>(`/sessions/${sessionId}/training-charges`, {
+    method: "POST",
+  });
 }
 
 export function generateBallRentalCharge(
   sessionId: number,
   participantId: number,
 ) {
-  return apiFetch<Charge>(
-    `/sessions/${sessionId}/ball-rental`,
-    {
-      method: "POST",
-      body: JSON.stringify({
-        participantId,
-      }),
-    },
-  );
+  return apiFetch<Charge>(`/sessions/${sessionId}/ball-rental`, {
+    method: "POST",
+    body: JSON.stringify({
+      participantId,
+    }),
+  });
 }
 
 export function generateRacketRentalCharge(
   sessionId: number,
   participantId: number,
 ) {
-  return apiFetch<Charge>(
-    `/sessions/${sessionId}/racket-rental`,
-    {
-      method: "POST",
-      body: JSON.stringify({
-        participantId,
-      }),
-    },
-  );
+  return apiFetch<Charge>(`/sessions/${sessionId}/racket-rental`, {
+    method: "POST",
+    body: JSON.stringify({
+      participantId,
+    }),
+  });
 }
 
 export function generateOutsiderCourtCharge(

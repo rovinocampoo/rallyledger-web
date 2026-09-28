@@ -12,6 +12,9 @@ type SessionCardProps = {
   onManageTraining: (session: Session) => void;
   onManageOutsider: (session: Session) => void;
   onViewResults: (session: Session) => void;
+  onGenerateCharges: (session: Session) => void;
+  generatingCharges: boolean;
+  hasUnchargedMatches: boolean;
 };
 
 function SessionCard({
@@ -25,6 +28,9 @@ function SessionCard({
   onManageOutsider,
   onViewResults,
   onViewCharges,
+  onGenerateCharges,
+  generatingCharges,
+  hasUnchargedMatches,
 }: SessionCardProps) {
   return (
     <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
@@ -95,6 +101,16 @@ function SessionCard({
             >
               View Results
             </button>
+            {hasUnchargedMatches && (
+              <button
+                type="button"
+                onClick={() => onGenerateCharges(session)}
+                disabled={generatingCharges}
+                className="primary-action w-full col-span-2 rounded-lg px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+              >
+                {generatingCharges ? "Checking Matches..." : "Generate Charges"}
+              </button>
+            )}
           </>
         )}
 

@@ -27,12 +27,16 @@ import {
 import MatchDetailsForm from "./MatchDetailsForm";
 import MatchSetsPanel from "./MatchSetsPanel";
 import type { AdminUser } from "../../api/auth";
+import SessionChargeReviewModal, {
+  type SessionChargeReviewMatch,
+} from "./SessionChargeReviewModal";
 
 type SessionMatchesPanelProps = {
   session: Session;
   admin: AdminUser;
   selectedMatchId?: number | null;
   onClose: () => void;
+  onMatchesChanged: () => void;
 };
 
 function SessionMatchesPanel({
@@ -40,6 +44,7 @@ function SessionMatchesPanel({
   admin,
   selectedMatchId = null,
   onClose,
+  onMatchesChanged,
 }: SessionMatchesPanelProps) {
   const canDeleteMatches = admin.role === "OWNER" || admin.role === "ADMIN";
   const [matches, setMatches] = useState<Match[]>([]);
@@ -57,6 +62,9 @@ function SessionMatchesPanel({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [chargeMatch, setChargeMatch] = useState<Match | null>(null);
+  const [chargeReviewMatch, setChargeReviewMatch] =
+    useState<SessionChargeReviewMatch | null>(null);
+  const [generatingMatchCharges, setGeneratingMatchCharges] = useState(false);
   const [chargedMatchIds, setChargedMatchIds] = useState<number[]>([]);
   const [participantsByMatch, setParticipantsByMatch] = useState<
     Record<number, MatchParticipant[]>
@@ -398,6 +406,10 @@ function SessionMatchesPanel({
 
       await loadMatches();
 
+      if (!editingMatch) {
+        onMatchesChanged();
+      }
+
       resetMatchForm();
       setEditingMatch(null);
       setShowForm(false);
@@ -552,21 +564,49 @@ function SessionMatchesPanel({
     }
   }
 
-  async function handleGenerateCharges(match: Match) {
-    const confirmed = window.confirm(
-      `Generate charges for Match #${getSessionMatchNumber(match.id)}?`,
-    );
+  function handleGenerateCharges(match: Match) {
+    const matchParticipants = participantsByMatch[match.id] ?? [];
 
-    if (!confirmed) {
+    const reviewParticipants = matchParticipants.map((matchParticipant) => {
+      const participant = participants.find(
+        (item) => item.id === matchParticipant.participantId,
+      );
+
+      return {
+        participantId: matchParticipant.participantId,
+        teamSide: matchParticipant.teamSide,
+        firstName: participant?.firstName ?? "Unknown",
+        lastName: participant?.lastName ?? "Participant",
+      };
+    });
+
+    setError(null);
+    setChargeMatch(null);
+
+    setChargeReviewMatch({
+      matchNumber: getSessionMatchNumber(match.id),
+      match,
+      participants: reviewParticipants,
+    });
+  }
+  async function handleConfirmMatchCharges() {
+    if (!chargeReviewMatch) {
       return;
     }
 
     try {
       setError(null);
+      setGeneratingMatchCharges(true);
 
-      await generateMatchCharges(match.id);
+      await generateMatchCharges(chargeReviewMatch.match.id);
 
-      setChargedMatchIds((current) => [...current, match.id]);
+      setChargedMatchIds((current) =>
+        current.includes(chargeReviewMatch.match.id)
+          ? current
+          : [...current, chargeReviewMatch.match.id],
+      );
+
+      setChargeReviewMatch(null);
     } catch (err) {
       console.error(err);
 
@@ -575,6 +615,8 @@ function SessionMatchesPanel({
       } else {
         setError("Failed to generate charges");
       }
+    } finally {
+      setGeneratingMatchCharges(false);
     }
   }
 
@@ -1009,6 +1051,21 @@ function SessionMatchesPanel({
           })
         )}
       </div>
+      {chargeReviewMatch && (
+        <SessionChargeReviewModal
+          sessionName={session.name}
+          matches={[chargeReviewMatch]}
+          generating={generatingMatchCharges}
+          onCancel={() => {
+            if (generatingMatchCharges) {
+              return;
+            }
+
+            setChargeReviewMatch(null);
+          }}
+          onConfirm={handleConfirmMatchCharges}
+        />
+      )}
     </div>
   );
 }

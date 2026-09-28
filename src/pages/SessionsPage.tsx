@@ -15,7 +15,12 @@ import SessionOutsiderPanel from "../components/sessions/SessionOutsiderPanel";
 import SessionResultsPanel from "../components/sessions/SessionResultsPanel";
 import type { AdminUser } from "../api/auth";
 import type { Organization } from "../types/organization";
-
+import { getSessionMatches } from "../api/matches";
+import { getMatchParticipants } from "../api/matchParticipants";
+import { generateSessionMatchCharges, getSessionCharges } from "../api/charges";
+import SessionChargeReviewModal, {
+  type SessionChargeReviewMatch,
+} from "../components/ui/SessionChargeReviewModal";
 function sortSessions(items: Session[]) {
   return [...items].sort((a, b) => {
     if (a.sessionDate !== b.sessionDate) {
@@ -63,6 +68,25 @@ function SessionsPage({
   const sessionPanelRef = useRef<HTMLDivElement | null>(null);
   const [resultsSession, setResultsSession] = useState<Session | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+
+  const [chargeReviewSession, setChargeReviewSession] =
+    useState<Session | null>(null);
+
+  const [chargeReviewMatches, setChargeReviewMatches] = useState<
+    SessionChargeReviewMatch[]
+  >([]);
+
+  const [chargeStatus, setChargeStatus] = useState<string | null>(null);
+
+  const [generatingSessionCharges, setGeneratingSessionCharges] =
+    useState(false);
+  const [chargeStatusSession, setChargeStatusSession] =
+    useState<Session | null>(null);
+  const [chargeReviewLoadingSessionId, setChargeReviewLoadingSessionId] =
+    useState<number | null>(null);
+  const [fullyChargedSessionIds, setFullyChargedSessionIds] = useState<
+    Set<number>
+  >(new Set());
   const [initialSessionType, setInitialSessionType] = useState<
     SessionType | undefined
   >(undefined);
@@ -246,6 +270,88 @@ function SessionsPage({
     });
   }, [editingSession]);
 
+  useEffect(() => {
+    if (loading || sessions.length === 0) {
+      return;
+    }
+
+    let ignore = false;
+
+    async function loadChargeStatus() {
+      try {
+        const regularPlaySessions = sessions.filter(
+          (session) => session.sessionType === "REGULAR_PLAY",
+        );
+
+        const statusResults = await Promise.all(
+          regularPlaySessions.map(async (session) => {
+            const [matches, charges] = await Promise.all([
+              getSessionMatches(session.id),
+              getSessionCharges(session.id),
+            ]);
+
+            const chargeableResults = new Set([
+              "TEAM_A_WIN",
+              "TEAM_B_WIN",
+              "DRAW",
+              "WALKOVER_A",
+              "WALKOVER_B",
+              "ABANDONED",
+            ]);
+
+            const chargeableMatchIds = new Set(
+              matches
+                .filter((match) => chargeableResults.has(match.result))
+                .map((match) => match.id),
+            );
+
+            const chargedMatchIds = new Set(
+              charges
+                .map((charge) => charge.matchId)
+                .filter((matchId): matchId is number => matchId !== null),
+            );
+
+            const unfinishedMatchCount = matches.filter(
+              (match) => !chargeableResults.has(match.result),
+            ).length;
+
+            const fullyCharged =
+              matches.length > 0 &&
+              unfinishedMatchCount === 0 &&
+              chargeableMatchIds.size > 0 &&
+              [...chargeableMatchIds].every((matchId) =>
+                chargedMatchIds.has(matchId),
+              );
+            return {
+              sessionId: session.id,
+              fullyCharged,
+            };
+          }),
+        );
+
+        if (ignore) {
+          return;
+        }
+
+        setFullyChargedSessionIds(
+          new Set(
+            statusResults
+              .filter((result) => result.fullyCharged)
+              .map((result) => result.sessionId),
+          ),
+        );
+      } catch (err) {
+        console.error("Failed to load session charge status:", err);
+      }
+    }
+
+    loadChargeStatus();
+
+    return () => {
+      ignore = true;
+    };
+  }, [loading, sessions]);
+
   if (loading) {
     return <p>Loading sessions...</p>;
   }
@@ -298,6 +404,217 @@ function SessionsPage({
     setShowForm(false);
     setEditingSession(null);
     setInitialSessionType(undefined);
+  }
+
+  async function handleGenerateSessionCharges(session: Session) {
+    try {
+      setActionError(null);
+      setChargeStatus(null);
+      setChargeStatusSession(session);
+      setChargeReviewLoadingSessionId(session.id);
+
+      const matches = await getSessionMatches(session.id);
+
+      if (matches.length === 0) {
+        setChargeStatus(
+          "No matches have been added to this session yet. Add and finish matches before generating charges.",
+        );
+        return;
+      }
+
+      const existingCharges = await getSessionCharges(session.id);
+
+      const chargedMatchIds = new Set(
+        existingCharges
+          .map((charge) => charge.matchId)
+          .filter((matchId): matchId is number => matchId !== null),
+      );
+
+      const chargeableResults = new Set([
+        "TEAM_A_WIN",
+        "TEAM_B_WIN",
+        "DRAW",
+        "WALKOVER_A",
+        "WALKOVER_B",
+        "ABANDONED",
+      ]);
+
+      const chargeableMatches = matches.filter((match) =>
+        chargeableResults.has(match.result),
+      );
+
+      const unchargedMatches = matches.filter(
+        (match) =>
+          chargeableResults.has(match.result) && !chargedMatchIds.has(match.id),
+      );
+
+      if (chargeableMatches.length === 0) {
+        setFullyChargedSessionIds((current) => {
+          const next = new Set(current);
+          next.delete(session.id);
+          return next;
+        });
+
+        const unfinishedCount = matches.length;
+
+        setChargeStatus(
+          unfinishedCount === 1
+            ? "1 match still needs a final result. Finish the match before generating charges."
+            : `${unfinishedCount} matches still need a final result. Finish all matches before generating charges.`,
+        );
+
+        return;
+      }
+
+      if (unchargedMatches.length === 0) {
+        const unfinishedMatches = matches.filter(
+          (match) => !chargeableResults.has(match.result),
+        );
+
+        if (unfinishedMatches.length > 0) {
+          setFullyChargedSessionIds((current) => {
+            const next = new Set(current);
+            next.delete(session.id);
+            return next;
+          });
+
+          setChargeStatus(
+            unfinishedMatches.length === 1
+              ? "1 match still needs a final result. Finish the match before generating charges."
+              : `${unfinishedMatches.length} matches still need a final result. Finish all matches before generating charges.`,
+          );
+
+          return;
+        }
+
+        setFullyChargedSessionIds((current) => {
+          const next = new Set(current);
+          next.add(session.id);
+          return next;
+        });
+
+        setChargeStatus(
+          "All finished matches in this session have already been charged.",
+        );
+        return;
+      }
+
+      setFullyChargedSessionIds((current) => {
+        const next = new Set(current);
+        next.delete(session.id);
+        return next;
+      });
+
+      const participantResults = await Promise.all(
+        unchargedMatches.map(async (match) => {
+          const matchParticipants = await getMatchParticipants(match.id);
+
+          const reviewParticipants = matchParticipants.map(
+            (matchParticipant) => {
+              const participant = participants.find(
+                (item) => item.id === matchParticipant.participantId,
+              );
+
+              return {
+                participantId: matchParticipant.participantId,
+                teamSide: matchParticipant.teamSide,
+                firstName: participant?.firstName ?? "Unknown",
+                lastName: participant?.lastName ?? "Participant",
+              };
+            },
+          );
+
+          return {
+            matchNumber:
+              matches.length -
+              matches.findIndex((item) => item.id === match.id),
+            match,
+            participants: reviewParticipants,
+          };
+        }),
+      );
+
+      setChargeStatus(null);
+      setChargeStatusSession(null);
+      setChargeReviewMatches(participantResults);
+      setChargeReviewSession(session);
+    } catch (err) {
+      console.error(err);
+
+      setActionError(
+        err instanceof Error ? err.message : "Failed to prepare charges",
+      );
+    } finally {
+      setChargeReviewLoadingSessionId(null);
+    }
+  }
+  async function handleConfirmSessionCharges() {
+    if (!chargeReviewSession) {
+      return;
+    }
+
+    try {
+      setActionError(null);
+      setGeneratingSessionCharges(true);
+
+      await generateSessionMatchCharges(chargeReviewSession.id);
+      const updatedCharges = await getSessionCharges(chargeReviewSession.id);
+      const updatedMatches = await getSessionMatches(chargeReviewSession.id);
+      const chargedMatchIds = new Set(
+        updatedCharges
+          .map((charge) => charge.matchId)
+          .filter((matchId): matchId is number => matchId !== null),
+      );
+
+      const chargeableResults = new Set([
+        "TEAM_A_WIN",
+        "TEAM_B_WIN",
+        "DRAW",
+        "WALKOVER_A",
+        "WALKOVER_B",
+        "ABANDONED",
+      ]);
+
+      const updatedChargeableMatches = updatedMatches.filter((match) =>
+        chargeableResults.has(match.result),
+      );
+
+      const remainingUnchargedMatches = updatedChargeableMatches.filter(
+        (match) => !chargedMatchIds.has(match.id),
+      );
+
+      const unfinishedMatchCount = updatedMatches.filter(
+        (match) => !chargeableResults.has(match.result),
+      ).length;
+      setFullyChargedSessionIds((current) => {
+        const next = new Set(current);
+
+        const fullyCharged =
+          updatedMatches.length > 0 &&
+          unfinishedMatchCount === 0 &&
+          updatedChargeableMatches.length > 0 &&
+          remainingUnchargedMatches.length === 0;
+
+        if (fullyCharged) {
+          next.add(chargeReviewSession.id);
+        } else {
+          next.delete(chargeReviewSession.id);
+        }
+
+        return next;
+      });
+
+      setChargeReviewSession(null);
+      setChargeReviewMatches([]);
+    } catch (err) {
+      console.error(err);
+
+      setActionError(
+        err instanceof Error ? err.message : "Failed to generate charges",
+      );
+    } finally {
+      setGeneratingSessionCharges(false);
+    }
   }
 
   async function handleSessionDelete(session: Session) {
@@ -383,6 +700,13 @@ function SessionsPage({
               <SessionCard
                 session={session}
                 canDelete={canDeleteSessions}
+                onGenerateCharges={handleGenerateSessionCharges}
+                generatingCharges={chargeReviewLoadingSessionId === session.id}
+                hasUnchargedMatches={
+                  session.sessionType === "REGULAR_PLAY"
+                    ? !fullyChargedSessionIds.has(session.id)
+                    : false
+                }
                 onEdit={(session) => {
                   setEditingSession(session);
                   setShowForm(true);
@@ -490,6 +814,13 @@ function SessionsPage({
                       setMatchSession(null);
                       setSelectedMatchId(null);
                     }}
+                    onMatchesChanged={() => {
+                      setFullyChargedSessionIds((current) => {
+                        const next = new Set(current);
+                        next.delete(session.id);
+                        return next;
+                      });
+                    }}
                   />
                 </div>
               )}
@@ -554,6 +885,69 @@ function SessionsPage({
           ))
         )}
       </div>
+      {chargeStatus && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-2xl border border-zinc-200 bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="flex items-center justify-between border-b border-zinc-200 px-5 py-4 dark:border-zinc-800">
+              <div>
+                <h2 className="text-lg font-semibold text-zinc-950 dark:text-white">
+                  Generate Charges
+                </h2>
+
+                <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+                  {chargeStatusSession?.name ?? "Session status"}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setChargeStatus(null);
+                  setChargeStatusSession(null);
+                }}
+                className="rounded-lg px-2 py-1 text-sm text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-zinc-800 dark:hover:text-white"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="p-5">
+              <p className="text-sm text-zinc-700 dark:text-zinc-300">
+                {chargeStatus}
+              </p>
+            </div>
+
+            <div className="border-t border-zinc-200 p-5 dark:border-zinc-800">
+              <button
+                type="button"
+                onClick={() => {
+                  setChargeStatus(null);
+                  setChargeStatusSession(null);
+                }}
+                className="w-full rounded-lg border border-zinc-300 px-4 py-2.5 text-sm font-medium hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {chargeReviewSession && (
+        <SessionChargeReviewModal
+          sessionName={chargeReviewSession.name}
+          matches={chargeReviewMatches}
+          generating={generatingSessionCharges}
+          onCancel={() => {
+            if (generatingSessionCharges) {
+              return;
+            }
+
+            setChargeReviewSession(null);
+            setChargeReviewMatches([]);
+          }}
+          onConfirm={handleConfirmSessionCharges}
+        />
+      )}
     </div>
   );
 }
