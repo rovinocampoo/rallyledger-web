@@ -195,7 +195,38 @@ function LoginPage({ onLoggedIn }: LoginPageProps) {
                       onChange={(event) => setPassword(event.target.value)}
                       autoComplete="current-password"
                       required
-                      className="w-full rounded-xl border-2 border-[#103f25]/20 bg-[#f1eee5] px-4 py-3 pr-12 text-[#103f25] outline-none transition placeholder:text-[#103f25]/35 focus:border-[#103f25] focus:bg-[#fffdf5] focus:shadow-[4px_4px_0_#dfff28] dark:border-zinc-700 dark:bg-zinc-950 dark:text-white dark:placeholder:text-zinc-600 dark:focus:border-zinc-300 dark:focus:shadow-[4px_4px_0_#dfff28]"
+                      className="
+                      w-full rounded-xl border-2
+                      border-[#103f25]/20
+                      bg-[#f1eee5]
+                      px-4 py-3 pr-12
+                      text-[#103f25]
+                      caret-[#103f25]
+                      outline-none
+                      transition
+
+                      [-webkit-text-fill-color:currentColor]
+
+                      placeholder:text-[#103f25]/35
+
+                      focus:border-[#103f25]
+                      focus:bg-[#fffdf5]
+                      focus:shadow-[4px_4px_0_#dfff28]
+
+                      dark:border-zinc-700
+                      dark:bg-zinc-950
+                      dark:text-white
+                      dark:caret-white
+                      dark:placeholder:text-zinc-600
+                      dark:focus:border-zinc-300
+                      dark:focus:bg-zinc-950
+                      dark:focus:shadow-[4px_4px_0_#dfff28]
+
+                      autofill:bg-zinc-950
+                      autofill:text-white
+                      dark:autofill:bg-zinc-950
+                      dark:autofill:text-white
+                    "
                     />
 
                     <button
