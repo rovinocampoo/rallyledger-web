@@ -1,6 +1,11 @@
 import { NavLink, Outlet } from "react-router-dom";
 
-function PublicLayout() {
+type PublicLayoutProps = {
+  theme: "light" | "dark";
+  onThemeToggle: () => void;
+};
+
+function PublicLayout({ theme, onThemeToggle }: PublicLayoutProps) {
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-950 dark:bg-zinc-950 dark:text-white">
       <header className="border-b border-zinc-200 bg-white/95 dark:border-zinc-800 dark:bg-zinc-950/95">
@@ -18,43 +23,44 @@ function PublicLayout() {
             />
           </NavLink>
 
-          <nav className="hidden items-center gap-6 text-sm md:flex">
-            <NavLink
-              to="/walkthrough"
-              className={({ isActive }) =>
-                isActive
-                  ? "font-medium text-zinc-950 dark:text-white"
-                  : "text-zinc-500 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white"
-              }
-            >
-              Walkthrough
-            </NavLink>
+          <div className="flex items-center gap-2">
+            {/* Desktop links */}
+            <nav className="hidden items-center gap-5 text-sm font-medium md:flex">
+              <NavLink
+                to="/walkthrough"
+                className="text-zinc-600 transition hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white"
+              >
+                Walkthrough
+              </NavLink>
 
-            <NavLink
-              to="/faq"
-              className={({ isActive }) =>
-                isActive
-                  ? "font-medium text-zinc-950 dark:text-white"
-                  : "text-zinc-500 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white"
-              }
-            >
-              FAQ
-            </NavLink>
+              <NavLink
+                to="/faq"
+                className="text-zinc-600 transition hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white"
+              >
+                FAQ
+              </NavLink>
+            </nav>
 
+            {/* Theme toggle - visible on mobile and desktop */}
+            <button
+              type="button"
+              onClick={onThemeToggle}
+              aria-label={`Switch to ${
+                theme === "dark" ? "light" : "dark"
+              } mode`}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-zinc-300 text-sm text-zinc-700 transition hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+            >
+              {theme === "dark" ? "☀" : "☾"}
+            </button>
+
+            {/* Sign in - visible on mobile and desktop */}
             <NavLink
               to="/login"
-              className="rounded-lg border border-zinc-300 px-3 py-2 font-medium text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+              className="inline-flex items-center justify-center rounded-lg bg-zinc-900 px-3 py-2 text-sm font-medium text-white transition hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-zinc-300"
             >
               Sign in
             </NavLink>
-          </nav>
-
-          <NavLink
-            to="/login"
-            className="rounded-lg bg-zinc-900 px-3 py-2 text-sm font-medium text-white md:hidden dark:bg-white dark:text-zinc-950"
-          >
-            Sign in
-          </NavLink>
+          </div>
         </div>
       </header>
 
@@ -78,8 +84,8 @@ function PublicLayout() {
               />
 
               <p className="mt-3 max-w-sm text-sm leading-6 text-zinc-500 dark:text-zinc-400">
-                Club management for sessions, participants, matches,
-                charges, products, and club records.
+                Club management for sessions, participants, matches, charges,
+                products, and club records.
               </p>
             </div>
 

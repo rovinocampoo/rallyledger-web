@@ -414,10 +414,32 @@ function CalendarPage({
             select={handleCalendarSelect}
             initialView="timeGridDay"
             colorScheme={isDarkMode ? "dark" : "light"}
+            className="rally-calendar"
+            toolbarClass="rally-calendar-toolbar"
+            toolbarTitleClass="rally-calendar-toolbar-title"
+            buttonClass="rally-calendar-button"
+            buttonGroupClass="rally-calendar-button-group"
+            dayHeaderClass="rally-calendar-day-header"
+            dayHeaderInnerClass="rally-calendar-day-header-inner"
+            dayCellClass={(arg) =>
+              arg.isToday
+                ? "rally-calendar-day-cell rally-calendar-day-today"
+                : "rally-calendar-day-cell"
+            }
+            dayCellTopInnerClass={(arg) =>
+              arg.isToday
+                ? "rally-calendar-day-number rally-calendar-day-number-today"
+                : "rally-calendar-day-number"
+            }
+            highlightClass="rally-calendar-highlight"
             views={{
               timeGridThreeDay: {
                 type: "timeGrid",
                 duration: { days: 3 },
+              },
+              timeGrid: {
+                nowIndicatorLineClass: "rally-calendar-now-line",
+                nowIndicatorHeaderClass: "rally-calendar-now-header",
               },
             }}
             headerToolbar={{

@@ -247,7 +247,11 @@ function App() {
   if (!admin) {
     return (
       <Routes>
-        <Route element={<PublicLayout />}>
+        <Route
+          element={
+            <PublicLayout theme={theme} onThemeToggle={handleThemeToggle} />
+          }
+        >
           <Route path="/" element={<LandingPage />} />
           <Route path="/walkthrough" element={<WalkthroughPage />} />
           <Route path="/faq" element={<FaqPage />} />
@@ -282,7 +286,11 @@ function App() {
 
   return (
     <Routes>
-      <Route element={<PublicLayout />}>
+      <Route
+        element={
+          <PublicLayout theme={theme} onThemeToggle={handleThemeToggle} />
+        }
+      >
         <Route path="/walkthrough" element={<WalkthroughPage />} />
         <Route path="/faq" element={<FaqPage />} />
         <Route path="/privacy" element={<PrivacyPage />} />

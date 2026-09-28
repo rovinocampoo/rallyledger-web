@@ -39,30 +39,49 @@ textarea {
 @layer components {
   /* Add, Create, Update, Save, Generate */
   .primary-action {
+    border: 1px solid var(--color-zinc-900);
     background-color: var(--color-zinc-900);
     color: var(--color-white);
-    transition-property: color, background-color, border-color, outline-color, text-decoration-color, fill, stroke;
-    transition-duration: 150ms;
+    box-shadow: 3px 3px 0 #dfff28;
+    transition:
+      color 150ms,
+      background-color 150ms,
+      border-color 150ms,
+      transform 150ms,
+      box-shadow 150ms;
 
     &:where(.dark, .dark *) {
+      border-color: var(--color-white);
       background-color: var(--color-white);
       color: var(--color-black);
+      box-shadow: 3px 3px 0 #dfff28;
     }
   }
 
   .primary-action:hover:not(:disabled) {
     background-color: var(--color-zinc-700);
+    transform: translate(-1px, -1px);
+    box-shadow: 5px 5px 0 #dfff28;
 
     &:where(.dark, .dark *) {
       background-color: var(--color-zinc-200);
     }
   }
 
+  .primary-action:active:not(:disabled) {
+    transform: translate(1px, 1px);
+    box-shadow: 1px 1px 0 #dfff28;
+  }
+
   /* Cancel, Close, ordinary bordered buttons */
   .secondary-action {
     border: 1px solid var(--color-zinc-300);
     color: var(--color-zinc-700);
-    transition: color 150ms, background-color 150ms, border-color 150ms;
+    transition:
+      color 150ms,
+      background-color 150ms,
+      border-color 150ms,
+      transform 150ms;
 
     &:where(.dark, .dark *) {
       border-color: var(--color-zinc-700);
@@ -73,6 +92,7 @@ textarea {
   .secondary-action:hover:not(:disabled) {
     background-color: var(--color-zinc-100);
     color: var(--color-zinc-950);
+    transform: translateY(-1px);
 
     &:where(.dark, .dark *) {
       background-color: var(--color-zinc-800);
@@ -84,7 +104,11 @@ textarea {
   .danger-action {
     border: 1px solid var(--color-red-300);
     color: var(--color-red-600);
-    transition: color 150ms, background-color 150ms, border-color 150ms;
+    transition:
+      color 150ms,
+      background-color 150ms,
+      border-color 150ms,
+      transform 150ms;
 
     &:where(.dark, .dark *) {
       border-color: color-mix(in srgb, var(--color-red-900) 60%, transparent);
@@ -96,10 +120,15 @@ textarea {
     border-color: var(--color-red-400);
     background-color: var(--color-red-50);
     color: var(--color-red-700);
+    transform: translateY(-1px);
 
     &:where(.dark, .dark *) {
       border-color: var(--color-red-700);
-      background-color: color-mix(in srgb, var(--color-red-950) 40%, transparent);
+      background-color: color-mix(
+        in srgb,
+        var(--color-red-950) 40%,
+        transparent
+      );
       color: var(--color-red-300);
     }
   }
@@ -243,4 +272,187 @@ textarea {
 
 .dark .rl-calendar-match-content {
   color: rgb(228 228 231) !important;
+}
+
+/* =========================================================
+   RallyLedger FullCalendar v7 styling
+   ========================================================= */
+
+.rally-calendar {
+  --rl-calendar-ink: #103f25;
+  --rl-calendar-lime: #dfff28;
+}
+
+/* Toolbar */
+.rally-calendar-toolbar {
+  margin-bottom: 1rem !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+}
+
+.rally-calendar-toolbar-title {
+  font-size: 1.125rem !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.025em !important;
+  color: rgb(24 24 27) !important;
+}
+
+/* Buttons */
+.rally-calendar-button {
+  min-height: 36px !important;
+  border: 1px solid rgb(212 212 216) !important;
+  border-radius: 0.625rem !important;
+  background: white !important;
+  color: rgb(39 39 42) !important;
+  padding: 0.5rem 0.75rem !important;
+  font-size: 0.875rem !important;
+  font-weight: 600 !important;
+  box-shadow: none !important;
+  transition:
+    transform 150ms,
+    background-color 150ms,
+    color 150ms,
+    border-color 150ms,
+    box-shadow 150ms !important;
+}
+
+.rally-calendar-button:hover:not(:disabled) {
+  border-color: var(--rl-calendar-ink) !important;
+  background: var(--rl-calendar-lime) !important;
+  color: var(--rl-calendar-ink) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 3px 3px 0 var(--rl-calendar-ink) !important;
+}
+
+.rally-calendar-button:active:not(:disabled) {
+  transform: translateY(1px) !important;
+  box-shadow: 1px 1px 0 var(--rl-calendar-ink) !important;
+}
+
+.rally-calendar-button[aria-pressed="true"] {
+  border-color: var(--rl-calendar-ink) !important;
+  background: var(--rl-calendar-ink) !important;
+  color: white !important;
+  box-shadow: 3px 3px 0 var(--rl-calendar-lime) !important;
+}
+
+/* Button group */
+.rally-calendar-button-group {
+  gap: 0.25rem !important;
+}
+
+/* Day headers */
+.rally-calendar-day-header {
+  border-color: rgb(228 228 231) !important;
+  color: rgb(113 113 122) !important;
+  font-size: 0.75rem !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+}
+
+.rally-calendar-day-header-inner {
+  padding: 0.5rem !important;
+}
+
+/* Day cells */
+.rally-calendar-day-cell {
+  background: transparent !important;
+  color: rgb(39 39 42) !important;
+}
+
+/* Today */
+.rally-calendar-day-today {
+  background: rgba(223, 255, 40, 0.1) !important;
+}
+
+.rally-calendar-day-number {
+  font-size: 0.875rem !important;
+  font-weight: 600 !important;
+}
+
+.rally-calendar-day-number-today {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-width: 28px !important;
+  min-height: 28px !important;
+  margin: 4px !important;
+  padding: 0 7px !important;
+  border-radius: 999px !important;
+  background: var(--rl-calendar-lime) !important;
+  color: var(--rl-calendar-ink) !important;
+  font-weight: 900 !important;
+}
+
+/* Drag/select highlight */
+.rally-calendar-highlight {
+  background: rgba(223, 255, 40, 0.24) !important;
+}
+
+/* Event hover */
+.rl-calendar-session,
+.rl-calendar-match {
+  transition:
+    transform 150ms,
+    box-shadow 150ms !important;
+}
+
+.rl-calendar-session:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 3px 3px 0 var(--rl-calendar-lime) !important;
+}
+
+.rl-calendar-match:hover {
+  transform: translateY(-1px) !important;
+  border-color: var(--rl-calendar-ink) !important;
+  box-shadow: 2px 2px 0 var(--rl-calendar-lime) !important;
+}
+
+/* Now indicator */
+.rally-calendar .fc-timegrid-now-indicator-line {
+  border-color: var(--rl-calendar-lime) !important;
+  border-width: 2px !important;
+}
+
+/* Dark mode */
+.dark .rally-calendar-toolbar-title {
+  color: rgb(244 244 245) !important;
+}
+
+.dark .rally-calendar-button {
+  border-color: rgb(63 63 70) !important;
+  background: rgb(24 24 27) !important;
+  color: rgb(228 228 231) !important;
+}
+
+.dark .rally-calendar-button:hover:not(:disabled) {
+  border-color: var(--rl-calendar-lime) !important;
+  background: var(--rl-calendar-lime) !important;
+  color: var(--rl-calendar-ink) !important;
+  box-shadow: 3px 3px 0 var(--rl-calendar-ink) !important;
+}
+
+.dark .rally-calendar-button[aria-pressed="true"] {
+  border-color: rgb(244 244 245) !important;
+  background: rgb(244 244 245) !important;
+  color: rgb(9 9 11) !important;
+  box-shadow: 3px 3px 0 var(--rl-calendar-lime) !important;
+}
+
+.dark .rally-calendar-day-header {
+  border-color: rgb(63 63 70) !important;
+  color: rgb(161 161 170) !important;
+}
+
+.dark .rally-calendar-day-cell {
+  color: rgb(228 228 231) !important;
+}
+
+.dark .rally-calendar-day-today {
+  background: rgba(223, 255, 40, 0.08) !important;
+}
+
+.dark .rally-calendar-highlight {
+  background: rgba(223, 255, 40, 0.18) !important;
 }
