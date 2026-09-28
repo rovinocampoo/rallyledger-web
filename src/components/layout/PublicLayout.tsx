@@ -78,7 +78,7 @@ function PublicLayout() {
               />
 
               <p className="mt-3 max-w-sm text-sm leading-6 text-zinc-500 dark:text-zinc-400">
-                Tennis club management for sessions, participants, matches,
+                Club management for sessions, participants, matches,
                 charges, products, and club records.
               </p>
             </div>

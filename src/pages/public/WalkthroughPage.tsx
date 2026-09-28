@@ -52,7 +52,7 @@ export default function WalkthroughPage() {
         </h1>
 
         <p className="mt-6 text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-          RallyLedger connects the day-to-day operations of a tennis
+          RallyLedger connects the day-to-day operations of an
           organization, including participants, sessions, matches, charges,
           products, and club records, into one workflow.
         </p>

@@ -63,7 +63,7 @@ function LoginPage({ onLoggedIn }: LoginPageProps) {
           </div>
 
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
-            Sign in to manage your tennis club.
+            Sign in to manage your club.
           </p>
         </div>
 

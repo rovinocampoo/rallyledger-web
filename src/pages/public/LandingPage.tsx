@@ -7,11 +7,11 @@ function LandingPage() {
         <div className="mx-auto max-w-6xl px-5 py-20 sm:py-28">
           <div className="max-w-3xl">
             <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">
-              Tennis club management
+              Rallyledger: club management
             </p>
 
             <h1 className="mt-4 text-4xl font-semibold tracking-tight text-zinc-950 sm:text-6xl dark:text-white">
-              Run your tennis club without the spreadsheet chaos.
+              Run your club without the spreadsheet chaos.
             </h1>
 
             <p className="mt-6 max-w-2xl text-lg leading-8 text-zinc-600 dark:text-zinc-400">

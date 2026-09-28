@@ -2,12 +2,12 @@
   {
     question: "What is RallyLedger?",
     answer:
-      "RallyLedger is a tennis club management platform for organizing participants, sessions, matches, charges, products, and other organization records in one place.",
+      "RallyLedger is a club management platform for organizing participants, sessions, matches, charges, products, and other organization records in one place.",
   },
   {
     question: "Who is RallyLedger for?",
     answer:
-      "RallyLedger is designed for tennis clubs, organizations, coaches, and administrators who need to manage recurring tennis activities and the records associated with them.",
+      "RallyLedger is designed for clubs, organizations, coaches, and administrators who need to manage recurring activities and the records associated with them.",
   },
   {
     question: "Can RallyLedger manage different participant types?",
