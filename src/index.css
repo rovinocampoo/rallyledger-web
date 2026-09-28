@@ -456,3 +456,14 @@ textarea {
 .dark .rally-calendar-highlight {
   background: rgba(223, 255, 40, 0.18) !important;
 }
+
+@keyframes brandLoader {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-4deg) scale(1);
+  }
+
+  50% {
+    transform: translateY(-10px) rotate(4deg) scale(1.03);
+  }
+}

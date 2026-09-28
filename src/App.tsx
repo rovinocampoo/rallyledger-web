@@ -38,6 +38,7 @@ import AuditLogPage from "./pages/AuditLogPage";
 import ChangePasswordPage from "./pages/ChangePasswordPage";
 import { AUTH_EXPIRED_EVENT } from "./api/client";
 import CalendarPage from "./pages/CalendarPage";
+import AppLoadingScreen from "./components/ui/AppLoadingScreen";
 
 type Theme = "light" | "dark";
 
@@ -237,13 +238,8 @@ function App() {
   }
 
   if (authLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-zinc-50 text-zinc-600 dark:bg-zinc-950 dark:text-zinc-400">
-        Checking session...
-      </div>
-    );
+    return <AppLoadingScreen />;
   }
-
   if (!admin) {
     return (
       <Routes>

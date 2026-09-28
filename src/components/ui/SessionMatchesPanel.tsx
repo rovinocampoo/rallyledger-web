@@ -1,4 +1,10 @@
-import { useEffect, useRef, useState, type SubmitEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type SubmitEvent,
+} from "react";
 import {
   createMatch,
   deleteMatch,
@@ -35,6 +41,8 @@ type SessionMatchesPanelProps = {
   session: Session;
   admin: AdminUser;
   selectedMatchId?: number | null;
+  openAddMatch?: boolean;
+  onAddMatchOpened?: () => void;
   onClose: () => void;
   onMatchesChanged: () => void;
 };
@@ -43,6 +51,8 @@ function SessionMatchesPanel({
   session,
   admin,
   selectedMatchId = null,
+  openAddMatch = false,
+  onAddMatchOpened,
   onClose,
   onMatchesChanged,
 }: SessionMatchesPanelProps) {
@@ -90,34 +100,71 @@ function SessionMatchesPanel({
   const manageMatchRef = useRef<HTMLDivElement | null>(null);
   const quickGuestInputRef = useRef<HTMLInputElement | null>(null);
   const autoOpenedMatchRef = useRef<number | null>(null);
+  const getPersistentLightUsage = useCallback((): "NONE" | "HALF" | "FULL" => {
+    const latestMatchUsingLights = [...matches]
+      .sort((a, b) => b.id - a.id)
+      .find((match) => match.lightUsage !== "NONE");
+
+    return latestMatchUsingLights?.lightUsage ?? "NONE";
+  }, [matches]);
 
   useEffect(() => {
     if (showForm && !editingMatch) {
+      console.log("[SessionMatchesPanel] CREATE FORM SCROLL", {
+        showForm,
+        editingMatch,
+        sessionId: session.id,
+      });
+
       createFormRef.current?.scrollIntoView({
         behavior: "smooth",
         block: "center",
       });
     }
-  }, [showForm, editingMatch, showQuickGuest]);
+  }, [showForm, editingMatch, session.id]);
+
+  useEffect(() => {
+    if (!openAddMatch || loading) {
+      return;
+    }
+
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setEditingMatch(null);
+    setChargeMatch(null);
+    resetMatchForm();
+    setLightUsage(getPersistentLightUsage());
+    setShowForm(true);
+    onAddMatchOpened?.();
+  }, [openAddMatch, loading, getPersistentLightUsage, onAddMatchOpened]);
 
   useEffect(() => {
     if (editingMatch) {
+      console.log("[SessionMatchesPanel] MANAGE MATCH SCROLL", {
+        editingMatchId: editingMatch.id,
+        sessionId: session.id,
+      });
+
       manageMatchRef.current?.scrollIntoView({
         behavior: "smooth",
         block: "center",
       });
     }
-  }, [editingMatch]);
+  }, [editingMatch, session.id]);
 
   useEffect(() => {
     if (showQuickGuest) {
+      console.log("[SessionMatchesPanel] QUICK GUEST SCROLL", {
+        showQuickGuest,
+        sessionId: session.id,
+      });
+
       quickGuestInputRef.current?.scrollIntoView({
         behavior: "smooth",
         block: "center",
       });
     }
-  }, [showQuickGuest]);
-
+  }, [showQuickGuest, session.id]);
+  
   useEffect(() => {
     let ignore = false;
 
@@ -485,38 +532,40 @@ function SessionMatchesPanel({
     }
   }
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  function handleEditMatch(match: Match) {
-    const matchParticipants = participantsByMatch[match.id] ?? [];
+  const handleEditMatch = useCallback(
+    (match: Match) => {
+      const matchParticipants = participantsByMatch[match.id] ?? [];
 
-    const teamA = matchParticipants.filter(
-      (participant) => participant.teamSide === "A",
-    );
+      const teamA = matchParticipants.filter(
+        (participant) => participant.teamSide === "A",
+      );
 
-    const teamB = matchParticipants.filter(
-      (participant) => participant.teamSide === "B",
-    );
+      const teamB = matchParticipants.filter(
+        (participant) => participant.teamSide === "B",
+      );
 
-    setEditingMatch(match);
+      setEditingMatch(match);
 
-    setCourtId(String(match.courtId));
-    setMatchType(match.matchType);
-    setLightUsage(match.lightUsage);
+      setCourtId(String(match.courtId));
+      setMatchType(match.matchType);
+      setLightUsage(match.lightUsage);
 
-    setTeamAPlayer1(teamA[0] ? String(teamA[0].participantId) : "");
+      setTeamAPlayer1(teamA[0] ? String(teamA[0].participantId) : "");
 
-    setTeamAPlayer2(teamA[1] ? String(teamA[1].participantId) : "");
+      setTeamAPlayer2(teamA[1] ? String(teamA[1].participantId) : "");
 
-    setTeamBPlayer1(teamB[0] ? String(teamB[0].participantId) : "");
+      setTeamBPlayer1(teamB[0] ? String(teamB[0].participantId) : "");
 
-    setTeamBPlayer2(teamB[1] ? String(teamB[1].participantId) : "");
+      setTeamBPlayer2(teamB[1] ? String(teamB[1].participantId) : "");
 
-    setManageTab("SCORE");
-    setShowForm(false);
-    setChargeMatch(null);
+      setManageTab("SCORE");
+      setShowForm(false);
+      setChargeMatch(null);
 
-    setError(null);
-  }
+      setError(null);
+    },
+    [participantsByMatch],
+  );
 
   useEffect(() => {
     if (!selectedMatchId || loading || matches.length === 0) {
@@ -643,14 +692,6 @@ function SessionMatchesPanel({
     });
   }
 
-  function getPersistentLightUsage(): "NONE" | "HALF" | "FULL" {
-    const latestMatchUsingLights = [...matches]
-      .sort((a, b) => b.id - a.id)
-      .find((match) => match.lightUsage !== "NONE");
-
-    return latestMatchUsingLights?.lightUsage ?? "NONE";
-  }
-
   function resetMatchForm() {
     setCourtId("");
     setMatchType("DOUBLES");
@@ -767,9 +808,9 @@ function SessionMatchesPanel({
             handleSubmit={handleSubmit}
             onCancel={() => {
               setShowForm(false);
+              onAddMatchOpened?.();
 
               resetMatchForm();
-              setError(null);
             }}
           />
         </div>

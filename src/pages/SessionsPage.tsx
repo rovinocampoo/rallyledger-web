@@ -1,4 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { useSearchParams } from "react-router-dom";
 import { getSessions, deleteSession } from "../api/sessions";
 import type { Session, SessionType } from "../types/session";
@@ -59,6 +65,7 @@ function SessionsPage({
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
   const [matchSession, setMatchSession] = useState<Session | null>(null);
   const [selectedMatchId, setSelectedMatchId] = useState<number | null>(null);
+  const [openAddMatch, setOpenAddMatch] = useState(false);
   const [trainingSession, setTrainingSession] = useState<Session | null>(null);
   const [outsiderSession, setOutsiderSession] = useState<Session | null>(null);
   const [chargeSession, setChargeSession] = useState<Session | null>(null);
@@ -69,6 +76,7 @@ function SessionsPage({
   const [returnToChargeSession, setReturnToChargeSession] =
     useState<Session | null>(null);
   const sessionPanelRef = useRef<HTMLDivElement | null>(null);
+  const [sessionPanelScrollRequest, setSessionPanelScrollRequest] = useState(0);
   const [resultsSession, setResultsSession] = useState<Session | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -93,27 +101,36 @@ function SessionsPage({
   const [initialSessionType, setInitialSessionType] = useState<
     SessionType | undefined
   >(undefined);
+  const handleAddMatchOpened = useCallback(() => {
+    setOpenAddMatch(false);
+  }, []);
 
-  useEffect(() => {
-    if (
-      matchSession ||
-      trainingSession ||
-      outsiderSession ||
-      resultsSession ||
-      chargeSession
-    ) {
-      sessionPanelRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block: "center",
-      });
+  useLayoutEffect(() => {
+    if (sessionPanelScrollRequest === 0) {
+      return;
     }
-  }, [
-    matchSession,
-    trainingSession,
-    outsiderSession,
-    resultsSession,
-    chargeSession,
-  ]);
+
+    requestAnimationFrame(() => {
+      console.log(
+        "[SessionsPage] PANEL SCROLL",
+        "request:",
+        sessionPanelScrollRequest,
+      );
+      const element = sessionPanelRef.current;
+
+      if (!element) {
+        return;
+      }
+
+      const top = element.getBoundingClientRect().top + window.scrollY - 24;
+
+      window.scrollTo({
+        top,
+        behavior: "smooth",
+      });
+    });
+  }, [sessionPanelScrollRequest]);
+
   useEffect(() => {
     let ignore = false;
 
@@ -144,76 +161,71 @@ function SessionsPage({
       return;
     }
 
-    if (searchParams.get("action") !== "add-match") {
-      return;
-    }
+    const action = searchParams.get("action");
+    const requestedType = searchParams.get("new");
+    const sessionIdParam = searchParams.get("session");
 
-    const today = new Date();
+    if (action === "add-match") {
+      const today = new Date();
 
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, "0");
-    const day = String(today.getDate()).padStart(2, "0");
+      const year = today.getFullYear();
+      const month = String(today.getMonth() + 1).padStart(2, "0");
+      const day = String(today.getDate()).padStart(2, "0");
 
-    const todayDate = `${year}-${month}-${day}`;
+      const todayDate = `${year}-${month}-${day}`;
 
-    const latestRegularPlay = sessions
-      .filter(
-        (session) =>
-          session.sessionType === "REGULAR_PLAY" &&
-          session.sessionDate.slice(0, 10) === todayDate,
-      )
-      .sort((a, b) => {
-        if (a.startTime !== b.startTime) {
-          return b.startTime.localeCompare(a.startTime);
-        }
+      const latestRegularPlay = sessions
+        .filter(
+          (session) =>
+            session.sessionType === "REGULAR_PLAY" &&
+            session.sessionDate.slice(0, 10) === todayDate,
+        )
+        .sort((a, b) => {
+          if (a.startTime !== b.startTime) {
+            return b.startTime.localeCompare(a.startTime);
+          }
 
-        return b.id - a.id;
-      })[0];
+          return b.id - a.id;
+        })[0];
 
-    if (!latestRegularPlay) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setActionError("No Regular Play session found for today.");
+      if (!latestRegularPlay) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setActionError("No Regular Play session found for today.");
+        setSearchParams({}, { replace: true });
+        return;
+      }
+
+      setMatchSession(latestRegularPlay);
+      setSelectedMatchId(null);
+      setOpenAddMatch(true);
+      setTrainingSession(null);
+      setOutsiderSession(null);
+      setResultsSession(null);
+      setSelectedSession(null);
+      setChargeSession(null);
+      setLedgerParticipant(null);
+      setEditingSession(null);
+      setShowForm(false);
+
       setSearchParams({}, { replace: true });
       return;
     }
 
-    setMatchSession(latestRegularPlay);
-    setTrainingSession(null);
-    setOutsiderSession(null);
-    setResultsSession(null);
-    setSelectedSession(null);
-    setChargeSession(null);
-    setLedgerParticipant(null);
-    setEditingSession(null);
-    setShowForm(false);
-
-    setSearchParams({}, { replace: true });
-  }, [loading, searchParams, sessions, setSearchParams]);
-
-  useEffect(() => {
-    const requestedType = searchParams.get("new");
-
     if (
-      requestedType !== "REGULAR_PLAY" &&
-      requestedType !== "TRAINING" &&
-      requestedType !== "OUTSIDER_PLAY" &&
-      requestedType !== "EVENT"
+      requestedType === "REGULAR_PLAY" ||
+      requestedType === "TRAINING" ||
+      requestedType === "OUTSIDER_PLAY" ||
+      requestedType === "EVENT"
     ) {
+      setEditingSession(null);
+      setInitialSessionType(requestedType);
+      setShowForm(true);
+
+      setSearchParams({}, { replace: true });
       return;
     }
 
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setEditingSession(null);
-    setInitialSessionType(requestedType);
-    setShowForm(true);
-
-    setSearchParams({}, { replace: true });
-  }, [searchParams, setSearchParams]);
-
-  useEffect(() => {
-    const sessionIdParam = searchParams.get("session");
-
-    if (!sessionIdParam || loading || sessions.length === 0) {
+    if (!sessionIdParam || sessions.length === 0) {
       return;
     }
 
@@ -238,9 +250,9 @@ function SessionsPage({
         return;
       }
 
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedMatchId(matchId);
       setMatchSession(session);
+      setOpenAddMatch(false);
       setSelectedSession(null);
       setEditingSession(null);
       setTrainingSession(null);
@@ -249,13 +261,25 @@ function SessionsPage({
       setChargeSession(null);
     } else {
       setSelectedMatchId(null);
-      setSelectedSession(session);
+      setOpenAddMatch(false);
+      setSelectedSession(null);
       setEditingSession(null);
       setMatchSession(null);
       setTrainingSession(null);
       setOutsiderSession(null);
       setResultsSession(null);
       setChargeSession(null);
+
+      if (session.sessionType === "TRAINING") {
+        setTrainingSession(session);
+      } else if (session.sessionType === "OUTSIDER_PLAY") {
+        setOutsiderSession(session);
+      } else if (session.sessionType === "REGULAR_PLAY") {
+        setMatchSession(session);
+      } else {
+        setSelectedSession(session);
+      }
+      setSessionPanelScrollRequest((current) => current + 1);
     }
 
     setSearchParams({}, { replace: true });
@@ -752,7 +776,7 @@ function SessionsPage({
                 onManageMatches={(session) => {
                   setMatchSession(session);
                   setSelectedMatchId(null);
-
+                  setOpenAddMatch(false);
                   setTrainingSession(null);
                   setOutsiderSession(null);
                   setResultsSession(null);
@@ -802,10 +826,12 @@ function SessionsPage({
               )}
 
               {selectedSession?.id === session.id && (
-                <SessionParticipantsPanel
-                  session={session}
-                  onClose={() => setSelectedSession(null)}
-                />
+                <div ref={sessionPanelRef}>
+                  <SessionParticipantsPanel
+                    session={session}
+                    onClose={() => setSelectedSession(null)}
+                  />
+                </div>
               )}
 
               {matchSession?.id === session.id && (
@@ -814,9 +840,12 @@ function SessionsPage({
                     session={session}
                     admin={admin}
                     selectedMatchId={selectedMatchId}
+                    openAddMatch={openAddMatch}
+                    onAddMatchOpened={handleAddMatchOpened}
                     onClose={() => {
                       setMatchSession(null);
                       setSelectedMatchId(null);
+                      setOpenAddMatch(false);
                     }}
                     onMatchesChanged={() => {
                       setFullyChargedSessionIds((current) => {
