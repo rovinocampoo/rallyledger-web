@@ -44,6 +44,7 @@ function AppLayout({
     { to: "/", label: "Home", icon: "🏠", end: true },
     { to: "/outstanding", label: "Balance", icon: "₱", end: true },
     { to: "/participants", label: "Players", icon: "👥" },
+    { to: "/records", label: "Records", icon: "🏆" },
     { to: "/sessions", label: "Sessions", icon: "🎾" },
     { to: "/calendar", label: "Calendar", icon: "📆" },
     { to: "/courts", label: "Courts", icon: "🎾" },
@@ -461,6 +462,14 @@ function AppLayout({
             >
               <span>👥</span>
               <span>Players</span>
+            </NavLink>
+                <NavLink
+              to="/records"
+              onClick={closeMobileMenus}
+              className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800"
+            >
+              <span>🏆</span>
+              <span>Records</span>
             </NavLink>
 
             <NavLink

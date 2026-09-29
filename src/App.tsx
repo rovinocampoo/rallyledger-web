@@ -40,6 +40,7 @@ import { AUTH_EXPIRED_EVENT } from "./api/client";
 import CalendarPage from "./pages/CalendarPage";
 import AppLoadingScreen from "./components/ui/AppLoadingScreen";
 import SalesPage from "./pages/SalesPage";
+import RecordsPage from "./pages/RecordsPage";
 
 type Theme = "light" | "dark";
 
@@ -336,6 +337,7 @@ function App() {
             />
           }
         />
+        <Route path="/records" element={<RecordsPage />} />
         <Route path="/courts" element={<CourtsPage admin={admin} />} />
         <Route path="/products" element={<ProductsPage admin={admin} />} />
         <Route path="/sales" element={<SalesPage admin={admin} />} />
