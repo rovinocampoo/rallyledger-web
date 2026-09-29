@@ -26,7 +26,7 @@ function LandingPage() {
             </div>
 
             <h1 className="mt-6 max-w-[780px] text-[clamp(56px,7.4vw,104px)] font-black leading-[0.88] tracking-[-0.075em] text-[#103f25] dark:text-white">
-              Run your club without the{" "}
+              Run your club without the
               <span className="inline-block rotate-[-1.8deg] bg-[#dfff28] px-[0.09em] pb-[0.05em] text-[#103f25] dark:text-zinc-950">
                 spreadsheet chaos.
               </span>
@@ -132,7 +132,7 @@ function LandingPage() {
           </div>
 
           <svg
-            className="absolute left-[2%] top-[24%] hidden h-[150px] w-[120px] lg:block"
+            className="absolute left-[-8%] top-[19%] hidden h-[150px] w-[120px] lg:block"
             viewBox="0 0 120 150"
             fill="none"
             aria-hidden="true"

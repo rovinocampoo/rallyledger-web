@@ -48,6 +48,7 @@ function AppLayout({
     { to: "/calendar", label: "Calendar", icon: "📆" },
     { to: "/courts", label: "Courts", icon: "🎾" },
     { to: "/products", label: "Products", icon: "📦" },
+    { to: "/sales", label: "Sales", icon: "💸" },
     { to: "/fee-rules", label: "Fees", icon: "🧾" },
     ...(admin.role === "OWNER"
       ? [{ to: "/admin/access", label: "Admin Access", icon: "🔐" }]
@@ -477,6 +478,14 @@ function AppLayout({
             >
               <span>📦</span>
               <span>Products</span>
+            </NavLink>
+            <NavLink
+              to="/sales"
+              onClick={closeMobileMenus}
+              className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800"
+            >
+              <span>💸</span>
+              <span>Sales</span>
             </NavLink>
             <NavLink
               to="/courts"

@@ -1,17 +1,12 @@
 import { useEffect, useState } from "react";
 import type { AdminUser } from "../api/auth";
 import {
-  chargeProductParticipant,
   deleteProduct,
   getProducts,
 } from "../api/products";
-import { getParticipants } from "../api/participants";
-import type { Participant } from "../types/participant";
 import type { Product } from "../types/product";
 import ProductCard from "../components/ui/ProductCard";
 import ProductForm from "../components/ui/ProductForm";
-import ProductChargeModal from "../components/ui/ProductChargeModal";
-import { formatCurrency, formatFullName } from "../utils/format";
 
 type ProductsPageProps = {
   admin: AdminUser;
@@ -21,15 +16,12 @@ function ProductsPage({ admin }: ProductsPageProps) {
   const canManageProducts = admin.role === "OWNER" || admin.role === "ADMIN";
 
   const [products, setProducts] = useState<Product[]>([]);
-  const [participants, setParticipants] = useState<Participant[]>([]);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [showForm, setShowForm] = useState(false);
-  const [chargeProduct, setChargeProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [charging, setCharging] = useState(false);
 
   useEffect(() => {
     let ignore = false;
@@ -59,28 +51,6 @@ function ProductsPage({ admin }: ProductsPageProps) {
       ignore = true;
     };
   }, []);
-
-  useEffect(() => {
-    if (!canManageProducts) {
-      return;
-    }
-
-    let ignore = false;
-
-    getParticipants()
-      .then((data) => {
-        if (!ignore) {
-          setParticipants(data);
-        }
-      })
-      .catch((err) => {
-        console.error(err);
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, [canManageProducts]);
 
   function handleProductSaved(savedProduct: Product) {
     setProducts((current) => {
@@ -135,41 +105,6 @@ function ProductsPage({ admin }: ProductsPageProps) {
     }
   }
 
-  async function handleProductCharge(participantId: number) {
-    if (!chargeProduct) {
-      return;
-    }
-
-    const participant = participants.find((item) => item.id === participantId);
-
-    try {
-      setCharging(true);
-      setActionError(null);
-
-      await chargeProductParticipant(chargeProduct.id, participantId);
-
-      setChargeProduct(null);
-
-      setSuccessMessage(
-        `${chargeProduct.name} (${formatCurrency(
-          chargeProduct.price,
-        )}) charged to ${
-          participant
-            ? formatFullName(participant.firstName, participant.lastName)
-            : `Participant #${participantId}`
-        }.`,
-      );
-    } catch (err) {
-      console.error(err);
-
-      setActionError(
-        err instanceof Error ? err.message : "Failed to charge product",
-      );
-    } finally {
-      setCharging(false);
-    }
-  }
-
   if (loading) {
     return <div className="p-4 text-sm text-zinc-500">Loading products...</div>;
   }
@@ -185,7 +120,7 @@ function ProductsPage({ admin }: ProductsPageProps) {
           <h1 className="text-2xl font-semibold">Products</h1>
 
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            Manage products and charge them to participants.
+            Manage the products available for sale.
           </p>
         </div>
 
@@ -243,11 +178,6 @@ function ProductsPage({ admin }: ProductsPageProps) {
                   setSuccessMessage(null);
                 }}
                 onDelete={handleProductDelete}
-                onCharge={(selectedProduct) => {
-                  setChargeProduct(selectedProduct);
-                  setActionError(null);
-                  setSuccessMessage(null);
-                }}
               />
 
               {showForm && editingProduct?.id === product.id && (
@@ -266,24 +196,6 @@ function ProductsPage({ admin }: ProductsPageProps) {
           ))
         )}
       </div>
-
-      {chargeProduct && (
-        <ProductChargeModal
-          product={chargeProduct}
-          participants={participants}
-          submitting={charging}
-          error={actionError}
-          onCancel={() => {
-            if (charging) {
-              return;
-            }
-
-            setChargeProduct(null);
-            setActionError(null);
-          }}
-          onConfirm={handleProductCharge}
-        />
-      )}
     </div>
   );
 }

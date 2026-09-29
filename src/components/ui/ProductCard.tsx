@@ -6,7 +6,6 @@ type ProductCardProps = {
   canManage: boolean;
   onEdit: (product: Product) => void;
   onDelete: (product: Product) => void;
-  onCharge: (product: Product) => void;
 };
 
 function ProductCard({
@@ -14,7 +13,6 @@ function ProductCard({
   canManage,
   onEdit,
   onDelete,
-  onCharge,
 }: ProductCardProps) {
   return (
     <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
@@ -43,15 +41,7 @@ function ProductCard({
       <p className="mt-4 text-2xl font-bold">{formatCurrency(product.price)}</p>
 
       {canManage && (
-        <div className="mt-4 grid gap-2 sm:grid-cols-3">
-          <button
-            type="button"
-            onClick={() => onCharge(product)}
-            disabled={!product.isActive}
-            className="primary-action rounded-lg px-3 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            Charge
-          </button>
+        <div className="mt-4 grid gap-2 sm:grid-cols-2">
 
           <button
             type="button"
