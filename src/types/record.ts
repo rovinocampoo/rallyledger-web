@@ -26,3 +26,19 @@ export type PairRecord = {
   losses: number;
   draws: number;
 };
+
+export type RecordMatchPlayer = {
+  participantId: number;
+  name: string;
+  nickname: string | null;
+  teamSide: "A" | "B";
+};
+
+export type RecordMatchHistory = {
+  matchId: number;
+  sessionId: number;
+  sessionDate: string;
+  matchType: string;
+  result: "W" | "L" | "D";
+  players: RecordMatchPlayer[];
+};

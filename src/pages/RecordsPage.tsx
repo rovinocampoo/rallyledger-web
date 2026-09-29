@@ -1,7 +1,16 @@
-import { useEffect, useMemo, useState } from "react";
-import { getPairRecords, getPlayerRecords } from "../api/records";
-import type { PairRecord, PlayerRecord } from "../types/record";
-
+import { Fragment, useEffect, useMemo, useState } from "react";
+import {
+  getPairRecords,
+  getPlayerRecords,
+  getPlayerMatchHistory,
+  getPairMatchHistory,
+  type RecordDateRange,
+} from "../api/records";
+import type {
+  PairRecord,
+  PlayerRecord,
+  RecordMatchHistory,
+} from "../types/record";
 function formatRecord(wins: number, losses: number, draws: number) {
   return (
     <span className="inline-flex items-center">
@@ -13,6 +22,72 @@ function formatRecord(wins: number, losses: number, draws: number) {
     </span>
   );
 }
+
+type DateFilter =
+  | "THIS_WEEK"
+  | "LAST_7_DAYS"
+  | "THIS_MONTH"
+  | "ALL_RECORDS"
+  | "CUSTOM";
+
+function formatDateInput(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function buildRecordDateRange(
+  filter: DateFilter,
+  customFrom: string,
+  customTo: string,
+) {
+  const today = new Date();
+  const todayValue = formatDateInput(today);
+
+  if (filter === "THIS_WEEK") {
+    const startOfWeek = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate() - today.getDay(),
+    );
+
+    return {
+      from: formatDateInput(startOfWeek),
+      to: todayValue,
+    };
+  }
+
+  if (filter === "LAST_7_DAYS") {
+    const startDate = new Date(today);
+    startDate.setDate(startDate.getDate() - 6);
+
+    return {
+      from: formatDateInput(startDate),
+      to: todayValue,
+    };
+  }
+
+  if (filter === "THIS_MONTH") {
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+
+    return {
+      from: formatDateInput(startOfMonth),
+      to: todayValue,
+    };
+  }
+
+  if (filter === "CUSTOM") {
+    return {
+      from: customFrom || undefined,
+      to: customTo || undefined,
+    };
+  }
+
+  return undefined;
+}
+
 function getWinRate(wins: number, losses: number, draws: number) {
   const totalMatches = wins + losses + draws;
 
@@ -52,6 +127,87 @@ function formatWinRate(wins: number, losses: number, draws: number) {
   );
 }
 
+function formatMatchType(matchType: string) {
+  return matchType.replaceAll("_", " ");
+}
+
+function getHistoryResultClass(result: RecordMatchHistory["result"]) {
+  switch (result) {
+    case "W":
+      return "text-emerald-600 dark:text-emerald-400";
+    case "D":
+      return "text-amber-600 dark:text-amber-400";
+    case "L":
+      return "text-red-600 dark:text-red-400";
+  }
+}
+
+function MatchHistoryList({ history }: { history: RecordMatchHistory[] }) {
+  if (history.length === 0) {
+    return (
+      <p className="text-sm text-zinc-500">
+        No completed matches in this period.
+      </p>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      {history.map((match) => {
+        const teamA = match.players.filter((player) => player.teamSide === "A");
+
+        const teamB = match.players.filter((player) => player.teamSide === "B");
+
+        return (
+          <div
+            key={match.matchId}
+            className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2.5 dark:border-zinc-800 dark:bg-zinc-950"
+          >
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">
+                {match.sessionDate} · {formatMatchType(match.matchType)}
+              </p>
+
+              <span
+                className={`text-xs font-semibold ${getHistoryResultClass(
+                  match.result,
+                )}`}
+              >
+                {match.result}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-[minmax(0,1fr)_24px_minmax(0,1fr)] items-center gap-2 text-sm">
+              <div className="min-w-0">
+                {teamA.map((player) => (
+                  <p
+                    key={`${match.matchId}-a-${player.participantId}`}
+                    className="truncate"
+                  >
+                    {player.nickname || player.name}
+                  </p>
+                ))}
+              </div>
+
+              <span className="text-center text-xs text-zinc-400">vs</span>
+
+              <div className="min-w-0">
+                {teamB.map((player) => (
+                  <p
+                    key={`${match.matchId}-b-${player.participantId}`}
+                    className="truncate"
+                  >
+                    {player.nickname || player.name}
+                  </p>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 type RecordsTab = "players" | "pairs";
 
 type SortDirection = "asc" | "desc";
@@ -83,11 +239,48 @@ function RecordsPage() {
   const [pairSortKey, setPairSortKey] = useState<PairSortKey>("matches");
   const [pairSortDirection, setPairSortDirection] =
     useState<SortDirection>("desc");
+  const [dateFilter, setDateFilter] = useState<DateFilter>("ALL_RECORDS");
+
+  const [customFrom, setCustomFrom] = useState("");
+  const [customTo, setCustomTo] = useState("");
+
+  const [appliedDateRange, setAppliedDateRange] = useState<
+    RecordDateRange | undefined
+  >(undefined);
+  const [expandedPlayerId, setExpandedPlayerId] = useState<number | null>(null);
+
+  const [expandedPairKey, setExpandedPairKey] = useState<string | null>(null);
+
+  const [playerHistory, setPlayerHistory] = useState<
+    Record<number, RecordMatchHistory[]>
+  >({});
+
+  const [pairHistory, setPairHistory] = useState<
+    Record<string, RecordMatchHistory[]>
+  >({});
+
+  const [loadingPlayerHistory, setLoadingPlayerHistory] = useState<
+    Record<number, boolean>
+  >({});
+
+  const [loadingPairHistory, setLoadingPairHistory] = useState<
+    Record<string, boolean>
+  >({});
+  const [historyError, setHistoryError] = useState<string | null>(null);
 
   useEffect(() => {
     let ignore = false;
-
-    Promise.all([getPlayerRecords(), getPairRecords()])
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setLoading(true);
+    setError(null);
+    setExpandedPlayerId(null);
+    setExpandedPairKey(null);
+    setPlayerHistory({});
+    setPairHistory({});
+    Promise.all([
+      getPlayerRecords(appliedDateRange),
+      getPairRecords(appliedDateRange),
+    ])
       .then(([players, pairs]) => {
         if (ignore) {
           return;
@@ -111,7 +304,95 @@ function RecordsPage() {
     return () => {
       ignore = true;
     };
-  }, []);
+  }, [appliedDateRange]);
+
+  async function togglePlayerHistory(participantId: number) {
+    if (expandedPlayerId === participantId) {
+      setExpandedPlayerId(null);
+      setHistoryError(null);
+      return;
+    }
+
+    setExpandedPairKey(null);
+    setExpandedPlayerId(participantId);
+    setHistoryError(null);
+
+    if (playerHistory[participantId]) {
+      return;
+    }
+
+    setLoadingPlayerHistory((current) => ({
+      ...current,
+      [participantId]: true,
+    }));
+
+    try {
+      const history = await getPlayerMatchHistory(
+        participantId,
+        appliedDateRange,
+      );
+
+      setPlayerHistory((current) => ({
+        ...current,
+        [participantId]: history,
+      }));
+    } catch (err) {
+      console.error(err);
+      setHistoryError("Failed to load match history.");
+    } finally {
+      setLoadingPlayerHistory((current) => ({
+        ...current,
+        [participantId]: false,
+      }));
+    }
+  }
+
+  async function togglePairHistory(
+    participantOneId: number,
+    participantTwoId: number,
+  ) {
+    const key = `${participantOneId}-${participantTwoId}`;
+
+    if (expandedPairKey === key) {
+      setExpandedPairKey(null);
+      setHistoryError(null);
+      return;
+    }
+
+    setExpandedPlayerId(null);
+    setExpandedPairKey(key);
+    setHistoryError(null);
+
+    if (pairHistory[key]) {
+      return;
+    }
+
+    setLoadingPairHistory((current) => ({
+      ...current,
+      [key]: true,
+    }));
+
+    try {
+      const history = await getPairMatchHistory(
+        participantOneId,
+        participantTwoId,
+        appliedDateRange,
+      );
+
+      setPairHistory((current) => ({
+        ...current,
+        [key]: history,
+      }));
+    } catch (err) {
+      console.error(err);
+      setHistoryError("Failed to load match history.");
+    } finally {
+      setLoadingPairHistory((current) => ({
+        ...current,
+        [key]: false,
+      }));
+    }
+  }
 
   function togglePlayerSort(key: PlayerSortKey) {
     if (playerSortKey === key) {
@@ -285,6 +566,32 @@ function RecordsPage() {
     return sortRecords(filtered);
   }, [pairRecords, playerRecords, pairSearch, pairSortKey, pairSortDirection]);
 
+  function handleDateFilterChange(filter: DateFilter) {
+    setDateFilter(filter);
+
+    if (filter === "CUSTOM") {
+      return;
+    }
+
+    setAppliedDateRange(buildRecordDateRange(filter, customFrom, customTo));
+  }
+
+  function handleApplyCustomRange() {
+    if (!customFrom || !customTo) {
+      setError("Please select both From and To dates.");
+      return;
+    }
+
+    if (customFrom > customTo) {
+      setError("From date cannot be after To date.");
+      return;
+    }
+
+    setError(null);
+
+    setAppliedDateRange(buildRecordDateRange("CUSTOM", customFrom, customTo));
+  }
+
   if (loading) {
     return <p>Loading records...</p>;
   }
@@ -304,7 +611,65 @@ function RecordsPage() {
           Match records calculated from completed results.
         </p>
       </div>
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end">
+        <div className="w-full sm:w-auto">
+          <label className="mb-1 block text-xs font-medium text-zinc-500 dark:text-zinc-400">
+            Period
+          </label>
 
+          <select
+            value={dateFilter}
+            onChange={(event) =>
+              handleDateFilterChange(event.target.value as DateFilter)
+            }
+            className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-950 outline-none focus:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-900 dark:text-white dark:focus:border-zinc-600 sm:w-48"
+          >
+            <option value="THIS_WEEK">This Week</option>
+            <option value="LAST_7_DAYS">Last 7 Days</option>
+            <option value="THIS_MONTH">This Month</option>
+            <option value="ALL_RECORDS">All Records</option>
+            <option value="CUSTOM">Custom</option>
+          </select>
+        </div>
+
+        {dateFilter === "CUSTOM" && (
+          <>
+            <div className="w-full sm:w-auto">
+              <label className="mb-1 block text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                From
+              </label>
+
+              <input
+                type="date"
+                value={customFrom}
+                onChange={(event) => setCustomFrom(event.target.value)}
+                className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-950 outline-none focus:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-900 dark:text-white dark:focus:border-zinc-600"
+              />
+            </div>
+
+            <div className="w-full sm:w-auto">
+              <label className="mb-1 block text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                To
+              </label>
+
+              <input
+                type="date"
+                value={customTo}
+                onChange={(event) => setCustomTo(event.target.value)}
+                className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-950 outline-none focus:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-900 dark:text-white dark:focus:border-zinc-600"
+              />
+            </div>
+
+            <button
+              type="button"
+              onClick={handleApplyCustomRange}
+              className="primary-action rounded-lg px-4 py-2 text-sm font-medium"
+            >
+              Apply
+            </button>
+          </>
+        )}
+      </div>
       <div className="mb-6 inline-flex rounded-xl border border-zinc-200 bg-zinc-100 p-1 dark:border-zinc-800 dark:bg-zinc-900">
         <button
           type="button"
@@ -445,66 +810,98 @@ function RecordsPage() {
 
               <div className="space-y-3 md:space-y-0 md:rounded-b-xl md:border-x md:border-b md:border-zinc-200 dark:border-zinc-800">
                 {filteredPlayerRecords.map((record) => (
-                  <div
-                    key={record.participantId}
-                    className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900 md:grid md:grid-cols-[minmax(0,1fr)_110px_140px_140px_140px_100px] md:items-center md:gap-4 md:rounded-none md:border-0 md:border-b md:px-4 md:py-3 md:last:border-b-0"
-                  >
-                    <div className="min-w-0">
-                      <p
-                        className="truncate text-sm font-medium"
-                        title={record.fullName}
-                      >
-                        {record.fullName}
-                      </p>
+                  <Fragment key={record.participantId}>
+                    {" "}
+                    <button
+                      type="button"
+                      onClick={() => togglePlayerHistory(record.participantId)}
+                      aria-expanded={expandedPlayerId === record.participantId}
+                      className="w-full rounded-xl border border-zinc-200 bg-white p-4 text-left dark:border-zinc-800 dark:bg-zinc-900 md:grid md:grid-cols-[minmax(0,1fr)_110px_140px_140px_140px_100px] md:items-center md:gap-4 md:rounded-none md:border-0 md:border-b md:px-4 md:py-3 md:last:border-b-0"
+                    >
+                      <div className="min-w-0">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <span className="shrink-0 text-xs text-zinc-400">
+                            {expandedPlayerId === record.participantId
+                              ? "▾"
+                              : "▸"}
+                          </span>
 
-                      {record.nickname && (
-                        <p className="mt-0.5 truncate text-xs text-zinc-500">
-                          {record.nickname}
+                          <p
+                            className="truncate text-sm font-medium"
+                            title={record.fullName}
+                          >
+                            {record.fullName}
+                          </p>
+                        </div>
+
+                        {record.nickname && (
+                          <p className="mt-0.5 truncate pl-5 text-xs text-zinc-500">
+                            {record.nickname}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="mt-3 text-sm md:mt-0">
+                        <span className="md:hidden">Total Matches: </span>
+                        {record.overallMatches}
+                      </div>
+
+                      <div className="mt-3 text-sm md:mt-0">
+                        <span className="md:hidden">Singles: </span>
+                        {formatRecord(
+                          record.singlesWins,
+                          record.singlesLosses,
+                          record.singlesDraws,
+                        )}
+                      </div>
+
+                      <div className="mt-3 text-sm md:mt-0">
+                        <span className="md:hidden">Doubles: </span>
+                        {formatRecord(
+                          record.doublesWins,
+                          record.doublesLosses,
+                          record.doublesDraws,
+                        )}
+                      </div>
+
+                      <div className="mt-3 text-sm font-medium md:mt-0">
+                        <span className="md:hidden">Overall: </span>
+                        {formatRecord(
+                          record.overallWins,
+                          record.overallLosses,
+                          record.overallDraws,
+                        )}
+                      </div>
+
+                      <div className="mt-3 text-sm md:mt-0">
+                        <span className="md:hidden">Win %: </span>
+                        {formatWinRate(
+                          record.overallWins,
+                          record.overallLosses,
+                          record.overallDraws,
+                        )}
+                      </div>
+                    </button>
+                    {expandedPlayerId === record.participantId && (
+                      <div className="border-b border-zinc-200 px-4 py-4 dark:border-zinc-800 md:col-span-full md:px-6">
+                        <p className="mb-3 text-sm font-semibold">
+                          Match History
                         </p>
-                      )}
-                    </div>
 
-                    <div className="mt-3 text-sm md:mt-0">
-                      <span className="md:hidden">Total Matches: </span>
-                      {record.overallMatches}
-                    </div>
-
-                    <div className="mt-3 text-sm md:mt-0">
-                      <span className="md:hidden">Singles: </span>
-                      {formatRecord(
-                        record.singlesWins,
-                        record.singlesLosses,
-                        record.singlesDraws,
-                      )}
-                    </div>
-
-                    <div className="mt-3 text-sm md:mt-0">
-                      <span className="md:hidden">Doubles: </span>
-                      {formatRecord(
-                        record.doublesWins,
-                        record.doublesLosses,
-                        record.doublesDraws,
-                      )}
-                    </div>
-
-                    <div className="mt-3 text-sm font-medium md:mt-0">
-                      <span className="md:hidden">Overall: </span>
-                      {formatRecord(
-                        record.overallWins,
-                        record.overallLosses,
-                        record.overallDraws,
-                      )}
-                    </div>
-
-                    <div className="mt-3 text-sm md:mt-0">
-                      <span className="md:hidden">Win %: </span>
-                      {formatWinRate(
-                        record.overallWins,
-                        record.overallLosses,
-                        record.overallDraws,
-                      )}
-                    </div>
-                  </div>
+                        {loadingPlayerHistory[record.participantId] ? (
+                          <p className="text-sm text-zinc-500">
+                            Loading match history...
+                          </p>
+                        ) : historyError ? (
+                          <p className="text-sm text-red-500">{historyError}</p>
+                        ) : (
+                          <MatchHistoryList
+                            history={playerHistory[record.participantId] ?? []}
+                          />
+                        )}
+                      </div>
+                    )}
+                  </Fragment>
                 ))}
               </div>
             </>
@@ -593,32 +990,86 @@ function RecordsPage() {
 
               <div className="space-y-3 md:space-y-0 md:rounded-b-xl md:border-x md:border-b md:border-zinc-200 dark:border-zinc-800">
                 {filteredPairRecords.map((record) => (
-                  <div
+                  <Fragment
                     key={`${record.participantOneId}-${record.participantTwoId}`}
-                    className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900 md:grid md:grid-cols-[minmax(0,1fr)_120px_120px_120px] md:items-center md:gap-4 md:rounded-none md:border-0 md:border-b md:last:border-b-0 md:px-4 md:py-3"
                   >
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium">
-                        {record.participantOneName} +{" "}
-                        {record.participantTwoName}
-                      </p>
-                    </div>
+                    {" "}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        togglePairHistory(
+                          record.participantOneId,
+                          record.participantTwoId,
+                        )
+                      }
+                      aria-expanded={
+                        expandedPairKey ===
+                        `${record.participantOneId}-${record.participantTwoId}`
+                      }
+                      className="w-full rounded-xl border border-zinc-200 bg-white p-4 text-left dark:border-zinc-800 dark:bg-zinc-900 md:grid md:grid-cols-[minmax(0,1fr)_120px_120px_120px] md:items-center md:gap-4 md:rounded-none md:border-0 md:border-b md:px-4 md:py-3 md:last:border-b-0"
+                    >
+                      <div className="min-w-0">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <span className="shrink-0 text-xs text-zinc-400">
+                            {expandedPairKey ===
+                            `${record.participantOneId}-${record.participantTwoId}`
+                              ? "▾"
+                              : "▸"}
+                          </span>
 
-                    <div className="mt-2 text-sm md:mt-0">
-                      <span className="md:hidden">Matches: </span>
-                      {record.matchesPlayed}
-                    </div>
+                          <p className="truncate text-sm font-medium">
+                            {record.participantOneName} +{" "}
+                            {record.participantTwoName}
+                          </p>
+                        </div>
+                      </div>
 
-                    <div className="mt-2 text-sm md:mt-0">
-                      <span className="md:hidden">Record: </span>
-                      {formatRecord(record.wins, record.losses, record.draws)}
-                    </div>
+                      <div className="mt-2 text-sm md:mt-0">
+                        <span className="md:hidden">Matches: </span>
+                        {record.matchesPlayed}
+                      </div>
 
-                    <div className="mt-2 text-sm md:mt-0">
-                      <span className="md:hidden">Win %: </span>
-                      {formatWinRate(record.wins, record.losses, record.draws)}
-                    </div>
-                  </div>
+                      <div className="mt-2 text-sm md:mt-0">
+                        <span className="md:hidden">Record: </span>
+                        {formatRecord(record.wins, record.losses, record.draws)}
+                      </div>
+
+                      <div className="mt-2 text-sm md:mt-0">
+                        <span className="md:hidden">Win %: </span>
+                        {formatWinRate(
+                          record.wins,
+                          record.losses,
+                          record.draws,
+                        )}
+                      </div>
+                    </button>
+                    {expandedPairKey ===
+                      `${record.participantOneId}-${record.participantTwoId}` && (
+                      <div className="border-b border-zinc-200 px-4 py-4 dark:border-zinc-800 md:col-span-full md:px-6">
+                        <p className="mb-3 text-sm font-semibold">
+                          Match History
+                        </p>
+
+                        {loadingPairHistory[
+                          `${record.participantOneId}-${record.participantTwoId}`
+                        ] ? (
+                          <p className="text-sm text-zinc-500">
+                            Loading match history...
+                          </p>
+                        ) : historyError ? (
+                          <p className="text-sm text-red-500">{historyError}</p>
+                        ) : (
+                          <MatchHistoryList
+                            history={
+                              pairHistory[
+                                `${record.participantOneId}-${record.participantTwoId}`
+                              ] ?? []
+                            }
+                          />
+                        )}
+                      </div>
+                    )}
+                  </Fragment>
                 ))}
               </div>
             </>
