@@ -41,6 +41,7 @@ import CalendarPage from "./pages/CalendarPage";
 import AppLoadingScreen from "./components/ui/AppLoadingScreen";
 import SalesPage from "./pages/SalesPage";
 import RecordsPage from "./pages/RecordsPage";
+import FinancialReportPage from "./pages/FinancialReportPage";
 
 type Theme = "light" | "dark";
 
@@ -352,6 +353,7 @@ function App() {
           }
         />
         <Route path="/fee-rules" element={<FeeRulesPage admin={admin} />} />
+        <Route path="/reports" element={<FinancialReportPage />} />
         <Route
           path="/change-password"
           element={

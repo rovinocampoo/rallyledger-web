@@ -4,16 +4,24 @@ import {
   getOutstanding,
   getPaymentReport,
   type ReportDateRange,
+  getFinancialReport,
 } from "../api/reports";
 import type {
   OutstandingParticipant,
   ReportSummary,
   PaymentReport,
+  FinancialReport,
 } from "../types/report";
+import { getPlayerRecords } from "../api/records";
+import type { PlayerRecord } from "../types/record";
 import { formatCurrency, formatFullName, formatLabel } from "../utils/format";
-import { useNavigate } from "react-router-dom";
-import { useOutletContext } from "react-router-dom";
+import { useNavigate, useOutletContext } from "react-router-dom";
 import type { AppOutletContext } from "../components/layout/AppLayout";
+import FinancialTrendChart from "../components/ui/FinancialTrendChart";
+import PlayerRecordsChart from "../components/ui/PlayerRecordsChart";
+import PaymentMethodChart from "../components/ui/PaymentMethodChart";
+import SessionTypeChart from "../components/ui/SessionTypeChart";
+import MatchTrendChart from "../components/ui/MatchTrendChart";
 
 type DateFilter = "ALL_TIME" | "TODAY" | "THIS_MONTH" | "CUSTOM";
 
@@ -79,6 +87,8 @@ function DashboardPage() {
   const [paymentReport, setPaymentReport] = useState<PaymentReport | null>(
     null,
   );
+  const [financialReport, setFinancialReport] =
+    useState<FinancialReport | null>(null);
   const [dateFilter, setDateFilter] = useState<DateFilter>("ALL_TIME");
 
   const [customFrom, setCustomFrom] = useState("");
@@ -87,6 +97,7 @@ function DashboardPage() {
   const [appliedDateRange, setAppliedDateRange] = useState<
     ReportDateRange | undefined
   >(undefined);
+  const [playerRecords, setPlayerRecords] = useState<PlayerRecord[]>([]);
 
   function handleApplyFilter() {
     if (!customFrom || !customTo) {
@@ -138,15 +149,30 @@ function DashboardPage() {
       getReportSummary(appliedDateRange),
       getOutstanding(5),
       getPaymentReport(appliedDateRange),
+      getFinancialReport(appliedDateRange),
+      getPlayerRecords({
+        from: appliedDateRange?.from,
+        to: appliedDateRange?.to,
+      }),
     ])
-      .then(([summaryData, outstandingData, paymentData]) => {
-        if (!ignore) {
-          setSummary(summaryData);
-          setOutstandingParticipants(outstandingData);
-          setPaymentReport(paymentData);
-          setLoading(false);
-        }
-      })
+      .then(
+        ([
+          summaryData,
+          outstandingData,
+          paymentData,
+          financialData,
+          playerRecordData,
+        ]) => {
+          if (!ignore) {
+            setSummary(summaryData);
+            setOutstandingParticipants(outstandingData);
+            setPaymentReport(paymentData);
+            setFinancialReport(financialData);
+            setPlayerRecords(playerRecordData);
+            setLoading(false);
+          }
+        },
+      )
       .catch((err) => {
         if (!ignore) {
           console.error(err);
@@ -213,7 +239,7 @@ function DashboardPage() {
               type="date"
               value={customFrom}
               onChange={(event) => setCustomFrom(event.target.value)}
-              className="rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2"
+              className="dark:[color-scheme:dark] rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2"
             />
           </div>
 
@@ -224,7 +250,7 @@ function DashboardPage() {
               type="date"
               value={customTo}
               onChange={(event) => setCustomTo(event.target.value)}
-              className="rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2"
+              className="dark:[color-scheme:dark] rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2"
             />
           </div>
           <button
@@ -241,7 +267,7 @@ function DashboardPage() {
       )}
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5">
+        <div className="h-full rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5">
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
             Participants
           </p>
@@ -249,19 +275,19 @@ function DashboardPage() {
           <p className="mt-2 text-3xl font-bold">{summary.participantCount}</p>
         </div>
 
-        <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5">
+        <div className="h-full rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5">
           <p className="text-sm text-zinc-600 dark:text-zinc-400">Sessions</p>
 
           <p className="mt-2 text-3xl font-bold">{summary.sessionCount}</p>
         </div>
 
-        <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5">
+        <div className="h-full rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5">
           <p className="text-sm text-zinc-600 dark:text-zinc-400">Matches</p>
 
           <p className="mt-2 text-3xl font-bold">{summary.matchCount}</p>
         </div>
 
-        <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5">
+        <div className="h-full rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5">
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
             Total Charges
           </p>
@@ -271,7 +297,7 @@ function DashboardPage() {
           </p>
         </div>
 
-        <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5">
+        <div className="h-full rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5">
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
             Total Payments
           </p>
@@ -280,7 +306,7 @@ function DashboardPage() {
           </p>{" "}
         </div>
 
-        <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5">
+        <div className="h-full rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5">
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
             Net Balance
           </p>
@@ -289,55 +315,122 @@ function DashboardPage() {
           </p>
         </div>
       </div>
-      <div className="mt-8 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5">
-        <div className="mb-4">
-          <h2 className="text-lg font-semibold">Top Outstanding</h2>
+      <div className="mt-6 grid gap-6 lg:grid-cols-6">
+        {financialReport && (
+          <section className="lg:col-span-3 rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="mb-5">
+              <h2 className="text-lg font-semibold">Financial Activity</h2>
 
-          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            Participants with the highest unpaid balances.
-          </p>
-        </div>
+              <p className="mt-1 text-sm text-zinc-500">
+                Charges and payments during the selected period.
+              </p>
+            </div>
 
-        {outstandingParticipants.length === 0 ? (
-          <p className="text-sm text-zinc-500">No outstanding balances.</p>
-        ) : (
-          <div className="space-y-2">
-            {outstandingParticipants.map((participant) => (
-              <button
-                key={participant.participantId}
-                type="button"
-                onClick={() =>
-                  navigate("/participants", {
-                    state: {
-                      ledgerParticipantId: participant.participantId,
-                    },
-                  })
-                }
-                className="flex w-full items-center justify-between rounded-lg bg-zinc-50 px-4 py-3 text-left transition-colors hover:bg-zinc-200 dark:bg-zinc-950 dark:hover:bg-zinc-800"
-              >
-                <div>
-                  <p className="font-medium">
-                    {formatFullName(
-                      participant.firstName,
-                      participant.lastName,
-                    )}
-                  </p>
-
-                  {participant.nickname && (
-                    <p className="text-xs text-zinc-500">
-                      {participant.nickname}
-                    </p>
-                  )}
-                </div>
-
-                <p className="font-semibold">
-                  {formatCurrency(participant.balance)}
-                </p>
-              </button>
-            ))}
-          </div>
+            <FinancialTrendChart data={financialReport.trend} />
+          </section>
         )}
+
+        {financialReport && (
+          <section className="lg:col-span-3 rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="mb-5">
+              <h2 className="text-lg font-semibold">
+                Collections by Payment Method
+              </h2>
+
+              <p className="mt-1 text-sm text-zinc-500">
+                Money collected during the selected period.
+              </p>
+            </div>
+
+            <PaymentMethodChart data={financialReport.byPaymentMethod} />
+          </section>
+        )}
+
+        <section className="lg:col-span-3 rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+          <div className="mb-5">
+            <h2 className="text-lg font-semibold">Player Records</h2>
+
+            <p className="mt-1 text-sm text-zinc-500">
+              Most active players and their completed-match wins.
+            </p>
+          </div>
+
+          <PlayerRecordsChart data={playerRecords} />
+        </section>
+        <div className="lg:col-span-3 rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold">Top Outstanding</h2>
+
+            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+              Participants with the highest current unpaid balances.
+            </p>
+          </div>
+
+          {outstandingParticipants.length === 0 ? (
+            <p className="text-sm text-zinc-500">No outstanding balances.</p>
+          ) : (
+            <div className="space-y-2">
+              {outstandingParticipants.map((participant) => (
+                <button
+                  key={participant.participantId}
+                  type="button"
+                  onClick={() =>
+                    navigate("/participants", {
+                      state: {
+                        ledgerParticipantId: participant.participantId,
+                      },
+                    })
+                  }
+                  className="flex w-full items-center justify-between rounded-lg bg-zinc-50 px-4 py-3 text-left transition-colors hover:bg-zinc-200 dark:bg-zinc-950 dark:hover:bg-zinc-800"
+                >
+                  <div>
+                    <p className="font-medium">
+                      {formatFullName(
+                        participant.firstName,
+                        participant.lastName,
+                      )}
+                    </p>
+
+                    {participant.nickname && (
+                      <p className="text-xs text-zinc-500">
+                        {participant.nickname}
+                      </p>
+                    )}
+                  </div>
+
+                  <p className="font-semibold">
+                    {formatCurrency(participant.balance)}
+                  </p>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900 lg:col-span-3">
+          <div className="mb-5">
+            <h2 className="text-lg font-semibold">Sessions by Type</h2>
+
+            <p className="mt-1 text-sm text-zinc-500">
+              Sessions during the selected period.
+            </p>
+          </div>
+
+          <SessionTypeChart data={summary.sessionsByType} />
+        </section>
+
+        <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900 lg:col-span-3">
+          <div className="mb-5">
+            <h2 className="text-lg font-semibold">Matches Over Time</h2>
+
+            <p className="mt-1 text-sm text-zinc-500">
+              Matches recorded during the selected period.
+            </p>
+          </div>
+
+          <MatchTrendChart data={summary.matchTrend} />
+        </section>
       </div>
+
       {/* Payment Report */}
       {paymentReport && (
         <div className="mt-8 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5">

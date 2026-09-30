@@ -23,6 +23,7 @@ import {
   Users,
   WalletCards,
   type LucideIcon,
+  FileSpreadsheet,
 } from "lucide-react";
 import type { AdminUser } from "../../api/auth";
 import type {
@@ -121,6 +122,11 @@ function AppLayout({
       to: "/fee-rules",
       label: "Fee Rules",
       icon: SlidersHorizontal,
+    },
+    {
+      to: "/reports",
+      label: "Financial Report",
+      icon: FileSpreadsheet,
     },
   ];
 
@@ -861,6 +867,14 @@ function AppLayout({
                 >
                   <Receipt className="h-4 w-4" />
                   <span>Sales</span>
+                </NavLink>
+                <NavLink
+                  to="/reports"
+                  onClick={closeMobileMenus}
+                  className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                >
+                  <FileSpreadsheet className="h-4 w-4" />
+                  <span>Financial Report</span>
                 </NavLink>
               </div>
             </>
