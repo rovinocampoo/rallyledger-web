@@ -22,7 +22,6 @@ import type { AdminUser } from "../../api/auth";
 import ChargeAdjustmentHistory from "./ChargeAdjustmentHistory";
 import type { Payment, PaymentCorrection } from "../../types/payment";
 import type { Organization } from "../../types/organization";
-import OrganizationBrand from "./OrganizationBrand";
 import type { Charge } from "../../types/charge";
 
 type ParticipantLedgerPanelProps = {
@@ -180,231 +179,312 @@ function LedgerStatement({
   organizationGcashQr,
   products,
 }: LedgerStatementProps) {
-  const chargesByType = charges.reduce<Record<string, number>>(
-    (totals, charge) => {
-      totals[charge.feeType] = (totals[charge.feeType] ?? 0) + charge.amount;
+  const chargesByDate = charges.reduce<Record<string, typeof charges>>(
+    (groups, charge) => {
+      if (!groups[charge.chargeDate]) {
+        groups[charge.chargeDate] = [];
+      }
 
-      return totals;
+      groups[charge.chargeDate].push(charge);
+
+      return groups;
     },
     {},
   );
 
-  const chargesByDate = charges.reduce<Record<string, number>>(
-    (totals, charge) => {
-      totals[charge.chargeDate] =
-        (totals[charge.chargeDate] ?? 0) + charge.amount;
-
-      return totals;
-    },
-    {},
+  const chargeDateGroups = Object.entries(chargesByDate).sort(
+    ([dateA], [dateB]) => dateB.localeCompare(dateA),
   );
+
+  const sortedPayments = [...payments].sort((a, b) =>
+    b.paymentDate.localeCompare(a.paymentDate),
+  );
+
+  const hasGcash = Boolean(organizationGcashNumber || organizationGcashQr);
+
   return (
-    <div className="w-[700px] bg-white p-10 text-zinc-950">
-      <div className="border-b border-zinc-200 pb-6">
-        <OrganizationBrand
-          name={organizationName}
-          logoDataUrl={organizationLogo}
-        />
-        <p className="text-sm font-medium uppercase tracking-widest text-zinc-500">
-          Player Ledger
-        </p>
+    <div className="w-[700px] bg-white p-8 text-zinc-950">
+      {/* HEADER */}
+      <div className="border-b border-zinc-200 pb-5">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex min-w-0 items-center gap-3">
+            {organizationLogo ? (
+              <img
+                src={organizationLogo}
+                alt=""
+                className="h-10 w-10 rounded-lg object-contain"
+                crossOrigin="anonymous"
+              />
+            ) : (
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-zinc-950 text-sm font-bold text-white">
+                RL
+              </div>
+            )}
 
-        <p className="mt-1 text-sm text-zinc-600">Participant Ledger</p>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold">
+                {organizationName || "RallyLedger"}
+              </p>
 
-        <h2 className="mt-4 text-3xl font-bold">
-          {formatFullName(participant.firstName, participant.lastName)}
-        </h2>
+              <p className="text-xs text-zinc-500">Powered by RallyLedger</p>
+            </div>
+          </div>
 
-        {participant.nickname && (
-          <p className="mt-1 text-zinc-600">{participant.nickname}</p>
-        )}
+          <div className="shrink-0 text-right">
+            <p className="text-xs font-medium uppercase tracking-widest text-zinc-400">
+              Statement
+            </p>
 
-        <p className="mt-3 text-sm text-zinc-600">Period: {periodLabel}</p>
+            <p className="mt-1 text-sm font-semibold">{periodLabel}</p>
+          </div>
+        </div>
 
-        <p className="mt-1 text-xs text-zinc-500">
-          Generated {formatDate(getTodayDate())}
-        </p>
-      </div>
-      <div className="grid grid-cols-4 gap-2">
-        <div className="rounded-lg bg-zinc-50 p-4">
-          <p className="text-sm text-zinc-600">Opening Balance</p>
+        <div className="mt-5">
+          <h2 className="text-2xl font-bold leading-tight">
+            {formatFullName(participant.firstName, participant.lastName)}
+          </h2>
 
-          <p className="mt-1 text-xl font-semibold">
-            {formatCurrency(openingBalance)}
+          {participant.nickname && (
+            <p className="mt-1 text-sm text-zinc-500">{participant.nickname}</p>
+          )}
+
+          <p className="mt-2 text-xs text-zinc-500">
+            Generated {formatDate(new Date().toISOString().slice(0, 10))}
           </p>
+        </div>
+      </div>
 
-          <p className="mt-1 text-xs text-zinc-500">
-            {getBalanceLabel(openingBalance)}
+      {/* SUMMARY */}
+      <div className="mt-5 grid grid-cols-4 gap-2">
+        <div className="rounded-lg bg-zinc-50 px-3 py-3">
+          <p className="text-[11px] font-medium text-zinc-500">Opening</p>
+
+          <p className="mt-1 text-base font-semibold">
+            {formatCurrency(openingBalance)}
           </p>
         </div>
 
-        <div className="rounded-lg bg-zinc-50 p-4">
-          <p className="text-sm text-zinc-600">Charges</p>
+        <div className="rounded-lg bg-zinc-50 px-3 py-3">
+          <p className="text-[11px] font-medium text-zinc-500">Charges</p>
 
-          <p className="mt-1 text-xl font-semibold">
+          <p className="mt-1 text-base font-semibold">
             {formatCurrency(chargeTotal)}
           </p>
         </div>
 
-        <div className="rounded-lg bg-zinc-50 p-4">
-          <p className="text-sm text-zinc-600">Payments</p>
+        <div className="rounded-lg bg-zinc-50 px-3 py-3">
+          <p className="text-[11px] font-medium text-zinc-500">Payments</p>
 
-          <p className="mt-1 text-xl font-semibold">
+          <p className="mt-1 text-base font-semibold">
             {formatCurrency(paymentTotal)}
           </p>
         </div>
 
-        <div className="rounded-lg bg-zinc-50 p-4">
-          <p className="text-sm text-zinc-600">Closing Balance</p>
+        <div className="rounded-lg bg-zinc-50 px-3 py-3">
+          <p className="text-[11px] font-medium text-zinc-500">Balance</p>
 
-          <p className="mt-1 text-xl font-semibold">
+          <p className="mt-1 text-base font-semibold">
             {formatCurrency(closingBalance)}
+          </p>
+
+          <p className="mt-0.5 text-[10px] text-zinc-400">
+            {getBalanceLabel(closingBalance)}
+          </p>
+        </div>
+      </div>
+
+      {/* CHARGE SUMMARY */}
+      <div className="mt-5">
+        <div className="mb-2 flex items-center justify-between">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+            Charge Summary
+          </h3>
+
+          <span className="text-xs text-zinc-400">
+            {charges.length} {charges.length === 1 ? "charge" : "charges"}
+          </span>
+        </div>
+
+        {charges.length === 0 ? (
+          <p className="text-sm text-zinc-500">No charges recorded.</p>
+        ) : (
+          <div className="flex flex-wrap gap-x-4 gap-y-1 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2.5">
+            {Object.entries(
+              charges.reduce<Record<string, number>>((totals, charge) => {
+                const label =
+                  charge.feeType === "PRODUCT" && charge.productId != null
+                    ? (products.find(
+                        (product) => product.id === charge.productId,
+                      )?.name ?? "Product")
+                    : formatLabel(charge.feeType);
+
+                totals[label] = (totals[label] ?? 0) + charge.amount;
+
+                return totals;
+              }, {}),
+            ).map(([label, amount]) => (
+              <span key={label} className="text-xs text-zinc-700">
+                <span className="font-medium">{label}</span>{" "}
+                <span className="font-semibold">{formatCurrency(amount)}</span>
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* CHARGES */}
+      <div className="mt-5">
+        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+          Activity
+        </h3>
+
+        {chargeDateGroups.length === 0 ? (
+          <p className="text-sm text-zinc-500">
+            No charge activity for this period.
+          </p>
+        ) : (
+          <div className="grid grid-cols-2 gap-2">
+            {chargeDateGroups.map(([date, dateCharges]) => {
+              const dateTotal = dateCharges.reduce(
+                (sum, charge) => sum + charge.amount,
+                0,
+              );
+
+              return (
+                <div
+                  key={date}
+                  className="rounded-lg border border-zinc-200 bg-white px-3 py-2.5"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-xs font-semibold">{formatDate(date)}</p>
+
+                    <p className="text-xs font-semibold">
+                      {formatCurrency(dateTotal)}
+                    </p>
+                  </div>
+
+                  <div className="mt-1.5 flex flex-wrap gap-x-2.5 gap-y-0.5">
+                    {dateCharges.map((charge) => {
+                      const label =
+                        charge.feeType === "PRODUCT" && charge.productId != null
+                          ? (products.find(
+                              (product) => product.id === charge.productId,
+                            )?.name ?? "Product")
+                          : formatLabel(charge.feeType);
+
+                      return (
+                        <span
+                          key={charge.id}
+                          className="text-[11px] leading-4 text-zinc-600"
+                        >
+                          {label}{" "}
+                          <span className="font-medium text-zinc-900">
+                            {formatCurrency(charge.amount)}
+                          </span>
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* PAYMENTS */}
+      <div className="mt-5">
+        <div className="mb-2 flex items-center justify-between">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+            Payments
+          </h3>
+
+          <span className="text-xs text-zinc-400">
+            {payments.length} {payments.length === 1 ? "payment" : "payments"}
+          </span>
+        </div>
+
+        {sortedPayments.length === 0 ? (
+          <p className="text-sm text-zinc-500">No payments recorded.</p>
+        ) : (
+          <div className="grid grid-cols-2 gap-2">
+            {sortedPayments.map((payment) => (
+              <div
+                key={payment.id}
+                className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2.5"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold">
+                      {formatDate(payment.paymentDate)}
+                    </p>
+
+                    <p className="mt-0.5 truncate text-[11px] text-zinc-500">
+                      {formatLabel(payment.paymentMethod)}
+                      {payment.reference ? ` · ${payment.reference}` : ""}
+                    </p>
+                  </div>
+
+                  <p className="shrink-0 text-xs font-semibold">
+                    {formatCurrency(payment.amount)}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* FINAL BALANCE */}
+      <div className="mt-5 flex items-center justify-between border-t border-zinc-200 pt-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+            Closing Balance
           </p>
 
           <p className="mt-1 text-xs text-zinc-500">
             {getBalanceLabel(closingBalance)}
           </p>
         </div>
-      </div>
-      <div className="grid grid-cols-2 gap-2">
-        <div className="rounded-lg bg-zinc-50 p-4">
-          <h3 className="font-semibold">Charges by Type</h3>
-          <div className="mt-3 space-y-2">
-            {Object.entries(chargesByType).length === 0 ? (
-              <p className="text-sm text-zinc-500">No charges yet.</p>
-            ) : (
-              Object.entries(chargesByType).map(([feeType, amount]) => (
-                <div
-                  key={feeType}
-                  className="flex items-center justify-between text-sm"
-                >
-                  <span className="text-zinc-600 dark:text-zinc-400">
-                    {formatLabel(feeType)}
-                  </span>
 
-                  <span className="font-medium">{formatCurrency(amount)}</span>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-        <div className="rounded-lg bg-zinc-50 p-4">
-          <h3 className="font-semibold">Charges by Date</h3>
-          <div className="mt-3 space-y-2">
-            {Object.entries(chargesByDate).length === 0 ? (
-              <p className="text-sm text-zinc-500">No charges yet.</p>
-            ) : (
-              Object.entries(chargesByDate).map(([feeType, amount]) => (
-                <div
-                  key={feeType}
-                  className="flex items-center justify-between text-sm"
-                >
-                  <span className="text-zinc-600 dark:text-zinc-400">
-                    {formatLabel(feeType)}
-                  </span>
-
-                  <span className="font-medium">{formatCurrency(amount)}</span>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
+        <p className="text-2xl font-bold">{formatCurrency(closingBalance)}</p>
       </div>
 
-      <div className="mt-8">
-        <h3 className="text-lg font-semibold">Charge Details</h3>
+      {/* GCASH */}
+      {hasGcash && (
+        <div className="mt-5 border-t border-zinc-200 pt-4">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                Pay via GCash
+              </p>
 
-        <div className="mt-3 overflow-hidden rounded-lg border border-zinc-200">
-          <div className="grid grid-cols-[minmax(0,1fr)_160px_120px] gap-4 bg-zinc-50 px-4 py-3 text-sm text-zinc-500">
-            <span>Type</span>
-            <span>Date</span>
-            <span className="text-right">Amount</span>
-          </div>
-
-          {charges.map((charge) => (
-            <div
-              key={charge.id}
-              className="grid grid-cols-[minmax(0,1fr)_160px_120px] gap-4 border-t border-zinc-200 px-4 py-3"
-            >
-              <span className="font-medium">
-                {getChargeLabel(charge, products)}
-              </span>
-              <span className="text-zinc-600">
-                {formatDate(charge.chargeDate)}
-              </span>
-
-              <span className="text-right font-semibold">
-                {formatCurrency(charge.amount)}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
-      <div className="mt-8">
-        <h3 className="text-lg font-semibold">Payments</h3>
-
-        <div className="mt-3 space-y-2">
-          {payments.length === 0 ? (
-            <p className="text-sm text-zinc-500">No payments recorded.</p>
-          ) : (
-            payments.map((payment) => (
-              <div
-                key={payment.id}
-                className="flex items-center justify-between rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3"
-              >
-                <div>
-                  <p className="font-medium">
-                    {formatLabel(payment.paymentMethod)}
-                  </p>
-
-                  <p className="text-xs text-zinc-500">
-                    {formatDate(payment.paymentDate)}
-                  </p>
-
-                  {payment.reference && (
-                    <p className="mt-1 text-xs text-zinc-500">
-                      Ref: {payment.reference}
-                    </p>
-                  )}
-                </div>
-
-                <p className="font-semibold">
-                  {formatCurrency(payment.amount)}
+              {organizationGcashNumber && (
+                <p className="mt-1 text-sm font-semibold">
+                  {organizationGcashNumber}
                 </p>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-      {(organizationGcashQr || organizationGcashNumber) && (
-        <div className="mt-8 border-t border-zinc-200 pt-6 text-center">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
-            GCash Payment
-          </p>
+              )}
 
-          {organizationGcashQr && (
-            <>
+              <p className="mt-0.5 text-xs text-zinc-500">
+                Scan to pay or use the number above.
+              </p>
+            </div>
+
+            {organizationGcashQr && (
               <img
                 src={organizationGcashQr}
-                alt="GCash payment QR code"
-                className="mx-auto mt-4 h-44 w-44 object-contain"
+                alt="GCash payment QR"
+                className="h-24 w-24 shrink-0 object-contain"
+                crossOrigin="anonymous"
               />
-              <p className="mt-1 text-xs text-zinc-500">
-                Use your e-wallet/banking app to scan and pay.
-              </p>
-            </>
-          )}
-
-          {organizationGcashNumber && (
-            <p className="mt-3 text-sm font-medium text-zinc-700">
-              GCash: {organizationGcashNumber}
-            </p>
-          )}
+            )}
+          </div>
         </div>
       )}
 
-      <div className="mt-8 border-t border-zinc-200 pt-5 text-xs text-zinc-500">
-        Generated by RallyLedger
+      {/* FOOTER */}
+      <div className="mt-5 border-t border-zinc-200 pt-3 text-center text-[10px] text-zinc-400">
+        RallyLedger statement · {periodLabel}
       </div>
     </div>
   );
