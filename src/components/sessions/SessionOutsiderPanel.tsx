@@ -7,7 +7,7 @@ import {
   generateOutsiderCourtCharge,
   getSessionCharges,
 } from "../../api/charges";
-import { createParticipant, getParticipants } from "../../api/participants";
+import { getParticipants } from "../../api/participants";
 import {
   addSessionParticipant,
   getSessionParticipants,
@@ -19,6 +19,7 @@ import ChargeEditForm from "../ui/ChargeEditForm";
 import ChargeAdjustmentHistory from "../ui/ChargeAdjustmentHistory";
 import type { AdminUser } from "../../api/auth";
 import type { Charge } from "../../types/charge";
+import { getOrCreateGuest } from "../../utils/guest";
 import { formatCurrency, formatLabel } from "../../utils/format";
 
 type SessionOutsiderPanelProps = {
@@ -64,6 +65,7 @@ function SessionOutsiderPanel({
   const [lastAdjustedChargeId, setLastAdjustedChargeId] = useState<
     number | null
   >(null);
+  const [quickGuestError, setQuickGuestError] = useState<string | null>(null);
 
   const availableParticipants = participants.filter(
     (participant) =>
@@ -188,9 +190,10 @@ function SessionOutsiderPanel({
 
   async function handleQuickGuest() {
     if (isAtCapacity) {
-      setError("This outsider play session is already full.");
+      setQuickGuestError("This outsider play session is already full.");
       return;
     }
+
     const name = quickGuestName.trim();
 
     if (!name) {
@@ -199,30 +202,42 @@ function SessionOutsiderPanel({
 
     try {
       setCreatingGuest(true);
+      setQuickGuestError(null);
       setError(null);
 
-      const guest = await createParticipant({
-        firstName: name,
-        lastName: "",
-        nickname: name,
-        birthday: null,
-        membershipStatus: "ACTIVE",
-        participantType: "NONMEMBER",
-        isTemporary: true,
-      });
+      const guest = await getOrCreateGuest(name, participants);
+
+      if (sessionParticipantIds.includes(guest.id)) {
+        setQuickGuestError(
+          `${guest.nickname || guest.firstName} is already added to this session.`,
+        );
+        return;
+      }
 
       await addSessionParticipant(session.id, guest.id);
 
-      setParticipants((current) => [...current, guest]);
+      setParticipants((current) => {
+        if (current.some((participant) => participant.id === guest.id)) {
+          return current;
+        }
 
-      setSessionParticipantIds((current) => [...current, guest.id]);
+        return [...current, guest];
+      });
+
+      setSessionParticipantIds((current) => {
+        if (current.includes(guest.id)) {
+          return current;
+        }
+
+        return [...current, guest.id];
+      });
 
       setQuickGuestName("");
       setShowQuickGuest(false);
     } catch (err) {
       console.error(err);
 
-      setError(
+      setQuickGuestError(
         err instanceof Error ? err.message : "Failed to create quick guest",
       );
     } finally {
@@ -441,11 +456,17 @@ function SessionOutsiderPanel({
               setShowQuickGuest((current) => !current);
               setQuickGuestName("");
               setError(null);
+              setQuickGuestError(null);
             }}
             className="text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white"
           >
             {showQuickGuest ? "Cancel Quick Guest" : "+ Quick Guest"}
           </button>
+          {quickGuestError && (
+            <p className="mt-2 text-sm text-red-600 dark:text-red-400">
+              {quickGuestError}
+            </p>
+          )}
 
           {showQuickGuest && (
             <div className="mt-3 flex flex-col gap-2 sm:flex-row">

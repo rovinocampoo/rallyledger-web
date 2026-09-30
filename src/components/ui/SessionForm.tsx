@@ -220,7 +220,7 @@ function SessionForm({
               value={startTime}
               onChange={(event) => setStartTime(event.target.value)}
               required
-              className="mt-2 w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 px-3 py-2"
+              className="dark:[color-scheme:dark] mt-2 w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 px-3 py-2"
             />
           </label>
 
@@ -233,7 +233,7 @@ function SessionForm({
               value={endTime}
               onChange={(event) => setEndTime(event.target.value)}
               required
-              className="mt-2 w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 px-3 py-2"
+              className="dark:[color-scheme:dark] mt-2 w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 px-3 py-2"
             />
           </label>
           <div className="flex gap-4">

@@ -1,5 +1,29 @@
 import { useEffect, useRef, useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
+import {
+  Building2,
+  Calendar,
+  CalendarClock,
+  CalendarDays,
+  FileText,
+  Home,
+  KeyRound,
+  LogOut,
+  MapPin,
+  Menu,
+  Moon,
+  Package,
+  Plus,
+  Receipt,
+  ShieldCheck,
+  SlidersHorizontal,
+  Sun,
+  CalendarPlus,
+  Trophy,
+  Users,
+  WalletCards,
+  type LucideIcon,
+} from "lucide-react";
 import type { AdminUser } from "../../api/auth";
 import type {
   Organization,
@@ -36,31 +60,91 @@ function AppLayout({
   onThemeToggle,
 }: AppLayoutProps) {
   const [sessionMenuOpen, setSessionMenuOpen] = useState(false);
+  const [financeMenuOpen, setFinanceMenuOpen] = useState(false);
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const [mobileNavVisible, setMobileNavVisible] = useState(true);
   const lastScrollYRef = useRef(0);
 
-  const navItems = [
-    { to: "/", label: "Home", icon: "🏠", end: true },
-    { to: "/outstanding", label: "Balance", icon: "₱", end: true },
-    { to: "/participants", label: "Players", icon: "👥" },
-    { to: "/records", label: "Records", icon: "🏆" },
-    { to: "/sessions", label: "Sessions", icon: "🎾" },
-    { to: "/calendar", label: "Calendar", icon: "📆" },
-    { to: "/courts", label: "Courts", icon: "🎾" },
-    { to: "/products", label: "Products", icon: "📦" },
-    { to: "/sales", label: "Sales", icon: "💸" },
-    { to: "/fee-rules", label: "Fees", icon: "🧾" },
+  type NavItem = {
+    to: string;
+    label: string;
+    icon: LucideIcon;
+    end?: boolean;
+  };
+
+  const playNavItems: NavItem[] = [
+    {
+      to: "/calendar",
+      label: "Calendar",
+      icon: CalendarDays,
+    },
+    {
+      to: "/sessions",
+      label: "Sessions",
+      icon: CalendarClock,
+    },
+    {
+      to: "/records",
+      label: "Records",
+      icon: Trophy,
+    },
+    {
+      to: "/participants",
+      label: "Players",
+      icon: Users,
+    },
+    {
+      to: "/courts",
+      label: "Courts",
+      icon: MapPin,
+    },
+  ];
+
+  const financeNavItems: NavItem[] = [
+    {
+      to: "/outstanding",
+      label: "Balance",
+      icon: WalletCards,
+      end: true,
+    },
+    {
+      to: "/sales",
+      label: "Sales",
+      icon: Receipt,
+    },
+    {
+      to: "/products",
+      label: "Products",
+      icon: Package,
+    },
+    {
+      to: "/fee-rules",
+      label: "Fee Rules",
+      icon: SlidersHorizontal,
+    },
+  ];
+
+  const adminNavItems: NavItem[] = [
     ...(admin.role === "OWNER"
-      ? [{ to: "/admin/access", label: "Admin Access", icon: "🔐" }]
+      ? [
+          {
+            to: "/admin/access",
+            label: "Admin Access",
+            icon: ShieldCheck,
+          },
+        ]
       : []),
-    { to: "/admin/audit-logs", label: "Audit Log", icon: "📊" },
+    {
+      to: "/admin/audit-logs",
+      label: "Audit Log",
+      icon: FileText,
+    },
     ...(admin.role === "OWNER" || admin.role === "ADMIN"
       ? [
           {
             to: "/organization-settings",
             label: "Organization Settings",
-            icon: "🏢",
+            icon: Building2,
           },
         ]
       : []),
@@ -96,14 +180,27 @@ function AppLayout({
 
   function closeMobileMenus() {
     setSessionMenuOpen(false);
+    setFinanceMenuOpen(false);
     setMoreMenuOpen(false);
   }
 
   function handleSessionAction() {
+    setFinanceMenuOpen(false);
     setMoreMenuOpen(false);
     setSessionMenuOpen((current) => !current);
   }
 
+  function handleFinanceAction() {
+    setSessionMenuOpen(false);
+    setMoreMenuOpen(false);
+    setFinanceMenuOpen((current) => !current);
+  }
+
+  function handleMoreAction() {
+    setSessionMenuOpen(false);
+    setFinanceMenuOpen(false);
+    setMoreMenuOpen((current) => !current);
+  }
   return (
     <div className="min-h-screen w-full overflow-x-hidden bg-zinc-50 text-zinc-950 dark:bg-zinc-950 dark:text-white">
       <div className="flex min-h-screen w-full min-w-0">
@@ -197,8 +294,7 @@ function AppLayout({
                   onClick={() => setSessionMenuOpen(false)}
                   className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800"
                 >
-                  <span className="text-lg">🎾</span>
-
+                  <CalendarPlus className="h-4 w-4" />
                   <span className="min-w-0">
                     <span className="block font-medium">Add Match</span>
                     <span className="block text-xs text-zinc-400">
@@ -218,7 +314,7 @@ function AppLayout({
                   onClick={() => setSessionMenuOpen(false)}
                   className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800"
                 >
-                  <span className="text-lg">🎾</span>
+                  <CalendarClock className="h-4 w-4" />
                   <span>Training</span>
                 </NavLink>
 
@@ -227,7 +323,7 @@ function AppLayout({
                   onClick={() => setSessionMenuOpen(false)}
                   className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800"
                 >
-                  <span className="text-lg">🎾</span>
+                  <CalendarDays className="h-4 w-4" />
                   <span>Regular Play</span>
                 </NavLink>
 
@@ -236,7 +332,7 @@ function AppLayout({
                   onClick={() => setSessionMenuOpen(false)}
                   className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800"
                 >
-                  <span className="text-lg">👥</span>
+                  <Users className="h-4 w-4" />
                   <span>Outsider Play</span>
                 </NavLink>
 
@@ -245,28 +341,120 @@ function AppLayout({
                   onClick={() => setSessionMenuOpen(false)}
                   className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800"
                 >
-                  <span className="text-lg">🎉</span>
+                  <CalendarDays className="h-4 w-4" />
                   <span>Event</span>
                 </NavLink>
               </div>
             )}
           </div>
 
-          <nav className="mt-4 flex flex-col gap-2">
-            {navItems.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                end={item.end}
-                className={({ isActive }) =>
+          <nav className="mt-5 flex flex-1 flex-col">
+            <NavLink
+              to="/"
+              end
+              className={({ isActive }) =>
+                `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm ${
                   isActive
-                    ? "rounded-lg bg-zinc-200 px-3 py-2 text-zinc-950 dark:bg-zinc-800 dark:text-white"
-                    : "rounded-lg px-3 py-2 text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-white"
-                }
-              >
-                {item.label}
-              </NavLink>
-            ))}
+                    ? "bg-zinc-200 font-medium text-zinc-950 dark:bg-zinc-800 dark:text-white"
+                    : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-white"
+                }`
+              }
+            >
+              <Home className="h-4 w-4 shrink-0" />
+              <span>Home</span>
+            </NavLink>
+
+            <div className="mt-6">
+              <p className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
+                Play
+              </p>
+
+              <div className="space-y-1">
+                {playNavItems.map((item) => {
+                  const Icon = item.icon;
+
+                  return (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      end={item.end}
+                      className={({ isActive }) =>
+                        `flex items-center gap-3 rounded-lg px-3 py-2 text-sm ${
+                          isActive
+                            ? "bg-zinc-200 font-medium text-zinc-950 dark:bg-zinc-800 dark:text-white"
+                            : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-white"
+                        }`
+                      }
+                    >
+                      <Icon className="h-4 w-4 shrink-0" />
+                      <span>{item.label}</span>
+                    </NavLink>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="mt-6">
+              <p className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
+                Finance
+              </p>
+
+              <div className="space-y-1">
+                {financeNavItems.map((item) => {
+                  const Icon = item.icon;
+
+                  return (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      end={item.end}
+                      className={({ isActive }) =>
+                        `flex items-center gap-3 rounded-lg px-3 py-2 text-sm ${
+                          isActive
+                            ? "bg-zinc-200 font-medium text-zinc-950 dark:bg-zinc-800 dark:text-white"
+                            : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-white"
+                        }`
+                      }
+                    >
+                      <Icon className="h-4 w-4 shrink-0" />
+                      <span>{item.label}</span>
+                    </NavLink>
+                  );
+                })}
+              </div>
+            </div>
+
+            {adminNavItems.length > 0 && (
+              <div className="mt-6">
+                <p className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
+                  Admin
+                </p>
+
+                <div className="space-y-1">
+                  {adminNavItems.map((item) => {
+                    const Icon = item.icon;
+
+                    return (
+                      <NavLink
+                        key={item.to}
+                        to={item.to}
+                        end={item.end}
+                        className={({ isActive }) =>
+                          `flex items-center gap-3 rounded-lg px-3 py-2 text-sm ${
+                            isActive
+                              ? "bg-zinc-200 font-medium text-zinc-950 dark:bg-zinc-800 dark:text-white"
+                              : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-white"
+                          }`
+                        }
+                      >
+                        <Icon className="h-4 w-4 shrink-0" />
+                        <span>{item.label}</span>
+                      </NavLink>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </nav>
 
           <div className="mt-auto border-t border-zinc-200 pt-4 dark:border-zinc-800">
@@ -391,8 +579,7 @@ function AppLayout({
               onClick={() => setSessionMenuOpen(false)}
               className="flex min-w-52 items-center gap-3 rounded-full border border-zinc-200 bg-white px-5 py-3 text-sm font-medium text-zinc-900 shadow-lg transition-transform active:scale-95 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white"
             >
-              <span className="text-lg">🎾</span>
-
+              <CalendarPlus className="h-4 w-4" />
               <span className="text-left">
                 <span className="block font-medium">Add Match</span>
                 <span className="block text-xs font-normal text-zinc-400">
@@ -407,7 +594,7 @@ function AppLayout({
               onClick={() => setSessionMenuOpen(false)}
               className="flex min-w-44 items-center gap-3 rounded-full border border-zinc-200 bg-white px-5 py-3 text-sm font-medium text-zinc-900 shadow-lg transition-transform active:scale-95 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white"
             >
-              <span className="text-lg">🎾</span>
+              <CalendarClock className="h-4 w-4" />
               <span>Training</span>
             </NavLink>
 
@@ -416,7 +603,7 @@ function AppLayout({
               onClick={() => setSessionMenuOpen(false)}
               className="flex min-w-44 items-center gap-3 rounded-full border border-zinc-200 bg-white px-5 py-3 text-sm font-medium text-zinc-900 shadow-lg transition-transform active:scale-95 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white"
             >
-              <span className="text-lg">🎾</span>
+              <Calendar className="h-4 w-4" />
               <span>Regular Play</span>
             </NavLink>
             <NavLink
@@ -424,7 +611,7 @@ function AppLayout({
               onClick={() => setSessionMenuOpen(false)}
               className="flex min-w-44 items-center gap-3 rounded-full border border-zinc-200 bg-white px-5 py-3 text-sm font-medium text-zinc-900 shadow-lg transition-transform active:scale-95 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white"
             >
-              <span className="text-lg">👥</span>
+              <Users className="h-4 w-4" />
               <span>Outsider Play</span>
             </NavLink>
 
@@ -433,7 +620,7 @@ function AppLayout({
               onClick={() => setSessionMenuOpen(false)}
               className="flex min-w-44 items-center gap-3 rounded-full border border-zinc-200 bg-white px-5 py-3 text-sm font-medium text-zinc-900 shadow-lg transition-transform active:scale-95 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white"
             >
-              <span className="text-lg">🎉</span>
+              <CalendarDays className="h-4 w-4" />
               <span>Event</span>
             </NavLink>
           </div>
@@ -451,125 +638,125 @@ function AppLayout({
           />
 
           <div className="fixed bottom-20 right-3 z-50 w-64 overflow-hidden rounded-2xl border border-zinc-200 bg-white p-2 shadow-xl dark:border-zinc-800 dark:bg-zinc-900 md:hidden">
-            <p className="px-3 py-2 text-xs font-medium uppercase tracking-wide text-zinc-400">
-              More
-            </p>
+            <div className="max-h-[75vh] overflow-y-auto">
+              <p className="px-3 py-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">
+                More
+              </p>
 
-            <NavLink
-              to="/participants"
-              onClick={closeMobileMenus}
-              className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800"
-            >
-              <span>👥</span>
-              <span>Players</span>
-            </NavLink>
+              <div className="px-1">
+                <p className="px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
+                  Play
+                </p>
+
+                {[...playNavItems].map((item) => {
+                  const Icon = item.icon;
+
+                  return (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      onClick={closeMobileMenus}
+                      className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                    >
+                      <Icon className="h-4 w-4 shrink-0" />
+                      <span>{item.label}</span>
+                    </NavLink>
+                  );
+                })}
+
+                <p className="mt-3 px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
+                  Commerce
+                </p>
+
+                {[
+                  {
+                    to: "/products",
+                    label: "Products",
+                    icon: Package,
+                  },
+                  {
+                    to: "/fee-rules",
+                    label: "Fee Rules",
+                    icon: SlidersHorizontal,
+                  },
+                ].map((item) => {
+                  const Icon = item.icon;
+
+                  return (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      onClick={closeMobileMenus}
+                      className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                    >
+                      <Icon className="h-4 w-4 shrink-0" />
+                      <span>{item.label}</span>
+                    </NavLink>
+                  );
+                })}
+
+                {adminNavItems.length > 0 && (
+                  <>
+                    <p className="mt-3 px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
+                      Administration
+                    </p>
+
+                    {adminNavItems.map((item) => {
+                      const Icon = item.icon;
+
+                      return (
+                        <NavLink
+                          key={item.to}
+                          to={item.to}
+                          onClick={closeMobileMenus}
+                          className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                        >
+                          <Icon className="h-4 w-4 shrink-0" />
+                          <span>{item.label}</span>
+                        </NavLink>
+                      );
+                    })}
+                  </>
+                )}
+
+                <p className="mt-3 px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
+                  Account
+                </p>
+
                 <NavLink
-              to="/records"
-              onClick={closeMobileMenus}
-              className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800"
-            >
-              <span>🏆</span>
-              <span>Records</span>
-            </NavLink>
+                  to="/change-password"
+                  onClick={closeMobileMenus}
+                  className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                >
+                  <KeyRound className="h-4 w-4 shrink-0" />
+                  <span>Change Password</span>
+                </NavLink>
 
-            <NavLink
-              to="/sessions"
-              onClick={closeMobileMenus}
-              className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800"
-            >
-              <span>🎾</span>
-              <span>Sessions</span>
-            </NavLink>
-            <NavLink
-              to="/products"
-              onClick={closeMobileMenus}
-              className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800"
-            >
-              <span>📦</span>
-              <span>Products</span>
-            </NavLink>
-            <NavLink
-              to="/sales"
-              onClick={closeMobileMenus}
-              className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800"
-            >
-              <span>💸</span>
-              <span>Sales</span>
-            </NavLink>
-            <NavLink
-              to="/courts"
-              onClick={closeMobileMenus}
-              className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800"
-            >
-              <span>🏟️</span>
-              <span>Courts</span>
-            </NavLink>
+                <div className="my-2 border-t border-zinc-200 dark:border-zinc-800" />
 
-            <NavLink
-              to="/fee-rules"
-              onClick={closeMobileMenus}
-              className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800"
-            >
-              <span>🧾</span>
-              <span>Fee Rules</span>
-            </NavLink>
-            {admin.role === "OWNER" && (
-              <NavLink
-                to="/admin/access"
-                onClick={closeMobileMenus}
-                className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800"
-              >
-                <span>⚙</span>
-                <span>Admin Access</span>
-              </NavLink>
-            )}
+                <button
+                  type="button"
+                  onClick={onThemeToggle}
+                  className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                >
+                  {theme === "dark" ? (
+                    <Moon className="h-4 w-4 shrink-0" />
+                  ) : (
+                    <Sun className="h-4 w-4 shrink-0" />
+                  )}
+                  <span>{theme === "dark" ? "Dark mode" : "Light mode"}</span>
+                </button>
 
-            <NavLink
-              to="/admin/audit-logs"
-              onClick={closeMobileMenus}
-              className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800"
-            >
-              <span>▤</span>
-              <span>Audit Log</span>
-            </NavLink>
-
-            {(admin.role === "OWNER" || admin.role === "ADMIN") && (
-              <NavLink
-                to="/organization-settings"
-                className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800"
-              >
-                <span>🏢</span>
-                <span>Organization Settings</span>
-              </NavLink>
-            )}
-            <NavLink
-              to="/change-password"
-              onClick={closeMobileMenus}
-              className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800"
-            >
-              <span>🔑</span>
-              <span>Change Password</span>
-            </NavLink>
-
-            <div className="my-2 border-t border-zinc-200 dark:border-zinc-800" />
-
-            <button
-              type="button"
-              onClick={onThemeToggle}
-              className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800"
-            >
-              <span>{theme === "dark" ? "🌙" : "☀️"}</span>
-              <span>{theme === "dark" ? "Dark mode" : "Light mode"}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={onLogout}
-              className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-            >
-              <span>↪</span>
-              <span>Logout</span>
-            </button>
+                <button
+                  type="button"
+                  onClick={onLogout}
+                  className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                >
+                  <LogOut className="h-4 w-4 shrink-0" />
+                  <span>Logout</span>
+                </button>
+              </div>
+            </div>
           </div>
         </>
       )}
@@ -577,7 +764,7 @@ function AppLayout({
       {/* Mobile bottom navigation */}
       <nav
         className={`fixed inset-x-0 bottom-0 z-50 border-t border-zinc-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur transition-transform duration-300 ease-out dark:border-zinc-800 dark:bg-zinc-950/95 md:hidden ${
-          mobileNavVisible || sessionMenuOpen || moreMenuOpen
+          mobileNavVisible || sessionMenuOpen || financeMenuOpen || moreMenuOpen
             ? "translate-y-0"
             : "translate-y-full"
         }`}
@@ -594,7 +781,7 @@ function AppLayout({
               }`
             }
           >
-            <span className="text-lg leading-none">🏠</span>
+            <Home className="h-4 w-4 shrink-0" />
             <span>Home</span>
           </NavLink>
 
@@ -608,7 +795,7 @@ function AppLayout({
               }`
             }
           >
-            <span className="text-lg leading-none">📆</span>
+            <CalendarDays className="h-4 w-4 shrink-0" />
             <span>Calendar</span>
           </NavLink>
 
@@ -625,31 +812,62 @@ function AppLayout({
                   sessionMenuOpen ? "rotate-45" : ""
                 }`}
               >
-                +
+                <Plus className="h-4 w-4" />
               </span>
             </button>
           </div>
 
-          <NavLink
-            to="/outstanding"
-            className={({ isActive }) =>
-              `flex flex-col items-center justify-center gap-1 text-[11px] ${
-                isActive
-                  ? "font-medium text-zinc-950 dark:text-white"
-                  : "text-zinc-500"
-              }`
-            }
-          >
-            <span className="text-lg leading-none">₱</span>
-            <span>Finance</span>
-          </NavLink>
-
           <button
             type="button"
-            onClick={() => {
-              setSessionMenuOpen(false);
-              setMoreMenuOpen((current) => !current);
-            }}
+            onClick={handleFinanceAction}
+            aria-label="Finance"
+            aria-expanded={financeMenuOpen}
+            className={`flex flex-col items-center justify-center gap-1 text-[11px] ${
+              financeMenuOpen
+                ? "font-medium text-zinc-950 dark:text-white"
+                : "text-zinc-500"
+            }`}
+          >
+            <WalletCards className="h-5 w-5" />
+            <span>Finance</span>
+          </button>
+          {financeMenuOpen && (
+            <>
+              <button
+                type="button"
+                aria-label="Close finance menu"
+                onClick={closeMobileMenus}
+                className="fixed inset-0 z-40 bg-black/20 backdrop-blur-[1px] md:hidden"
+              />
+
+              <div className="fixed bottom-20 left-1/2 z-50 w-64 -translate-x-1/2 overflow-hidden rounded-2xl border border-zinc-200 bg-white p-2 shadow-xl dark:border-zinc-800 dark:bg-zinc-900 md:hidden">
+                <p className="px-3 py-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">
+                  Finance
+                </p>
+
+                <NavLink
+                  to="/outstanding"
+                  onClick={closeMobileMenus}
+                  className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                >
+                  <WalletCards className="h-4 w-4" />
+                  <span>Balance</span>
+                </NavLink>
+
+                <NavLink
+                  to="/sales"
+                  onClick={closeMobileMenus}
+                  className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                >
+                  <Receipt className="h-4 w-4" />
+                  <span>Sales</span>
+                </NavLink>
+              </div>
+            </>
+          )}
+          <button
+            type="button"
+            onClick={handleMoreAction}
             aria-label="More"
             aria-expanded={moreMenuOpen}
             className={`flex flex-col items-center justify-center gap-1 text-[11px] ${
@@ -658,8 +876,7 @@ function AppLayout({
                 : "text-zinc-500"
             }`}
           >
-            <span className="text-lg leading-none">☰</span>
-            <span>More</span>
+            <Menu className="h-5 w-5" /> <span>More</span>
           </button>
         </div>
       </nav>

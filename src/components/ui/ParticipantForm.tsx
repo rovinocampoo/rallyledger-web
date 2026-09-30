@@ -31,10 +31,7 @@ function ParticipantForm({
   const [membershipStatus, setMembershipStatus] = useState(
     participant?.membershipStatus ?? "ACTIVE",
   );
-  const [isTemporary, setIsTemporary] = useState(
-    participant?.isTemporary ?? false,
-  );
-
+  const isTemporary = participant?.isTemporary ?? false;
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -174,27 +171,6 @@ function ParticipantForm({
                 <option value="REVOKED">Revoked</option>
               </select>
             </label>
-            {participantType === "NONMEMBER" && (
-              <label className="flex items-start gap-3 rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-left dark:border-zinc-800 dark:bg-zinc-950">
-                <input
-                  type="checkbox"
-                  checked={isTemporary}
-                  onChange={(event) => setIsTemporary(event.target.checked)}
-                  className="mt-1 h-4 w-4 rounded border-zinc-300"
-                />
-
-                <span>
-                  <span className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                    Temporary Guest
-                  </span>
-
-                  <span className="mt-1 block text-xs text-zinc-500">
-                    Temporary guests do not appear in regular participant
-                    searches, including Training.
-                  </span>
-                </span>
-              </label>
-            )}
           </div>
         </div>
 

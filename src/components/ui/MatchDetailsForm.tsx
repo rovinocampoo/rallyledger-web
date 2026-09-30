@@ -46,6 +46,9 @@ type MatchDetailsFormProps = {
   creatingGuest: boolean;
   handleQuickGuest: () => void;
 
+  quickGuestError: string | null;
+  clearQuickGuestError: () => void;
+
   error: string | null;
   submitting: boolean;
 
@@ -80,6 +83,8 @@ function MatchDetailsForm({
   setQuickGuestTarget,
   creatingGuest,
   handleQuickGuest,
+  quickGuestError,
+  clearQuickGuestError,
   submitting,
   handleSubmit,
   onCancel,
@@ -163,6 +168,7 @@ function MatchDetailsForm({
                 type="button"
                 onClick={() => {
                   setQuickGuestTarget("A1");
+                  clearQuickGuestError();
                   setShowQuickGuest(true);
                 }}
                 className="mt-1.5 text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white"
@@ -183,6 +189,7 @@ function MatchDetailsForm({
                     type="button"
                     onClick={() => {
                       setQuickGuestTarget("A2");
+                      clearQuickGuestError();
                       setShowQuickGuest(true);
                     }}
                     className="mt-1.5 text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white"
@@ -209,6 +216,7 @@ function MatchDetailsForm({
                 type="button"
                 onClick={() => {
                   setQuickGuestTarget("B1");
+                  clearQuickGuestError();
                   setShowQuickGuest(true);
                 }}
                 className="mt-1.5 text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white"
@@ -229,6 +237,7 @@ function MatchDetailsForm({
                     type="button"
                     onClick={() => {
                       setQuickGuestTarget("B2");
+                      clearQuickGuestError();
                       setShowQuickGuest(true);
                     }}
                     className="mt-1.5 text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white"
@@ -247,6 +256,11 @@ function MatchDetailsForm({
               <p className="text-sm text-zinc-500">
                 Add a temporary nonmember to this session.
               </p>
+              {quickGuestError && (
+                <p className="mt-2 text-sm text-red-600 dark:text-red-400">
+                  {quickGuestError}
+                </p>
+              )}
             </div>
 
             <div className="flex flex-col gap-2 sm:flex-row">
@@ -274,6 +288,7 @@ function MatchDetailsForm({
                   setShowQuickGuest(false);
                   setQuickGuestTarget(null);
                   setQuickGuestName("");
+                  clearQuickGuestError();
                 }}
                 className="rounded-lg border border-zinc-300 dark:border-zinc-700 px-4 py-2"
               >

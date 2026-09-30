@@ -111,7 +111,7 @@ function AuditLogPage() {
             type="button"
             onClick={() => void loadLogs()}
             disabled={loading}
-            className="secondary-action rounded-lg px-4 py-2.5 text-sm font-medium"
+            className="primary-action rounded-lg px-4 py-2.5 text-sm font-medium"
           >
             {loading ? "Refreshing..." : "Refresh"}
           </button>

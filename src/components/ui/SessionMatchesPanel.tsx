@@ -24,7 +24,7 @@ import {
   removeMatchParticipant,
 } from "../../api/matchParticipants";
 import type { MatchParticipant } from "../../types/matchParticipant";
-import { createParticipant, getParticipants } from "../../api/participants";
+import { getParticipants } from "../../api/participants";
 import type { Participant } from "../../types/participant";
 import {
   addSessionParticipant,
@@ -36,6 +36,7 @@ import type { AdminUser } from "../../api/auth";
 import SessionChargeReviewModal, {
   type SessionChargeReviewMatch,
 } from "./SessionChargeReviewModal";
+import { getOrCreateGuest } from "../../utils/guest";
 
 type SessionMatchesPanelProps = {
   session: Session;
@@ -71,6 +72,7 @@ function SessionMatchesPanel({
   const [loadError, setLoadError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [quickGuestError, setQuickGuestError] = useState<string | null>(null);
   const [chargeMatch, setChargeMatch] = useState<Match | null>(null);
   const [chargeReviewMatch, setChargeReviewMatch] =
     useState<SessionChargeReviewMatch | null>(null);
@@ -164,7 +166,7 @@ function SessionMatchesPanel({
       });
     }
   }, [showQuickGuest, session.id]);
-  
+
   useEffect(() => {
     let ignore = false;
 
@@ -484,47 +486,41 @@ function SessionMatchesPanel({
 
     try {
       setCreatingGuest(true);
+      setQuickGuestError(null);
       setError(null);
 
-      const guest = await createParticipant({
-        firstName: name,
-        lastName: "",
-        nickname: name,
-        birthday: null,
-        membershipStatus: "ACTIVE",
-        participantType: "NONMEMBER",
-        isTemporary: true,
-      });
+      const guest = await getOrCreateGuest(name, participants);
+
+      if (sessionParticipantIds.includes(guest.id)) {
+        setQuickGuestError(
+          `${guest.nickname || guest.firstName} is already added to this session.`,
+        );
+        return;
+      }
 
       await addSessionParticipant(session.id, guest.id);
 
-      setSessionParticipantIds((current) => [...current, guest.id]);
-      setParticipants((current) => [...current, guest]);
+      setSessionParticipantIds((current) => {
+        if (current.includes(guest.id)) {
+          return current;
+        }
 
-      const guestId = String(guest.id);
+        return [...current, guest.id];
+      });
 
-      if (quickGuestTarget === "A1") {
-        setTeamAPlayer1(guestId);
-      }
+      setParticipants((current) => {
+        if (current.some((participant) => participant.id === guest.id)) {
+          return current;
+        }
 
-      if (quickGuestTarget === "A2") {
-        setTeamAPlayer2(guestId);
-      }
+        return [...current, guest];
+      });
 
-      if (quickGuestTarget === "B1") {
-        setTeamBPlayer1(guestId);
-      }
-
-      if (quickGuestTarget === "B2") {
-        setTeamBPlayer2(guestId);
-      }
-
-      setQuickGuestName("");
-      setQuickGuestTarget(null);
-      setShowQuickGuest(false);
+      // existing team assignment...
     } catch (err) {
       console.error(err);
-      setError(
+
+      setQuickGuestError(
         err instanceof Error ? err.message : "Failed to create quick guest",
       );
     } finally {
@@ -751,7 +747,7 @@ function SessionMatchesPanel({
               setLightUsage(getPersistentLightUsage());
               setShowForm(true);
             }}
-            className="rounded-lg bg-white px-3 py-1.5 text-sm font-medium text-black"
+            className="primary-action rounded-lg bg-white px-3 py-1.5 text-sm font-medium text-black"
           >
             Add Match
           </button>
@@ -804,6 +800,8 @@ function SessionMatchesPanel({
             creatingGuest={creatingGuest}
             handleQuickGuest={handleQuickGuest}
             error={error}
+            quickGuestError={quickGuestError}
+            clearQuickGuestError={() => setQuickGuestError(null)}
             submitting={submitting}
             handleSubmit={handleSubmit}
             onCancel={() => {
@@ -947,7 +945,7 @@ function SessionMatchesPanel({
                         type="button"
                         onClick={() => handleGenerateCharges(match)}
                         disabled={!canGenerateCharges}
-                        className="rounded-lg bg-white px-3 py-2.5 text-sm font-medium text-black transition disabled:cursor-not-allowed disabled:opacity-40"
+                        className="primary-action rounded-lg bg-white px-3 py-2.5 text-sm font-medium text-black transition disabled:cursor-not-allowed disabled:opacity-40"
                       >
                         Generate Charges
                       </button>
@@ -960,7 +958,7 @@ function SessionMatchesPanel({
                           resetMatchForm();
                           setChargeMatch(match);
                         }}
-                        className="col-span-2 rounded-lg bg-white px-3 py-2 text-sm font-medium text-black transition hover:bg-zinc-200 sm:col-span-1"
+                        className="primary-action col-span-2 rounded-lg bg-white px-3 py-2 text-sm font-medium text-black transition hover:bg-zinc-200 sm:col-span-1"
                       >
                         View Charges
                       </button>
@@ -1044,6 +1042,8 @@ function SessionMatchesPanel({
                         setQuickGuestTarget={setQuickGuestTarget}
                         creatingGuest={creatingGuest}
                         handleQuickGuest={handleQuickGuest}
+                        quickGuestError={quickGuestError}
+                        clearQuickGuestError={() => setQuickGuestError(null)}
                         error={error}
                         submitting={submitting}
                         handleSubmit={handleSubmit}

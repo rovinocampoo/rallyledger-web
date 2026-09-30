@@ -7,7 +7,7 @@ import {
   getSessionParticipants,
   removeSessionParticipant,
 } from "../../api/sessionParticipants";
-import { createParticipant, getParticipants } from "../../api/participants";
+import { getParticipants } from "../../api/participants";
 import ParticipantPicker from "./ParticipantPicker";
 import {
   generateRacketRentalCharge,
@@ -24,6 +24,7 @@ import type { AdminUser } from "../../api/auth";
 import type { Organization } from "../../types/organization";
 import { getProducts } from "../../api/products";
 import type { Product } from "../../types/product";
+import { getOrCreateGuest } from "../../utils/guest";
 
 type SessionTrainingPanelProps = {
   session: Session;
@@ -49,6 +50,7 @@ function SessionTrainingPanel({
   const [showQuickGuest, setShowQuickGuest] = useState(false);
   const [quickGuestName, setQuickGuestName] = useState("");
   const [creatingGuest, setCreatingGuest] = useState(false);
+  const [quickGuestError, setQuickGuestError] = useState<string | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -320,41 +322,56 @@ function SessionTrainingPanel({
     const name = quickGuestName.trim();
 
     if (isAtCapacity) {
-      setError("This training session is already full.");
+      setQuickGuestError("This training session is already full.");
       return;
     }
 
     if (!name) {
-      setError("Enter a guest name");
+      setQuickGuestError("Enter a guest name.");
       return;
     }
 
     try {
       setCreatingGuest(true);
+      setQuickGuestError(null);
       setError(null);
 
-      const guest = await createParticipant({
-        firstName: name,
-        lastName: "",
-        nickname: name,
-        birthday: null,
-        membershipStatus: "ACTIVE",
-        participantType: "NONMEMBER",
-        isTemporary: true,
-      });
+      const guest = await getOrCreateGuest(name, participants);
+
+      if (checkedInParticipantIds.includes(guest.id)) {
+        setQuickGuestError(
+          `${guest.nickname || guest.firstName} is already added to this session.`,
+        );
+        return;
+      }
 
       await addSessionParticipant(session.id, guest.id);
 
-      setParticipants((current) => [...current, guest]);
+      setParticipants((current) => {
+        if (current.some((participant) => participant.id === guest.id)) {
+          return current;
+        }
 
-      setCheckedInParticipantIds((current) => [...current, guest.id]);
+        return [...current, guest];
+      });
+
+      setCheckedInParticipantIds((current) => {
+        if (current.includes(guest.id)) {
+          return current;
+        }
+
+        return [...current, guest.id];
+      });
 
       setQuickGuestName("");
+      setQuickGuestError(null);
       setShowQuickGuest(false);
     } catch (err) {
       console.error(err);
 
-      setError(err instanceof Error ? err.message : "Failed to create guest");
+      setQuickGuestError(
+        err instanceof Error ? err.message : "Failed to create guest",
+      );
     } finally {
       setCreatingGuest(false);
     }
@@ -437,37 +454,71 @@ function SessionTrainingPanel({
         <div className="mt-3">
           <button
             type="button"
-            onClick={() => setShowQuickGuest((current) => !current)}
+            onClick={() => {
+              setShowQuickGuest((current) => {
+                const next = !current;
+
+                if (next) {
+                  setQuickGuestError(null);
+                } else {
+                  setQuickGuestName("");
+                  setQuickGuestError(null);
+                }
+
+                return next;
+              });
+            }}
             className="text-sm text-zinc-600 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white"
           >
             {showQuickGuest ? "Cancel Quick Guest" : "+ Quick Guest"}
           </button>
         </div>
-
         {showQuickGuest && (
-          <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-            <input
-              type="text"
-              value={quickGuestName}
-              onChange={(event) => setQuickGuestName(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  event.preventDefault();
-                  void handleQuickGuest();
-                }
-              }}
-              placeholder="Guest name"
-              className="min-w-0 flex-1 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-500 dark:border-zinc-700 dark:bg-zinc-900"
-            />
+          <div className="mt-3 rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="mb-3">
+              <p className="text-sm font-medium">Quick Guest</p>
 
-            <button
-              type="button"
-              onClick={handleQuickGuest}
-              disabled={isAtCapacity || saving || creatingGuest}
-              className="primary-action rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50"
-            >
-              {creatingGuest ? "Adding..." : "Add Guest"}
-            </button>
+              <p className="mt-1 text-xs text-zinc-500">
+                Add a temporary nonmember to this session.
+              </p>
+
+              {quickGuestError && (
+                <p className="mt-2 text-sm text-red-600 dark:text-red-400">
+                  {quickGuestError}
+                </p>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <input
+                type="text"
+                value={quickGuestName}
+                onChange={(event) => {
+                  setQuickGuestName(event.target.value);
+
+                  if (quickGuestError) {
+                    setQuickGuestError(null);
+                  }
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    void handleQuickGuest();
+                  }
+                }}
+                placeholder="Guest name"
+                className="min-w-0 flex-1 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-500 dark:border-zinc-700 dark:bg-zinc-900"
+              />
+
+              <button
+                type="button"
+                onClick={handleQuickGuest}
+                disabled={isAtCapacity || saving || creatingGuest}
+                className="primary-action rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50"
+              >
+                {creatingGuest ? "Adding..." : "Add Guest"}
+              </button>
+            </div>
           </div>
         )}
       </div>
