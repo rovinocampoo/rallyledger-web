@@ -1,5 +1,9 @@
 import { useEffect, useState } from "react";
-import { getParticipants, deleteParticipant } from "../api/participants";
+import {
+  getParticipants,
+  deleteParticipant,
+  createPlayerInvitation,
+} from "../api/participants";
 import type { Participant } from "../types/participant";
 import ParticipantCard from "../components/ui/ParticipantCard";
 import ParticipantForm from "../components/ui/ParticipantForm";
@@ -62,6 +66,13 @@ function ParticipantsPage({
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [searchQuery, setSearchQuery] = useState("");
   const [actionError, setActionError] = useState<string | null>(null);
+  const [invitation, setInvitation] = useState<{
+    participantId: number;
+    link: string;
+  } | null>(null);
+  const [invitationParticipantId, setInvitationParticipantId] = useState<
+    number | null
+  >(null);
 
   function handleSort(key: SortKey) {
     if (sortKey === key) {
@@ -164,6 +175,30 @@ function ParticipantsPage({
 
     setShowForm(false);
     setEditingParticipant(null);
+  }
+
+  async function handleCreatePlayerInvitation(participant: Participant) {
+    try {
+      setActionError(null);
+      setInvitation(null);
+      setInvitationParticipantId(participant.id);
+
+      const result = await createPlayerInvitation(participant.id);
+
+      setInvitation({
+        participantId: participant.id,
+        link: `${window.location.origin}/player/invite/${result.token}`,
+      });
+    } catch (err) {
+      console.error(err);
+      setActionError(
+        err instanceof Error
+          ? err.message
+          : "Failed to create player invitation.",
+      );
+    } finally {
+      setInvitationParticipantId(null);
+    }
   }
 
   async function loadCategories() {
@@ -323,6 +358,47 @@ function ParticipantsPage({
           {actionError}
         </p>
       )}
+
+      {invitation && (
+        <div className="mb-6 rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-zinc-950 dark:text-white">
+                Player invitation created
+              </p>
+              <p className="mt-1 break-all text-sm text-zinc-600 dark:text-zinc-400">
+                {invitation.link}
+              </p>
+            </div>
+
+            <div className="flex shrink-0 gap-2">
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(invitation.link);
+                    setActionError(null);
+                  } catch (err) {
+                    console.error(err);
+                    setActionError("Failed to copy invitation link.");
+                  }
+                }}
+                className="primary-action rounded-lg px-4 py-2 text-sm font-medium"
+              >
+                Copy Link
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setInvitation(null)}
+                className="secondary-action rounded-lg px-4 py-2 text-sm font-medium"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {showCategories && (
         <ParticipantCategoryManager
           categories={categories}
@@ -407,6 +483,10 @@ function ParticipantsPage({
                   setEditingParticipant(null);
                   setShowForm(false);
                 }}
+                isCreatingPlayerInvitation={
+                  invitationParticipantId === participant.id
+                }
+                onCreatePlayerInvitation={handleCreatePlayerInvitation}
               />
 
               {canManageParticipants &&

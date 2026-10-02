@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Navigate, Route, Routes, useNavigate } from "react-router-dom";
+
 import {
   getAdminOrganizations,
   getCurrentAdmin,
@@ -9,14 +10,17 @@ import {
 } from "./api/auth";
 
 import type { Organization, OrganizationAccess } from "./types/organization";
+
 import {
   getCurrentOrganization,
   getOrganizationLogo,
 } from "./api/organization";
+
 import { blobToDataUrl } from "./utils/image";
 
 import AppLayout from "./components/layout/AppLayout";
 import PublicLayout from "./components/layout/PublicLayout";
+
 import LandingPage from "./pages/public/LandingPage";
 import WalkthroughPage from "./pages/public/WalkthroughPage";
 import FaqPage from "./pages/public/FaqPage";
@@ -24,6 +28,7 @@ import PrivacyPage from "./pages/public/PrivacyPage";
 import TermsPage from "./pages/public/TermsPage";
 import CookiesPage from "./pages/public/CookiesPage";
 import DisclaimerPage from "./pages/public/DisclaimerPage";
+
 import LoginPage from "./pages/LoginPage";
 import DashboardPage from "./pages/DashboardPage";
 import ParticipantsPage from "./pages/ParticipantsPage";
@@ -36,12 +41,17 @@ import AdminAccessPage from "./pages/AdminAccessPage";
 import OrganizationSettingsPage from "./pages/OrganizationSettingsPage";
 import AuditLogPage from "./pages/AuditLogPage";
 import ChangePasswordPage from "./pages/ChangePasswordPage";
+
 import { AUTH_EXPIRED_EVENT } from "./api/client";
+
 import CalendarPage from "./pages/CalendarPage";
 import AppLoadingScreen from "./components/ui/AppLoadingScreen";
 import SalesPage from "./pages/SalesPage";
 import RecordsPage from "./pages/RecordsPage";
 import FinancialReportPage from "./pages/FinancialReportPage";
+import PlayerLoginPage from "./pages/PlayerLoginPage";
+import PlayerPortalPage from "./pages/PlayerPortalPage";
+import PlayerInvitationPage from "./pages/PlayerInvitationPage";
 
 type Theme = "light" | "dark";
 
@@ -55,7 +65,9 @@ function App() {
     null,
   );
   const [authLoading, setAuthLoading] = useState(true);
+
   const navigate = useNavigate();
+
   const [theme, setTheme] = useState<Theme>(() => {
     const savedTheme = localStorage.getItem("rallyledger-theme");
 
@@ -124,6 +136,7 @@ function App() {
         if (!ignore) {
           setAdmin(null);
           setOrganization(null);
+          setOrganizations([]);
         }
       } finally {
         if (!ignore) {
@@ -147,6 +160,7 @@ function App() {
     } else {
       root.classList.remove("dark");
     }
+
     localStorage.setItem("rallyledger-theme", theme);
   }, [theme]);
 
@@ -201,6 +215,7 @@ function App() {
       setOrganizationLogo(null);
     }
   }
+
   async function handleOrganizationChange(organizationId: number) {
     if (organizationId === admin?.organizationId) {
       return;
@@ -209,8 +224,6 @@ function App() {
     try {
       setOrganizationSwitching(true);
       setOrganizationError(null);
-
-      // Immediately remove the previous organization's branding.
       setOrganizationLogo(null);
 
       await switchOrganization(organizationId);
@@ -230,6 +243,7 @@ function App() {
       setOrganizationError(
         err instanceof Error ? err.message : "Failed to switch organization",
       );
+
       setOrganizationLogo(null);
     } finally {
       setOrganizationSwitching(false);
@@ -243,6 +257,7 @@ function App() {
   if (authLoading) {
     return <AppLoadingScreen />;
   }
+
   if (!admin) {
     return (
       <Routes>
@@ -259,16 +274,26 @@ function App() {
           <Route path="/cookies" element={<CookiesPage />} />
           <Route path="/disclaimer" element={<DisclaimerPage />} />
         </Route>
-
+        <Route
+          path="/player"
+          element={
+            <PlayerPortalPage theme={theme} onThemeToggle={handleThemeToggle} />
+          }
+        />{" "}
+        <Route
+          path="/player/invite/:token"
+          element={<PlayerInvitationPage />}
+        />
+        <Route path="/player/:authPath" element={<PlayerLoginPage />} />
         <Route
           path="/login"
           element={<LoginPage onLoggedIn={handleLoggedIn} />}
         />
-
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     );
   }
+
   if (admin.mustChangePassword) {
     return (
       <ChangePasswordPage
@@ -285,6 +310,7 @@ function App() {
 
   return (
     <Routes>
+      {/* Public informational pages */}
       <Route
         element={
           <PublicLayout theme={theme} onThemeToggle={handleThemeToggle} />
@@ -298,8 +324,20 @@ function App() {
         <Route path="/disclaimer" element={<DisclaimerPage />} />
       </Route>
 
+      <Route
+        path="/player"
+        element={
+          <PlayerPortalPage theme={theme} onThemeToggle={handleThemeToggle} />
+        }
+      />
+      <Route path="/player/invite/:token" element={<PlayerInvitationPage />} />
+      {/* PLAYER — deliberately outside AppLayout */}
+      <Route path="/player/:authPath" element={<PlayerLoginPage />} />
+
+      {/* Admin login */}
       <Route path="/login" element={<Navigate to="/" replace />} />
 
+      {/* ADMIN — AppLayout starts here */}
       <Route
         element={
           <AppLayout
@@ -328,6 +366,7 @@ function App() {
             />
           }
         />
+
         <Route
           path="/participants"
           element={
@@ -404,6 +443,8 @@ function App() {
           }
         />
       </Route>
+
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }

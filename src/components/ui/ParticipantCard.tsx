@@ -8,6 +8,8 @@ type ParticipantCardProps = {
   onDelete: (participant: Participant) => void;
   onViewLedger: (participant: Participant) => void;
   canManage: boolean;
+  onCreatePlayerInvitation: (participant: Participant) => void;
+  isCreatingPlayerInvitation: boolean;
 };
 
 function ParticipantCard({
@@ -16,7 +18,9 @@ function ParticipantCard({
   onEdit,
   onDelete,
   onViewLedger,
+  onCreatePlayerInvitation,
   canManage,
+  isCreatingPlayerInvitation,
 }: ParticipantCardProps) {
   const typeStyles: Record<string, string> = {
     MEMBER: "bg-emerald-500/10 text-emerald-400",
@@ -90,7 +94,19 @@ function ParticipantCard({
           </div>
         </div>
 
-        <div className="mt-4 grid grid-cols-2 gap-2">
+        <div className="mt-4 grid grid-cols-3 gap-2">
+          {canManage && (
+            <button
+              type="button"
+              disabled={isCreatingPlayerInvitation}
+              onClick={() => onCreatePlayerInvitation(participant)}
+              className="col-span-2 rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-700 transition-colors hover:bg-zinc-100 hover:text-zinc-950 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white"
+            >
+              {isCreatingPlayerInvitation
+                ? "Creating..."
+                : "Create Player Invitation"}
+            </button>
+          )}
           {canManage && (
             <button
               type="button"
@@ -153,6 +169,16 @@ function ParticipantCard({
         </p>
 
         <div className="flex shrink-0 gap-2">
+          {canManage && (
+            <button
+              type="button"
+              disabled={isCreatingPlayerInvitation}
+              onClick={() => onCreatePlayerInvitation(participant)}
+              className="rounded-lg border border-zinc-300 px-3 py-1.5 text-sm text-zinc-700 transition-colors hover:bg-zinc-100 hover:text-zinc-950 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white"
+            >
+              {isCreatingPlayerInvitation ? "Creating..." : "Invite"}
+            </button>
+          )}
           {canManage && (
             <button
               type="button"
