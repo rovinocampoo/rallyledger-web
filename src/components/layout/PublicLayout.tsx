@@ -53,13 +53,21 @@ function PublicLayout({ theme, onThemeToggle }: PublicLayoutProps) {
               {theme === "dark" ? "☀" : "☾"}
             </button>
 
-            {/* Sign in - visible on mobile and desktop */}
-            <NavLink
-              to="/login"
-              className="inline-flex items-center justify-center rounded-lg bg-zinc-900 px-3 py-2 text-sm font-medium text-white transition hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-zinc-300"
-            >
-              Sign in
-            </NavLink>
+            <div className="flex items-center gap-2">
+              <NavLink
+                to="/player/login"
+                className="inline-flex items-center justify-center rounded-lg border-2 border-[#103f25] px-3 py-2 text-sm font-black text-[#103f25] transition hover:bg-[#103f25] hover:text-white dark:border-[#dfff28] dark:text-[#dfff28] dark:hover:bg-[#dfff28] dark:hover:text-[#0b2417]"
+              >
+                Player Portal
+              </NavLink>
+
+              <NavLink
+                to="/login"
+                className="inline-flex items-center justify-center rounded-lg bg-zinc-900 px-3 py-2 text-sm font-medium text-white transition hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-zinc-300"
+              >
+                Admin Login
+              </NavLink>
+            </div>
           </div>
         </div>
       </header>

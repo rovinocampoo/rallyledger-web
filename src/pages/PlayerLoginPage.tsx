@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { AuthView, NeonAuthUIProvider } from "@neondatabase/auth-ui";
 import {
   Link as RouterLink,
@@ -7,8 +6,6 @@ import {
   useSearchParams,
 } from "react-router-dom";
 import type { AnchorHTMLAttributes } from "react";
-
-import authUiCssUrl from "@neondatabase/auth-ui/css?url";
 
 import { neonAuth } from "../auth/neon";
 
@@ -53,20 +50,6 @@ export default function PlayerLoginPage() {
 
   const path = PLAYER_AUTH_PATHS.has(authPath) ? authPath : "sign-in";
 
-  useEffect(() => {
-    const link = document.createElement("link");
-
-    link.rel = "stylesheet";
-    link.href = authUiCssUrl;
-    link.dataset.neonAuthUi = "true";
-
-    document.head.appendChild(link);
-
-    return () => {
-      link.remove();
-    };
-  }, []);
-
   const isSignUp = path === "sign-up";
 
   return (
@@ -95,17 +78,15 @@ export default function PlayerLoginPage() {
       <div className="relative mx-auto flex min-h-screen w-[min(1100px,calc(100%-32px))] items-center justify-center py-20">
         <div className="grid w-full overflow-hidden rounded-[30px] border-[3px] border-[#103f25] bg-[#fffdf5] shadow-[14px_14px_0_#103f25] dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-[14px_14px_0_#dfff28] lg:grid-cols-[0.95fr_1.05fr]">
           {/* Brand / visual side */}
-          <section className="relative hidden overflow-hidden bg-[#103f25] p-10 text-[#f1eee5] lg:flex lg:min-h-[620px] lg:flex-col lg:justify-between">
+          <section className="relative flex min-h-[320px] overflow-hidden bg-[#103f25] p-8 text-[#f1eee5] sm:min-h-[420px] sm:p-10 lg:min-h-[620px] lg:flex-col lg:justify-between">
             <div
               aria-hidden="true"
               className="absolute right-[-70px] top-[-70px] h-64 w-64 rounded-full border-[30px] border-[#dfff28]/20"
             />
-
             <div
               aria-hidden="true"
               className="absolute bottom-[-100px] left-[-80px] h-72 w-72 rounded-full border-[30px] border-[#dfff28]/10"
             />
-
             <div className="relative">
               <div className="inline-flex items-center gap-2 rounded-full border border-[#f1eee5]/25 bg-white/[0.04] px-3 py-2 text-xs font-black uppercase tracking-[0.14em]">
                 <span className="h-2 w-2 rounded-full bg-[#dfff28]" />
@@ -125,7 +106,6 @@ export default function PlayerLoginPage() {
                 player records from one account.
               </p>
             </div>
-
             {/* Tennis visual */}
             <div className="relative flex flex-1 items-center justify-center py-10">
               <div className="relative h-64 w-64 rotate-[3deg] rounded-[42%_58%_50%_50%/48%_45%_55%_52%] border-[3px] border-[#f1eee5] bg-[#fffdf5] shadow-[12px_12px_0_#dfff28] transition duration-300 hover:rotate-[-2deg] hover:scale-[1.02]">
@@ -164,7 +144,6 @@ export default function PlayerLoginPage() {
                 </div>
               </div>
             </div>
-
             <div className="relative flex items-center gap-2 text-xs font-medium text-[#f1eee5]/55">
               <span className="text-base text-[#dfff28]" aria-hidden="true">
                 ✓
@@ -228,7 +207,6 @@ export default function PlayerLoginPage() {
               >
                 <AuthView path={path} />
               </NeonAuthUIProvider>
-
               <p className="mt-8 text-center text-xs leading-5 text-[#103f25]/45 dark:text-zinc-600">
                 RallyLedger player accounts are securely managed by Neon Auth.
               </p>
