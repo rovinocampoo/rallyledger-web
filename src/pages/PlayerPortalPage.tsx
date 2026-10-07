@@ -24,6 +24,7 @@ import type { PairRecord, PlayerRecord } from "../types/record";
 import type { ParticipantLedger } from "../types/ledger";
 import type { Session } from "../types/session";
 import { formatLabel, formatMatchTimeRange } from "../utils/format";
+import PlayerPortalLoading from "../components/PlayerPortalLoading";
 
 type PortalSection =
   "overview" | "sessions" | "records" | "pairs" | "ledger" | "profile";
@@ -163,6 +164,9 @@ export default function PlayerPortalPage({
   const [section, setSection] = useState<PortalSection>("overview");
   const [loadingOrganizations, setLoadingOrganizations] = useState(true);
   const [loadingPlayer, setLoadingPlayer] = useState(false);
+  const [loadingStep, setLoadingStep] = useState(
+    "Connecting to your player account...",
+  );
   const [error, setError] = useState<string | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [upcomingRegularPlay, setUpcomingRegularPlay] = useState<Session[]>([]);
@@ -190,9 +194,12 @@ export default function PlayerPortalPage({
       try {
         setError(null);
         setLoadingOrganizations(true);
+        setLoadingStep("Connecting to your player account...");
 
         // Keep this explicit for Neon Auth client/session initialization.
         await neonAuth.getSession();
+
+        setLoadingStep("Finding your organizations...");
 
         const result = await getPlayerOrganizations();
 
@@ -230,33 +237,29 @@ export default function PlayerPortalPage({
         setError(null);
         setLoadingPlayer(true);
         setLoadingPortalData(true);
-        const playerPromise = getPlayerMe(organizationId).then((result) => {
-          setPlayer(result);
-          return result;
-        });
 
-        const portalDataPromise = Promise.all([
-          getPlayerSessions(organizationId),
-          getPlayerMatches(organizationId),
-          getPlayerRecord(organizationId),
-          getPlayerPairs(organizationId),
-          getPlayerLedger(organizationId),
-          getPlayerUpcomingRegularPlay(organizationId),
-        ]);
+        setLoadingStep("Loading your player profile...");
+        const playerData = await getPlayerMe(organizationId);
+        setPlayer(playerData);
 
-        const [, portalData] = await Promise.all([
-          playerPromise,
-          portalDataPromise,
-        ]);
+        setLoadingStep("Loading your sessions...");
+        const sessionData = await getPlayerSessions(organizationId);
 
-        const [
-          sessionData,
-          matchData,
-          recordData,
-          pairData,
-          ledgerData,
-          upcomingRegularPlayData,
-        ] = portalData;
+        setLoadingStep("Loading your match history...");
+        const matchData = await getPlayerMatches(organizationId);
+
+        setLoadingStep("Preparing your player record...");
+        const recordData = await getPlayerRecord(organizationId);
+
+        setLoadingStep("Loading your doubles partners...");
+        const pairData = await getPlayerPairs(organizationId);
+
+        setLoadingStep("Loading your account ledger...");
+        const ledgerData = await getPlayerLedger(organizationId);
+
+        setLoadingStep("Checking upcoming regular play...");
+        const upcomingRegularPlayData =
+          await getPlayerUpcomingRegularPlay(organizationId);
 
         setSessions(sessionData);
         setUpcomingRegularPlay(upcomingRegularPlayData);
@@ -284,19 +287,19 @@ export default function PlayerPortalPage({
   }
 
   if (loadingOrganizations || !player) {
-    return (
-      <main className="min-h-screen bg-[#f1eee5] px-5 py-6 text-[#103f25] dark:bg-zinc-950 dark:text-white sm:px-8">
-        <div className="mx-auto flex min-h-[80vh] max-w-6xl items-center justify-center">
-          {error ? (
+    if (error) {
+      return (
+        <main className="min-h-screen bg-[#f1eee5] px-5 py-6 text-[#103f25] dark:bg-zinc-950 dark:text-white sm:px-8">
+          <div className="mx-auto flex min-h-[80vh] max-w-6xl items-center justify-center">
             <div className="w-full max-w-xl rounded-2xl border-2 border-red-900/20 bg-red-50 p-5 text-sm font-bold text-red-700 dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-400">
               {error}
             </div>
-          ) : (
-            <div className="text-sm font-black">Loading player account...</div>
-          )}
-        </div>
-      </main>
-    );
+          </div>
+        </main>
+      );
+    }
+
+    return <PlayerPortalLoading message={loadingStep} />;
   }
 
   const selectedOrganization = organizations.find(
