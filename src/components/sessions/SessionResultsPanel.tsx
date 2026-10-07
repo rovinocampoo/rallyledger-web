@@ -661,9 +661,20 @@ function SessionResultsPanel({
                 })}
             </div>
 
-            <p className="mt-8 text-center text-xs text-zinc-600 dark:text-zinc-400">
-              {}Powered by RallyLedger · kurovin
-            </p>
+            <div className="mt-8 border-t border-zinc-200 pt-5">
+              <div className="flex items-center justify-center">
+                <img
+                  src="/branding/login-light-horizontal.png"
+                  alt="RallyLedger"
+                  className="h-4 w-auto object-contain"
+                  crossOrigin="anonymous"
+                />
+              </div>
+
+              <p className="mt-1 text-center text-[8px] text-zinc-400">
+                by kurovin.
+              </p>
+            </div>
           </div>
         </div>
       )}
