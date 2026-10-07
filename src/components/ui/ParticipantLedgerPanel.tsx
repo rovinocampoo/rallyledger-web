@@ -353,7 +353,15 @@ function PaymentReceipt({
         </div>
 
         {allocations.length === 0 ? (
-          <p className="mt-3 text-sm text-zinc-500">No allocation history.</p>
+          <div className="mt-3 rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3">
+            <p className="text-sm font-medium text-zinc-700">
+              Detailed allocation tracking was not available for this payment.
+            </p>
+            <p className="mt-1 text-xs leading-5 text-zinc-500">
+              This payment was recorded before detailed payment allocation
+              tracking was introduced.
+            </p>
+          </div>
         ) : (
           <div className="mt-3 divide-y divide-zinc-200 rounded-lg border border-zinc-200">
             {groupedAllocations.map((allocation) => (
@@ -381,25 +389,27 @@ function PaymentReceipt({
       </div>
 
       {/* CURRENT STATE */}
-      <div className="mt-5 rounded-lg border border-zinc-200 p-4">
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-zinc-500">Current Applied</span>
+      {allocations.length > 0 && (
+        <div className="mt-5 rounded-lg border border-zinc-200 p-4">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-zinc-500">Current Applied</span>
 
-          <span className="font-semibold">
-            {formatCurrency(allocatedAmount)}
-          </span>
-        </div>
-
-        {creditAmount > 0 && (
-          <div className="mt-2 flex items-center justify-between text-sm">
-            <span className="text-zinc-500">Remaining Credit</span>
-
-            <span className="font-semibold text-emerald-700">
-              {formatCurrency(creditAmount)}
+            <span className="font-semibold">
+              {formatCurrency(allocatedAmount)}
             </span>
           </div>
-        )}
-      </div>
+
+          {creditAmount > 0 && (
+            <div className="mt-2 flex items-center justify-between text-sm">
+              <span className="text-zinc-500">Remaining Credit</span>
+
+              <span className="font-semibold text-emerald-700">
+                {formatCurrency(creditAmount)}
+              </span>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* CORRECTION / REVERSAL HISTORY */}
       {corrections.length > 0 && (
@@ -2170,9 +2180,16 @@ function ParticipantLedgerPanel({
                           {isExpanded && (
                             <div className="mt-3 rounded-lg border border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950">
                               {allocations.length === 0 ? (
-                                <p className="px-3 py-3 text-xs text-zinc-500">
-                                  No allocation history for this payment.
-                                </p>
+                                <div className="mt-3 rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3">
+                                  <p className="text-sm font-medium text-zinc-700">
+                                    Detailed allocation tracking was not
+                                    available for this payment.
+                                  </p>
+                                  <p className="mt-1 text-xs leading-5 text-zinc-500">
+                                    This payment was recorded before detailed
+                                    payment allocation tracking was introduced.
+                                  </p>
+                                </div>
                               ) : (
                                 <div className="divide-y divide-zinc-200 dark:divide-zinc-800">
                                   {allocations.map((allocation) => {
