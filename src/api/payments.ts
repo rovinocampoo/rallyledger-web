@@ -1,5 +1,9 @@
 import { apiFetch } from "./client";
-import type { Payment, PaymentCorrection } from "../types/payment";
+import type {
+  Payment,
+  PaymentAllocation,
+  PaymentCorrection,
+} from "../types/payment";
 
 export type CreatePaymentInput = {
   participantId: number;
@@ -39,4 +43,18 @@ export function correctPayment(id: number, data: CorrectPaymentInput) {
 
 export function getPaymentCorrections(id: number) {
   return apiFetch<PaymentCorrection[]>(`/payments/${id}/corrections`);
+}
+export type ReversePaymentInput = {
+  reason: string;
+};
+
+export function reversePayment(id: number, data: ReversePaymentInput) {
+  return apiFetch<Payment>(`/payments/${id}/reverse`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
+export function getPaymentAllocations(id: number) {
+  return apiFetch<PaymentAllocation[]>(`/payments/${id}/allocations`);
 }

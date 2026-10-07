@@ -16,11 +16,17 @@ import {
   createPayment,
   deletePayment,
   correctPayment,
+  reversePayment,
   getPaymentCorrections,
+  getPaymentAllocations,
 } from "../../api/payments";
 import type { AdminUser } from "../../api/auth";
 import ChargeAdjustmentHistory from "./ChargeAdjustmentHistory";
-import type { Payment, PaymentCorrection } from "../../types/payment";
+import type {
+  Payment,
+  PaymentCorrection,
+  PaymentAllocation,
+} from "../../types/payment";
 import type { Organization } from "../../types/organization";
 import type { Charge } from "../../types/charge";
 
@@ -51,11 +57,7 @@ type LedgerStatementProps = {
 };
 
 type StatementPeriod =
-  | "THIS_WEEK"
-  | "LAST_7_DAYS"
-  | "THIS_MONTH"
-  | "LAST_30_DAYS"
-  | "FULL_HISTORY";
+  "THIS_WEEK" | "LAST_7_DAYS" | "THIS_MONTH" | "LAST_30_DAYS" | "FULL_HISTORY";
 
 function getBalanceLabel(balance: number) {
   if (balance > 0) {
@@ -162,6 +164,302 @@ function waitForRender() {
       requestAnimationFrame(() => resolve());
     });
   });
+}
+type PaymentReceiptProps = {
+  participant: Participant;
+  payment: Payment;
+  allocations: PaymentAllocation[];
+  corrections: PaymentCorrection[];
+  organizationName: string;
+  organizationLogo: string | null;
+  rallyLedgerLogo: string;
+};
+type ReceiptAllocationLine = {
+  chargeDate: string;
+  feeType: string;
+  amount: number;
+};
+
+function groupAllocationsForReceipt(
+  allocations: PaymentAllocation[],
+): ReceiptAllocationLine[] {
+  const grouped = new Map<string, ReceiptAllocationLine>();
+
+  for (const allocation of allocations) {
+    const key = `${allocation.chargeDate}|${allocation.feeType}`;
+
+    const existing = grouped.get(key);
+
+    const signedAmount =
+      allocation.allocationType === "RELEASE"
+        ? -allocation.amount
+        : allocation.amount;
+
+    if (existing) {
+      existing.amount += signedAmount;
+      continue;
+    }
+
+    grouped.set(key, {
+      chargeDate: allocation.chargeDate,
+      feeType: allocation.feeType,
+      amount: signedAmount,
+    });
+  }
+
+  return Array.from(grouped.values())
+    .filter((line) => line.amount !== 0)
+    .sort((a, b) => {
+      const dateCompare = a.chargeDate.localeCompare(b.chargeDate);
+
+      if (dateCompare !== 0) {
+        return dateCompare;
+      }
+
+      return a.feeType.localeCompare(b.feeType);
+    });
+}
+
+function PaymentReceipt({
+  participant,
+  payment,
+  allocations,
+  corrections,
+  organizationName,
+  organizationLogo,
+  rallyLedgerLogo,
+}: PaymentReceiptProps) {
+  const allocatedAmount = allocations.reduce(
+    (total, allocation) =>
+      total +
+      (allocation.allocationType === "ALLOCATE"
+        ? allocation.amount
+        : -allocation.amount),
+    0,
+  );
+  const groupedAllocations = groupAllocationsForReceipt(allocations);
+
+  const creditAmount = Math.max(payment.amount - allocatedAmount, 0);
+
+  const isReversed =
+    payment.amount === 0 &&
+    corrections.some(
+      (correction) =>
+        correction.newAmount === 0 && correction.previousAmount > 0,
+    );
+
+  return (
+    <div className="w-[520px] bg-white p-8 text-zinc-950">
+      {/* ORGANIZATION HEADER */}
+      <div className="border-b border-zinc-200 pb-5">
+        <div className="flex items-center gap-3">
+          {organizationLogo ? (
+            <img
+              src={organizationLogo}
+              alt=""
+              className="h-12 w-12 rounded-lg object-contain"
+              crossOrigin="anonymous"
+            />
+          ) : (
+            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-zinc-950 text-sm font-bold text-white">
+              {organizationName.slice(0, 2).toUpperCase()}
+            </div>
+          )}
+
+          <div className="min-w-0">
+            <p className="truncate text-lg font-semibold">
+              {organizationName || "RallyLedger"}
+            </p>
+
+            <p className="text-xs text-zinc-500">Payment Receipt</p>
+          </div>
+        </div>
+      </div>
+
+      {/* PARTICIPANT */}
+      <div className="mt-5">
+        <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+          Participant
+        </p>
+
+        <p className="mt-1 text-xl font-bold">
+          {formatFullName(participant.firstName, participant.lastName)}
+        </p>
+
+        {participant.nickname && (
+          <p className="mt-1 text-sm text-zinc-500">{participant.nickname}</p>
+        )}
+      </div>
+
+      {/* REVERSED STATUS */}
+      {isReversed && (
+        <div className="mt-5 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
+          <p className="text-sm font-bold tracking-wide text-amber-700">
+            PAYMENT REVERSED
+          </p>
+        </div>
+      )}
+
+      {/* PAYMENT DETAILS */}
+      <div className="mt-5 rounded-lg bg-zinc-50 p-4">
+        <div className="grid grid-cols-2 gap-y-3 text-sm">
+          <span className="text-zinc-500">Payment Date</span>
+          <span className="text-right font-medium">
+            {formatDate(payment.paymentDate)}
+          </span>
+
+          <span className="text-zinc-500">Payment Method</span>
+          <span className="text-right font-medium">
+            {formatLabel(payment.paymentMethod)}
+          </span>
+
+          {payment.reference && (
+            <>
+              <span className="text-zinc-500">Reference</span>
+              <span className="truncate text-right font-medium">
+                {payment.reference}
+              </span>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* PAYMENT AMOUNT */}
+      <div className="mt-5">
+        <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+          Payment
+        </p>
+
+        <div className="mt-2 flex items-end justify-between">
+          <span className="text-sm text-zinc-600">Total Paid</span>
+
+          <span className="text-2xl font-bold">
+            {formatCurrency(payment.amount)}
+          </span>
+        </div>
+      </div>
+
+      {/* ALLOCATION HISTORY */}
+      <div className="mt-6">
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+            Allocation History
+          </p>
+
+          <span className="text-xs text-zinc-400">
+            {groupedAllocations.length}{" "}
+            {groupedAllocations.length === 1 ? "charge" : "charges"}
+          </span>
+        </div>
+
+        {allocations.length === 0 ? (
+          <p className="mt-3 text-sm text-zinc-500">No allocation history.</p>
+        ) : (
+          <div className="mt-3 divide-y divide-zinc-200 rounded-lg border border-zinc-200">
+            {groupedAllocations.map((allocation) => (
+              <div
+                key={`${allocation.chargeDate}-${allocation.feeType}`}
+                className="flex items-center justify-between gap-4 px-3 py-3"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold">
+                    {formatLabel(allocation.feeType)}
+                  </p>
+
+                  <p className="mt-0.5 text-xs text-zinc-500">
+                    {formatDate(allocation.chargeDate)}
+                  </p>
+                </div>
+
+                <p className="shrink-0 text-sm font-semibold text-zinc-950">
+                  {formatCurrency(allocation.amount)}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* CURRENT STATE */}
+      <div className="mt-5 rounded-lg border border-zinc-200 p-4">
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-zinc-500">Current Applied</span>
+
+          <span className="font-semibold">
+            {formatCurrency(allocatedAmount)}
+          </span>
+        </div>
+
+        {creditAmount > 0 && (
+          <div className="mt-2 flex items-center justify-between text-sm">
+            <span className="text-zinc-500">Remaining Credit</span>
+
+            <span className="font-semibold text-emerald-700">
+              {formatCurrency(creditAmount)}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* CORRECTION / REVERSAL HISTORY */}
+      {corrections.length > 0 && (
+        <div className="mt-6">
+          <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+            Payment History
+          </p>
+
+          <div className="mt-3 space-y-3">
+            {corrections.map((correction) => {
+              const isReversal =
+                correction.newAmount === 0 && correction.previousAmount > 0;
+
+              return (
+                <div
+                  key={correction.id}
+                  className="rounded-lg border border-zinc-200 bg-zinc-50 p-3"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm font-semibold">
+                      {isReversal ? "Reversal" : "Correction"}
+                    </p>
+
+                    <p className="text-xs text-zinc-500">
+                      {new Date(correction.createdAt).toLocaleString()}
+                    </p>
+                  </div>
+
+                  <p className="mt-2 text-sm">
+                    {formatCurrency(correction.previousAmount)} →{" "}
+                    {formatCurrency(correction.newAmount)}
+                  </p>
+
+                  <p className="mt-2 text-xs text-zinc-500">
+                    Reason: {correction.reason}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* FOOTER */}
+      <div className="mt-8 border-t border-zinc-200 pt-5">
+        <div className="flex items-center justify-center">
+          <img
+            src={rallyLedgerLogo}
+            alt="RallyLedger"
+            className="h-4 w-auto object-contain"
+            crossOrigin="anonymous"
+          />
+
+          <p className="mt-1 text-center text-[8px] text-zinc-400">
+            by kurovin.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function LedgerStatement({
@@ -484,7 +782,19 @@ function LedgerStatement({
 
       {/* FOOTER */}
       <div className="mt-5 border-t border-zinc-200 pt-3 text-center text-[10px] text-zinc-400">
-        RallyLedger statement · {periodLabel}
+        <div className="mt-8 border-t border-zinc-800 pt-5">
+          <div className="flex items-center justify-center">
+            <img
+              src="/branding/login-light-horizontal.png"
+              alt="RallyLedger"
+              className="h-4 w-auto object-contain"
+              crossOrigin="anonymous"
+            />
+            <p className="mt-1 text-center text-[8px] text-zinc-400">
+              by kurovin.
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -537,10 +847,42 @@ function ParticipantLedgerPanel({
   const [correctionReason, setCorrectionReason] = useState("");
   const [correctionError, setCorrectionError] = useState<string | null>(null);
   const [submittingCorrection, setSubmittingCorrection] = useState(false);
+  const [reversingPaymentId, setReversingPaymentId] = useState<number | null>(
+    null,
+  );
+  const [reversalReason, setReversalReason] = useState("");
+  const [reversalError, setReversalError] = useState<string | null>(null);
+  const [submittingReversal, setSubmittingReversal] = useState(false);
 
   const [paymentCorrections, setPaymentCorrections] = useState<
     Record<number, PaymentCorrection[]>
   >({});
+  const [paymentAllocations, setPaymentAllocations] = useState<
+    Record<number, PaymentAllocation[]>
+  >({});
+  const [expandedPaymentAllocations, setExpandedPaymentAllocations] = useState<
+    Record<number, boolean>
+  >({});
+  const [loadingPaymentAllocations, setLoadingPaymentAllocations] = useState<
+    Record<number, boolean>
+  >({});
+  const [expandedPaymentCorrections, setExpandedPaymentCorrections] = useState<
+    Record<number, boolean>
+  >({});
+  const [loadingPaymentCorrections, setLoadingPaymentCorrections] = useState<
+    Record<number, boolean>
+  >({});
+  const [renderPaymentReceipt, setRenderPaymentReceipt] = useState(false);
+  const [receiptPayment, setReceiptPayment] = useState<Payment | null>(null);
+  const [receiptAllocations, setReceiptAllocations] = useState<
+    PaymentAllocation[]
+  >([]);
+  const [receiptCorrections, setReceiptCorrections] = useState<
+    PaymentCorrection[]
+  >([]);
+  const [generatingReceipt, setGeneratingReceipt] = useState(false);
+
+  const paymentReceiptRef = useRef<HTMLDivElement | null>(null);
 
   async function loadLedger() {
     try {
@@ -706,6 +1048,13 @@ function ParticipantLedgerPanel({
         ...current,
         [payment.id]: corrections,
       }));
+      setPaymentAllocations((current) => {
+        const next = { ...current };
+        delete next[payment.id];
+        return next;
+      });
+
+      setReversingPaymentId(null);
 
       setCorrectingPaymentId(null);
       setCorrectionError(null);
@@ -721,6 +1070,149 @@ function ParticipantLedgerPanel({
       );
     } finally {
       setSubmittingCorrection(false);
+    }
+  }
+  async function handleReversePayment(payment: Payment) {
+    if (!canCorrectPayments) {
+      return;
+    }
+
+    if (!reversalReason.trim()) {
+      setReversalError("A reversal reason is required.");
+      return;
+    }
+
+    setSubmittingReversal(true);
+    setReversalError(null);
+
+    try {
+      const updatedPayment = await reversePayment(payment.id, {
+        reason: reversalReason.trim(),
+      });
+
+      setLedger((current) => {
+        if (!current) {
+          return current;
+        }
+
+        return {
+          ...current,
+          payments: current.payments.map((item) =>
+            item.id === updatedPayment.id ? updatedPayment : item,
+          ),
+        };
+      });
+
+      const corrections = await getPaymentCorrections(payment.id);
+      setPaymentCorrections((current) => ({
+        ...current,
+        [payment.id]: corrections,
+      }));
+      setPaymentAllocations((current) => {
+        const next = { ...current };
+        delete next[payment.id];
+        return next;
+      });
+
+      setReversingPaymentId(null);
+      setReversalReason("");
+      setReversalError(null);
+    } catch {
+      setReversalError("Failed to reverse payment");
+    } finally {
+      setSubmittingReversal(false);
+    }
+  }
+
+  async function togglePaymentAllocations(paymentId: number) {
+    const isExpanded = expandedPaymentAllocations[paymentId];
+
+    if (isExpanded) {
+      setExpandedPaymentAllocations((current) => ({
+        ...current,
+        [paymentId]: false,
+      }));
+      return;
+    }
+
+    if (paymentAllocations[paymentId]) {
+      setExpandedPaymentAllocations((current) => ({
+        ...current,
+        [paymentId]: true,
+      }));
+      return;
+    }
+
+    setLoadingPaymentAllocations((current) => ({
+      ...current,
+      [paymentId]: true,
+    }));
+
+    try {
+      const allocations = await getPaymentAllocations(paymentId);
+
+      setPaymentAllocations((current) => ({
+        ...current,
+        [paymentId]: allocations,
+      }));
+
+      setExpandedPaymentAllocations((current) => ({
+        ...current,
+        [paymentId]: true,
+      }));
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoadingPaymentAllocations((current) => ({
+        ...current,
+        [paymentId]: false,
+      }));
+    }
+  }
+
+  async function togglePaymentCorrections(paymentId: number) {
+    const isExpanded = expandedPaymentCorrections[paymentId];
+
+    if (isExpanded) {
+      setExpandedPaymentCorrections((current) => ({
+        ...current,
+        [paymentId]: false,
+      }));
+      return;
+    }
+
+    if (paymentCorrections[paymentId]) {
+      setExpandedPaymentCorrections((current) => ({
+        ...current,
+        [paymentId]: true,
+      }));
+      return;
+    }
+
+    setLoadingPaymentCorrections((current) => ({
+      ...current,
+      [paymentId]: true,
+    }));
+
+    try {
+      const corrections = await getPaymentCorrections(paymentId);
+
+      setPaymentCorrections((current) => ({
+        ...current,
+        [paymentId]: corrections,
+      }));
+
+      setExpandedPaymentCorrections((current) => ({
+        ...current,
+        [paymentId]: true,
+      }));
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoadingPaymentCorrections((current) => ({
+        ...current,
+        [paymentId]: false,
+      }));
     }
   }
 
@@ -786,6 +1278,33 @@ function ParticipantLedgerPanel({
       .join("\n");
   }
 
+  async function generatePaymentReceiptPng(payment: Payment) {
+    if (!paymentReceiptRef.current) {
+      return null;
+    }
+
+    const blob = await toBlob(paymentReceiptRef.current, {
+      cacheBust: true,
+      pixelRatio: 2,
+    });
+
+    if (!blob) {
+      return null;
+    }
+
+    const safeName = `${participant.firstName}-${participant.lastName}`
+      .toLowerCase()
+      .replaceAll(" ", "-");
+
+    return new File(
+      [blob],
+      `rallyledger-payment-${payment.id}-${safeName}.png`,
+      {
+        type: "image/png",
+      },
+    );
+  }
+
   async function generateLedgerPng() {
     if (!statementRef.current) {
       return null;
@@ -809,6 +1328,76 @@ function ParticipantLedgerPanel({
     });
   }
 
+  async function handlePaymentReceipt(payment: Payment) {
+    try {
+      setGeneratingReceipt(true);
+      setShareMessage(null);
+
+      const [allocations, corrections] = await Promise.all([
+        getPaymentAllocations(payment.id),
+        getPaymentCorrections(payment.id),
+      ]);
+
+      setReceiptPayment(payment);
+      setReceiptAllocations(allocations);
+      setReceiptCorrections(corrections);
+      setRenderPaymentReceipt(true);
+
+      await waitForRender();
+
+      const pngFile = await generatePaymentReceiptPng(payment);
+
+      if (!pngFile) {
+        setShareMessage("Failed to generate payment receipt.");
+        return;
+      }
+
+      if (
+        navigator.share &&
+        navigator.canShare?.({
+          files: [pngFile],
+        })
+      ) {
+        await navigator.share({
+          title: "RallyLedger Payment Receipt",
+          text: `Payment receipt for ${formatFullName(
+            participant.firstName,
+            participant.lastName,
+          )}`,
+          files: [pngFile],
+        });
+
+        return;
+      }
+
+      const url = URL.createObjectURL(pngFile);
+
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = pngFile.name;
+
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      URL.revokeObjectURL(url);
+
+      setShareMessage("Payment receipt saved.");
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") {
+        return;
+      }
+
+      console.error(err);
+      setShareMessage("Failed to generate payment receipt.");
+    } finally {
+      setGeneratingReceipt(false);
+      setRenderPaymentReceipt(false);
+      setReceiptPayment(null);
+      setReceiptAllocations([]);
+      setReceiptCorrections([]);
+    }
+  }
   async function handleShareLedgerPng() {
     if (!ledger) {
       return;
@@ -1425,6 +2014,8 @@ function ParticipantLedgerPanel({
               statementPayments.map((payment) => {
                 const corrections = paymentCorrections[payment.id] ?? [];
                 const isCorrecting = correctingPaymentId === payment.id;
+                const isCorrectionHistoryExpanded =
+                  expandedPaymentCorrections[payment.id] ?? false;
 
                 return (
                   <div
@@ -1450,10 +2041,15 @@ function ParticipantLedgerPanel({
                       </div>
 
                       <div className="flex flex-wrap items-center gap-3">
+                        {payment.amount === 0 && (
+                          <span className="rounded-full bg-amber-100 px-2 py-1 text-[11px] font-semibold text-amber-700 dark:bg-amber-950/40 dark:text-amber-400">
+                            REVERSED
+                          </span>
+                        )}
+
                         <p className="font-semibold">
                           {formatCurrency(payment.amount)}
                         </p>
-
                         {canCorrectPayments && (
                           <button
                             type="button"
@@ -1466,11 +2062,34 @@ function ParticipantLedgerPanel({
                               setCorrectionReason("");
                               setCorrectionError(null);
                             }}
-                            className="text-xs text-zinc-600 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white"
+                            className="secondary-action rounded-md px-3 py-1.5 text-xs text-zinc-600 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white"
                           >
                             Correct
                           </button>
                         )}
+
+                        {canCorrectPayments && payment.amount > 0 && (
+                          <button
+                            type="button"
+                            className="rounded-md border border-amber-300 px-3 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-50 dark:border-amber-700 dark:text-amber-400 dark:hover:bg-amber-950/30"
+                            onClick={() => {
+                              setReversingPaymentId(payment.id);
+                              setReversalReason("");
+                              setReversalError(null);
+                              setCorrectingPaymentId(null);
+                            }}
+                          >
+                            Reverse
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => void handlePaymentReceipt(payment)}
+                          disabled={generatingReceipt}
+                          className="text-xs text-zinc-600 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white disabled:opacity-50"
+                        >
+                          Receipt
+                        </button>
 
                         {canDeletePayments && (
                           <button
@@ -1483,6 +2102,312 @@ function ParticipantLedgerPanel({
                         )}
                       </div>
                     </div>
+                    {(() => {
+                      const allocations = paymentAllocations[payment.id] ?? [];
+
+                      const allocatedAmount = allocations.reduce(
+                        (total, allocation) =>
+                          total +
+                          (allocation.allocationType === "ALLOCATE"
+                            ? allocation.amount
+                            : -allocation.amount),
+                        0,
+                      );
+
+                      const creditAmount = Math.max(
+                        payment.amount - allocatedAmount,
+                        0,
+                      );
+
+                      const hasAllocations = allocations.length > 0;
+                      const isExpanded =
+                        expandedPaymentAllocations[payment.id] ?? false;
+                      const isLoading =
+                        loadingPaymentAllocations[payment.id] ?? false;
+
+                      return (
+                        <div className="mt-3">
+                          {hasAllocations && (
+                            <div className="mt-2 rounded-lg bg-zinc-50 px-3 py-2 dark:bg-zinc-950">
+                              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+                                <span className="text-zinc-600 dark:text-zinc-400">
+                                  Applied{" "}
+                                  <span className="font-semibold text-zinc-900 dark:text-zinc-100">
+                                    {formatCurrency(allocatedAmount)}
+                                  </span>
+                                </span>
+
+                                {creditAmount > 0 ? (
+                                  <span className="text-zinc-600 dark:text-zinc-400">
+                                    Credit{" "}
+                                    <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                                      {formatCurrency(creditAmount)}
+                                    </span>
+                                  </span>
+                                ) : (
+                                  <span className="font-medium text-emerald-600 dark:text-emerald-400">
+                                    Fully applied
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              void togglePaymentAllocations(payment.id)
+                            }
+                            className="mt-2 text-xs font-medium text-zinc-600 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white"
+                          >
+                            {isLoading
+                              ? "Loading allocation details..."
+                              : isExpanded
+                                ? "Hide allocation details ▲"
+                                : "View allocation details ▼"}
+                          </button>
+
+                          {isExpanded && (
+                            <div className="mt-3 rounded-lg border border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950">
+                              {allocations.length === 0 ? (
+                                <p className="px-3 py-3 text-xs text-zinc-500">
+                                  No allocation history for this payment.
+                                </p>
+                              ) : (
+                                <div className="divide-y divide-zinc-200 dark:divide-zinc-800">
+                                  {allocations.map((allocation) => {
+                                    const isRelease =
+                                      allocation.allocationType === "RELEASE";
+
+                                    return (
+                                      <div
+                                        key={allocation.id}
+                                        className="flex items-center justify-between gap-4 px-3 py-3"
+                                      >
+                                        <div className="min-w-0">
+                                          <p className="text-xs font-semibold">
+                                            {formatLabel(allocation.feeType)}
+                                          </p>
+
+                                          <p className="mt-1 text-[11px] text-zinc-500">
+                                            {formatDate(allocation.chargeDate)}
+                                            {" · "}
+                                            {isRelease
+                                              ? "Released"
+                                              : "Allocated"}
+                                          </p>
+                                        </div>
+
+                                        <p
+                                          className={`shrink-0 text-xs font-semibold ${
+                                            isRelease
+                                              ? "text-amber-600 dark:text-amber-400"
+                                              : "text-zinc-900 dark:text-zinc-100"
+                                          }`}
+                                        >
+                                          {isRelease ? "-" : "+"}
+                                          {formatCurrency(allocation.amount)}
+                                        </p>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+
+                              {hasAllocations && (
+                                <div className="border-t border-zinc-200 px-3 py-3 text-xs dark:border-zinc-800">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-zinc-500">
+                                      Current applied
+                                    </span>
+                                    <span className="font-semibold">
+                                      {formatCurrency(allocatedAmount)}
+                                    </span>
+                                  </div>
+
+                                  {creditAmount > 0 && (
+                                    <div className="mt-1 flex items-center justify-between">
+                                      <span className="text-zinc-500">
+                                        Remaining credit
+                                      </span>
+                                      <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                                        {formatCurrency(creditAmount)}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
+                    {canCorrectPayments && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          void togglePaymentCorrections(payment.id)
+                        }
+                        className="mt-3 text-xs font-medium text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+                      >
+                        {loadingPaymentCorrections[payment.id]
+                          ? "Loading correction history..."
+                          : isCorrectionHistoryExpanded
+                            ? "Hide correction history ▲"
+                            : corrections.length > 0
+                              ? `View correction history (${corrections.length}) ▼`
+                              : "View correction history ▼"}
+                      </button>
+                    )}
+                    {corrections.length > 0 && isCorrectionHistoryExpanded && (
+                      <div className="mt-3 rounded-lg border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-950">
+                        <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                          Correction history
+                        </p>
+
+                        <div className="space-y-3">
+                          {corrections.map((correction) => (
+                            <div
+                              key={correction.id}
+                              className="border-b border-zinc-200 pb-3 last:border-b-0 last:pb-0 dark:border-zinc-800"
+                            >
+                              <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+                                <div>
+                                  <p className="text-sm font-medium">
+                                    {formatCurrency(correction.previousAmount)}{" "}
+                                    → {formatCurrency(correction.newAmount)}
+                                  </p>
+
+                                  <p className="text-xs text-zinc-500">
+                                    {new Date(
+                                      correction.createdAt,
+                                    ).toLocaleString()}
+                                  </p>
+                                </div>
+
+                                <span className="text-xs font-medium text-zinc-500">
+                                  {correction.newAmount === 0 &&
+                                  correction.previousAmount > 0
+                                    ? "Reversal"
+                                    : "Correction"}
+                                </span>
+                              </div>
+
+                              {(correction.previousPaymentMethod !==
+                                correction.newPaymentMethod ||
+                                correction.previousPaymentDate !==
+                                  correction.newPaymentDate ||
+                                correction.previousReference !==
+                                  correction.newReference) && (
+                                <div className="mt-2 space-y-1 text-xs text-zinc-500">
+                                  {correction.previousPaymentMethod !==
+                                    correction.newPaymentMethod && (
+                                    <p>
+                                      Method:{" "}
+                                      {formatLabel(
+                                        correction.previousPaymentMethod,
+                                      )}{" "}
+                                      →{" "}
+                                      {formatLabel(correction.newPaymentMethod)}
+                                    </p>
+                                  )}
+
+                                  {correction.previousPaymentDate !==
+                                    correction.newPaymentDate && (
+                                    <p>
+                                      Date:{" "}
+                                      {formatDate(
+                                        correction.previousPaymentDate,
+                                      )}{" "}
+                                      → {formatDate(correction.newPaymentDate)}
+                                    </p>
+                                  )}
+
+                                  {correction.previousReference !==
+                                    correction.newReference && (
+                                    <p>
+                                      Reference:{" "}
+                                      {correction.previousReference || "—"} →{" "}
+                                      {correction.newReference || "—"}
+                                    </p>
+                                  )}
+                                </div>
+                              )}
+
+                              <p className="mt-2 text-xs text-zinc-600 dark:text-zinc-400">
+                                <span className="font-medium">Reason:</span>{" "}
+                                {correction.reason}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Reversal form */}
+                    {canCorrectPayments &&
+                      reversingPaymentId === payment.id && (
+                        <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50/60 p-4 dark:border-amber-800 dark:bg-amber-950/20">
+                          <p className="font-semibold text-amber-800 dark:text-amber-300">
+                            Reverse Payment
+                          </p>
+
+                          <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">
+                            This will set the payment amount to zero, release
+                            its allocations, and rerun FIFO allocation. This
+                            action cannot be undone normally.
+                          </p>
+
+                          <div className="mt-3">
+                            <label className="mb-1 block text-xs font-medium">
+                              Reversal Reason
+                            </label>
+
+                            <textarea
+                              value={reversalReason}
+                              onChange={(event) =>
+                                setReversalReason(event.target.value)
+                              }
+                              rows={3}
+                              placeholder="Why is this payment being reversed?"
+                              className="w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                              disabled={submittingReversal}
+                            />
+                          </div>
+
+                          {reversalError && (
+                            <p className="mt-2 text-xs text-red-600">
+                              {reversalError}
+                            </p>
+                          )}
+
+                          <div className="mt-3 flex gap-2">
+                            <button
+                              type="button"
+                              className="rounded-md bg-amber-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-700 disabled:opacity-50"
+                              disabled={submittingReversal}
+                              onClick={() => void handleReversePayment(payment)}
+                            >
+                              {submittingReversal
+                                ? "Reversing..."
+                                : "Confirm Reversal"}
+                            </button>
+
+                            <button
+                              type="button"
+                              className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs font-medium hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+                              disabled={submittingReversal}
+                              onClick={() => {
+                                setReversingPaymentId(null);
+                                setReversalReason("");
+                                setReversalError(null);
+                              }}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      )}
 
                     {/* Correction form */}
                     {canCorrectPayments && isCorrecting && (
@@ -1619,107 +2544,6 @@ function ParticipantLedgerPanel({
                         </div>
                       </div>
                     )}
-
-                    {/* Correction history */}
-                    {canCorrectPayments && (
-                      <div className="mt-3">
-                        <button
-                          type="button"
-                          onClick={async () => {
-                            try {
-                              const loadedCorrections =
-                                await getPaymentCorrections(payment.id);
-
-                              setPaymentCorrections((current) => ({
-                                ...current,
-                                [payment.id]: loadedCorrections,
-                              }));
-                            } catch (err) {
-                              console.error(err);
-                              setCorrectionError(
-                                "Failed to load correction history",
-                              );
-                            }
-                          }}
-                          className="text-xs text-zinc-500 hover:text-zinc-950 dark:hover:text-white"
-                        >
-                          {corrections.length > 0
-                            ? "Refresh Correction History"
-                            : "View Correction History"}
-                        </button>
-
-                        {corrections.length > 0 && (
-                          <div className="mt-3 rounded-lg border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-950">
-                            <p className="text-xs font-semibold">
-                              Correction History
-                            </p>
-
-                            <div className="mt-3 space-y-3">
-                              {corrections.map((correction) => (
-                                <div
-                                  key={correction.id}
-                                  className="border-t border-zinc-200 pt-3 first:border-t-0 first:pt-0 dark:border-zinc-800"
-                                >
-                                  <div className="flex flex-col gap-1 text-xs">
-                                    <p className="font-medium text-zinc-700 dark:text-zinc-300">
-                                      {formatCurrency(
-                                        correction.previousAmount,
-                                      )}{" "}
-                                      → {formatCurrency(correction.newAmount)}
-                                    </p>
-
-                                    {correction.previousPaymentMethod !==
-                                      correction.newPaymentMethod && (
-                                      <p className="text-zinc-500">
-                                        Method:{" "}
-                                        {formatLabel(
-                                          correction.previousPaymentMethod,
-                                        )}{" "}
-                                        →{" "}
-                                        {formatLabel(
-                                          correction.newPaymentMethod,
-                                        )}
-                                      </p>
-                                    )}
-
-                                    {correction.previousPaymentDate !==
-                                      correction.newPaymentDate && (
-                                      <p className="text-zinc-500">
-                                        Date:{" "}
-                                        {formatDate(
-                                          correction.previousPaymentDate,
-                                        )}{" "}
-                                        →{" "}
-                                        {formatDate(correction.newPaymentDate)}
-                                      </p>
-                                    )}
-
-                                    {correction.previousReference !==
-                                      correction.newReference && (
-                                      <p className="text-zinc-500">
-                                        Reference:{" "}
-                                        {correction.previousReference || "None"}{" "}
-                                        → {correction.newReference || "None"}
-                                      </p>
-                                    )}
-
-                                    <p className="mt-1 text-zinc-500">
-                                      Reason: {correction.reason}
-                                    </p>
-
-                                    <p className="text-zinc-500">
-                                      {new Date(
-                                        correction.createdAt,
-                                      ).toLocaleString()}
-                                    </p>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
                   </div>
                 );
               })
@@ -1727,6 +2551,21 @@ function ParticipantLedgerPanel({
           </div>
         )}
       </div>
+      {renderPaymentReceipt && receiptPayment && (
+        <div className="fixed left-[-10000px] top-0" aria-hidden="true">
+          <div ref={paymentReceiptRef}>
+            <PaymentReceipt
+              participant={participant}
+              payment={receiptPayment}
+              allocations={receiptAllocations}
+              corrections={receiptCorrections}
+              organizationName={organization?.name ?? "RallyLedger"}
+              organizationLogo={organizationLogo}
+              rallyLedgerLogo="/branding/login-light-horizontal.png"
+            />
+          </div>
+        </div>
+      )}
       {renderStatement && (
         <div className="fixed left-[-10000px] top-0" aria-hidden="true">
           <div ref={statementRef}>

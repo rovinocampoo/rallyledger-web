@@ -24,3 +24,14 @@ export type PaymentCorrection = {
   correctedByAdminUserId: number;
   createdAt: string;
 };
+
+export type PaymentAllocation = {
+  id: number;
+  paymentId: number;
+  chargeId: number;
+  feeType: string;
+  chargeDate: string;
+  amount: number;
+  allocationType: "ALLOCATE" | "RELEASE";
+  createdAt: string;
+};
