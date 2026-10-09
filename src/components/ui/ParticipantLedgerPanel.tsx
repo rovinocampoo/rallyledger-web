@@ -174,52 +174,38 @@ type PaymentReceiptProps = {
   organizationLogo: string | null;
   rallyLedgerLogo: string;
 };
+
 type ReceiptAllocationLine = {
   chargeDate: string;
   feeType: string;
   amount: number;
+  allocationType: PaymentAllocation["allocationType"];
 };
 
 function groupAllocationsForReceipt(
   allocations: PaymentAllocation[],
 ): ReceiptAllocationLine[] {
-  const grouped = new Map<string, ReceiptAllocationLine>();
-
-  for (const allocation of allocations) {
-    const key = `${allocation.chargeDate}|${allocation.feeType}`;
-
-    const existing = grouped.get(key);
-
-    const signedAmount =
-      allocation.allocationType === "RELEASE"
-        ? -allocation.amount
-        : allocation.amount;
-
-    if (existing) {
-      existing.amount += signedAmount;
-      continue;
-    }
-
-    grouped.set(key, {
+  return allocations
+    .map((allocation) => ({
       chargeDate: allocation.chargeDate,
       feeType: allocation.feeType,
-      amount: signedAmount,
-    });
-  }
-
-  return Array.from(grouped.values())
-    .filter((line) => line.amount !== 0)
+      amount:
+        allocation.allocationType === "RELEASE"
+          ? -allocation.amount
+          : allocation.amount,
+      allocationType: allocation.allocationType,
+    }))
+    .filter((allocation) => allocation.amount !== 0)
     .sort((a, b) => {
       const dateCompare = a.chargeDate.localeCompare(b.chargeDate);
+      if (dateCompare !== 0) return dateCompare;
 
-      if (dateCompare !== 0) {
-        return dateCompare;
-      }
+      const feeCompare = a.feeType.localeCompare(b.feeType);
+      if (feeCompare !== 0) return feeCompare;
 
-      return a.feeType.localeCompare(b.feeType);
+      return a.allocationType.localeCompare(b.allocationType);
     });
 }
-
 function PaymentReceipt({
   participant,
   payment,
@@ -364,24 +350,54 @@ function PaymentReceipt({
           </div>
         ) : (
           <div className="mt-3 divide-y divide-zinc-200 rounded-lg border border-zinc-200">
-            {groupedAllocations.map((allocation) => (
+            {Object.entries(
+              groupedAllocations.reduce<
+                Record<string, Record<string, ReceiptAllocationLine[]>>
+              >((dates, allocation) => {
+                const dateKey = allocation.chargeDate;
+                const feeKey = allocation.feeType;
+
+                dates[dateKey] ??= {};
+                dates[dateKey][feeKey] ??= [];
+                dates[dateKey][feeKey].push(allocation);
+
+                return dates;
+              }, {}),
+            ).map(([date, feeGroups]) => (
               <div
-                key={`${allocation.chargeDate}-${allocation.feeType}`}
-                className="flex items-center justify-between gap-4 px-3 py-3"
+                key={date}
+                className="border-b border-zinc-100 px-3 py-3 last:border-b-0"
               >
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold">
-                    {formatLabel(allocation.feeType)}
-                  </p>
+                <p className="mb-3 text-sm font-bold">{formatDate(date)}</p>
 
-                  <p className="mt-0.5 text-xs text-zinc-500">
-                    {formatDate(allocation.chargeDate)}
-                  </p>
+                <div className="space-y-3 pl-3">
+                  {Object.entries(feeGroups).map(([feeType, allocations]) => (
+                    <div key={feeType}>
+                      <p className="mb-1 text-sm font-semibold uppercase tracking-wide text-zinc-900">
+                        {formatLabel(feeType)}
+                      </p>
+
+                      <div className="space-y-2 pl-3">
+                        {allocations.map((allocation, index) => (
+                          <div
+                            key={`${date}-${feeType}-${index}`}
+                            className="flex items-center justify-between gap-4"
+                          >
+                            <span className="text-sm text-zinc-600">
+                              {allocation.allocationType === "RELEASE"
+                                ? `Release # ${index + 1}`
+                                : `${formatLabel(feeType)} Fee # ${index + 1}`}
+                            </span>
+
+                            <span className="shrink-0 text-sm font-medium text-zinc-950">
+                              {formatCurrency(allocation.amount)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-
-                <p className="shrink-0 text-sm font-semibold text-zinc-950">
-                  {formatCurrency(allocation.amount)}
-                </p>
               </div>
             ))}
           </div>
@@ -1541,24 +1557,26 @@ function ParticipantLedgerPanel({
 
   const { startDate, endDate } = getStatementRange(statementPeriod);
 
-  function isBeforeStart(dateValue: string) {
-    if (!startDate) {
-      return false;
-    }
+  function toLocalDateKey(date: Date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
 
-    return new Date(dateValue) < startDate;
+  function isBeforeStart(dateValue: string) {
+    if (!startDate) return false;
+
+    return dateValue.slice(0, 10) < toLocalDateKey(startDate);
   }
 
   function isWithinStatementPeriod(dateValue: string) {
-    const date = new Date(dateValue);
+    const dateKey = dateValue.slice(0, 10);
+    const endKey = toLocalDateKey(endDate);
+    const startKey = startDate ? toLocalDateKey(startDate) : null;
 
-    if (!startDate) {
-      return date <= endDate;
-    }
-
-    return date >= startDate && date <= endDate;
+    return dateKey <= endKey && (!startKey || dateKey >= startKey);
   }
-
   const openingCharges = ledger.charges
     .filter((charge) => isBeforeStart(charge.chargeDate))
     .reduce((total, charge) => total + charge.amount, 0);
