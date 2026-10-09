@@ -116,7 +116,7 @@ function SalesPage({ admin }: SalesPageProps) {
     setParticipantId("");
     setCustomerName("");
     setQuantity("1");
-    setPaymentStatus("UNPAID");
+    setPaymentStatus(buyerType === "WALK_IN" ? "PAID" : "UNPAID");
     setPaymentMethod("CASH");
     setReference("");
     setSaleDate(getToday());
@@ -182,10 +182,14 @@ function SalesPage({ admin }: SalesPageProps) {
             : null,
         productId: selectedProduct.id,
         quantity: parsedQuantity,
-        paymentStatus,
-        paymentMethod: paymentStatus === "PAID" ? paymentMethod : null,
+        paymentStatus: buyerType === "WALK_IN" ? "PAID" : paymentStatus,
+        paymentMethod:
+          buyerType === "WALK_IN" || paymentStatus === "PAID"
+            ? paymentMethod
+            : null,
         reference:
-          paymentStatus === "PAID" && reference.trim()
+          (buyerType === "WALK_IN" || paymentStatus === "PAID") &&
+          reference.trim()
             ? reference.trim()
             : null,
         saleDate,
@@ -275,6 +279,7 @@ function SalesPage({ admin }: SalesPageProps) {
                   onClick={() => {
                     setBuyerType("PARTICIPANT");
                     setCustomerName("");
+                    setPaymentStatus("UNPAID");
                   }}
                   className={
                     buyerType === "PARTICIPANT"
@@ -290,6 +295,7 @@ function SalesPage({ admin }: SalesPageProps) {
                   onClick={() => {
                     setBuyerType("WALK_IN");
                     setParticipantId("");
+                    setPaymentStatus("PAID");
                   }}
                   className={
                     buyerType === "WALK_IN"
@@ -376,38 +382,41 @@ function SalesPage({ admin }: SalesPageProps) {
                 </span>
               </div>
             </div>
+            {buyerType === "PARTICIPANT" && (
+              <>
+                <div>
+                  <span className="text-sm text-zinc-600 dark:text-zinc-400">
+                    Payment
+                  </span>
 
-            <div>
-              <span className="text-sm text-zinc-600 dark:text-zinc-400">
-                Payment
-              </span>
+                  <div className="mt-2 grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setPaymentStatus("UNPAID")}
+                      className={
+                        paymentStatus === "UNPAID"
+                          ? "primary-action rounded-lg px-3 py-2 text-sm font-medium"
+                          : "secondary-action rounded-lg px-3 py-2 text-sm font-medium"
+                      }
+                    >
+                      Unpaid
+                    </button>
 
-              <div className="mt-2 grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setPaymentStatus("UNPAID")}
-                  className={
-                    paymentStatus === "UNPAID"
-                      ? "primary-action rounded-lg px-3 py-2 text-sm font-medium"
-                      : "secondary-action rounded-lg px-3 py-2 text-sm font-medium"
-                  }
-                >
-                  Unpaid
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setPaymentStatus("PAID")}
-                  className={
-                    paymentStatus === "PAID"
-                      ? "primary-action rounded-lg px-3 py-2 text-sm font-medium"
-                      : "secondary-action rounded-lg px-3 py-2 text-sm font-medium"
-                  }
-                >
-                  Paid
-                </button>
-              </div>
-            </div>
+                    <button
+                      type="button"
+                      onClick={() => setPaymentStatus("PAID")}
+                      className={
+                        paymentStatus === "PAID"
+                          ? "primary-action rounded-lg px-3 py-2 text-sm font-medium"
+                          : "secondary-action rounded-lg px-3 py-2 text-sm font-medium"
+                      }
+                    >
+                      Paid
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
 
             {paymentStatus === "PAID" && (
               <>
@@ -533,7 +542,7 @@ function SalesPage({ admin }: SalesPageProps) {
                           {sale.paymentStatus}
                         </span>
 
-                        {canDeleteSales && (
+                        {canDeleteSales && sale.participantId == null && (
                           <button
                             type="button"
                             onClick={() => handleDeleteSale(sale)}

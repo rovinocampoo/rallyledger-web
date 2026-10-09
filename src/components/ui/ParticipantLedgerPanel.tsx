@@ -173,6 +173,8 @@ type PaymentReceiptProps = {
   organizationName: string;
   organizationLogo: string | null;
   rallyLedgerLogo: string;
+  charges: Charge[];
+  products: Product[];
 };
 
 type ReceiptAllocationLine = {
@@ -184,28 +186,39 @@ type ReceiptAllocationLine = {
 
 function groupAllocationsForReceipt(
   allocations: PaymentAllocation[],
+  charges: Charge[],
+  products: Product[],
 ): ReceiptAllocationLine[] {
   return allocations
-    .map((allocation) => ({
-      chargeDate: allocation.chargeDate,
-      feeType: allocation.feeType,
-      amount:
-        allocation.allocationType === "RELEASE"
-          ? -allocation.amount
-          : allocation.amount,
-      allocationType: allocation.allocationType,
-    }))
-    .filter((allocation) => allocation.amount !== 0)
-    .sort((a, b) => {
-      const dateCompare = a.chargeDate.localeCompare(b.chargeDate);
-      if (dateCompare !== 0) return dateCompare;
+    .map((allocation) => {
+      const charge = charges.find((item) => item.id === allocation.chargeId);
 
-      const feeCompare = a.feeType.localeCompare(b.feeType);
-      if (feeCompare !== 0) return feeCompare;
+      const feeType =
+        charge != null
+          ? getChargeLabel(charge, products)
+          : formatLabel(allocation.feeType);
+
+      return {
+        chargeDate: allocation.chargeDate,
+        feeType,
+        amount:
+          allocation.allocationType === "ALLOCATE"
+            ? allocation.amount
+            : -allocation.amount,
+        allocationType: allocation.allocationType,
+      };
+    })
+    .sort((a, b) => {
+      const dateComparison = a.chargeDate.localeCompare(b.chargeDate);
+      if (dateComparison !== 0) return dateComparison;
+
+      const typeComparison = a.feeType.localeCompare(b.feeType);
+      if (typeComparison !== 0) return typeComparison;
 
       return a.allocationType.localeCompare(b.allocationType);
     });
 }
+
 function PaymentReceipt({
   participant,
   payment,
@@ -214,6 +227,8 @@ function PaymentReceipt({
   organizationName,
   organizationLogo,
   rallyLedgerLogo,
+  charges,
+  products,
 }: PaymentReceiptProps) {
   const allocatedAmount = allocations.reduce(
     (total, allocation) =>
@@ -223,7 +238,11 @@ function PaymentReceipt({
         : -allocation.amount),
     0,
   );
-  const groupedAllocations = groupAllocationsForReceipt(allocations);
+  const groupedAllocations = groupAllocationsForReceipt(
+    allocations,
+    charges,
+    products,
+  );
 
   const creditAmount = Math.max(payment.amount - allocatedAmount, 0);
 
@@ -341,11 +360,11 @@ function PaymentReceipt({
         {allocations.length === 0 ? (
           <div className="mt-3 rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3">
             <p className="text-sm font-medium text-zinc-700">
-              Detailed allocation tracking was not available for this payment.
+              No allocation details available.
             </p>
             <p className="mt-1 text-xs leading-5 text-zinc-500">
-              This payment was recorded before detailed payment allocation
-              tracking was introduced.
+              This payment may be available as credit or may not have detailed
+              allocation records.
             </p>
           </div>
         ) : (
@@ -374,7 +393,7 @@ function PaymentReceipt({
                   {Object.entries(feeGroups).map(([feeType, allocations]) => (
                     <div key={feeType}>
                       <p className="mb-1 text-sm font-semibold uppercase tracking-wide text-zinc-900">
-                        {formatLabel(feeType)}
+                        {feeType}
                       </p>
 
                       <div className="space-y-2 pl-3">
@@ -386,7 +405,7 @@ function PaymentReceipt({
                             <span className="text-sm text-zinc-600">
                               {allocation.allocationType === "RELEASE"
                                 ? `Release # ${index + 1}`
-                                : `${formatLabel(feeType)} Fee # ${index + 1}`}
+                                : `${feeType} Fee # ${index + 1}`}
                             </span>
 
                             <span className="shrink-0 text-sm font-medium text-zinc-950">
@@ -1591,9 +1610,19 @@ function ParticipantLedgerPanel({
     isWithinStatementPeriod(charge.chargeDate),
   );
 
-  const statementPayments = ledger.payments.filter((payment) =>
-    isWithinStatementPeriod(payment.paymentDate),
-  );
+  const statementPayments = ledger.payments
+    .filter((payment) => isWithinStatementPeriod(payment.paymentDate))
+    .sort((a, b) => {
+      const dateComparison = b.paymentDate
+        .slice(0, 10)
+        .localeCompare(a.paymentDate.slice(0, 10));
+
+      if (dateComparison !== 0) {
+        return dateComparison;
+      }
+
+      return b.id - a.id;
+    });
 
   const statementChargeTotal = statementCharges.reduce(
     (total, charge) => total + charge.amount,
@@ -2221,7 +2250,23 @@ function ParticipantLedgerPanel({
                                       >
                                         <div className="min-w-0">
                                           <p className="text-xs font-semibold">
-                                            {formatLabel(allocation.feeType)}
+                                            {(() => {
+                                              const charge =
+                                                ledger?.charges.find(
+                                                  (item) =>
+                                                    item.id ===
+                                                    allocation.chargeId,
+                                                );
+
+                                              return charge
+                                                ? getChargeLabel(
+                                                    charge,
+                                                    products,
+                                                  )
+                                                : formatLabel(
+                                                    allocation.feeType,
+                                                  );
+                                            })()}
                                           </p>
 
                                           <p className="mt-1 text-[11px] text-zinc-500">
@@ -2597,6 +2642,8 @@ function ParticipantLedgerPanel({
               organizationName={organization?.name ?? "RallyLedger"}
               organizationLogo={organizationLogo}
               rallyLedgerLogo="/branding/login-light-horizontal.png"
+              charges={ledger?.charges ?? []}
+              products={products}
             />
           </div>
         </div>
