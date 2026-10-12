@@ -13,6 +13,7 @@ import { getParticipants } from "../../api/participants";
 import { formatDate, formatLabel } from "../../utils/format";
 import type { Organization } from "../../types/organization";
 import OrganizationBrand from "../ui/OrganizationBrand";
+import RallyLedgerLoading from "../RallyLedgerLoadingScreen";
 
 type SessionResultsPanelProps = {
   session: Session;
@@ -333,9 +334,15 @@ function SessionResultsPanel({
     }
   }
 
-  if (loading) {
-    return <p>Loading session results...</p>;
-  }
+if (loading) {
+  return (
+    <RallyLedgerLoading
+      heading="Getting your club ready"
+      message="Loading session results..."
+      portalLabel="RallyLedger Admin Portal"
+    />
+  );
+}
   if (error) {
     return (
       <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">

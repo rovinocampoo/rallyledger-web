@@ -24,7 +24,7 @@ import type { PairRecord, PlayerRecord } from "../types/record";
 import type { ParticipantLedger } from "../types/ledger";
 import type { Session } from "../types/session";
 import { formatLabel, formatMatchTimeRange } from "../utils/format";
-import PlayerPortalLoading from "../components/PlayerPortalLoading";
+import RallyLedgerLoading from "../components/RallyLedgerLoadingScreen";
 
 type PortalSection =
   "overview" | "sessions" | "records" | "pairs" | "ledger" | "profile";
@@ -299,7 +299,7 @@ export default function PlayerPortalPage({
       );
     }
 
-    return <PlayerPortalLoading message={loadingStep} />;
+    return <RallyLedgerLoading message={loadingStep} />;
   }
 
   const selectedOrganization = organizations.find(

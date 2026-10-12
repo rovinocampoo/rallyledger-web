@@ -7,6 +7,7 @@ import {
 import type { Product } from "../types/product";
 import ProductCard from "../components/ui/ProductCard";
 import ProductForm from "../components/ui/ProductForm";
+import RallyLedgerLoading from "../components/RallyLedgerLoadingScreen";
 
 type ProductsPageProps = {
   admin: AdminUser;
@@ -105,8 +106,14 @@ function ProductsPage({ admin }: ProductsPageProps) {
     }
   }
 
-  if (loading) {
-    return <div className="p-4 text-sm text-zinc-500">Loading products...</div>;
+if (loading) {
+    return (
+      <RallyLedgerLoading
+        heading="Getting your products ready"
+        message="Loading..."
+        portalLabel="RallyLedger Admin Portal"
+      />
+    );
   }
 
   if (error) {

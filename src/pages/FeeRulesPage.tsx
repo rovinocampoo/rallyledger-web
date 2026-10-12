@@ -7,6 +7,7 @@ import FeeRuleCard from "../components/ui/FeeRuleCard";
 import { getParticipantCategories } from "../api/participantCategories";
 import type { ParticipantCategory } from "../types/participantCategory";
 import type { AdminUser } from "../api/auth";
+import RallyLedgerLoading from "../components/RallyLedgerLoadingScreen";
 
 const FEE_TYPES = [
   "BALL",
@@ -170,8 +171,14 @@ function FeeRulesPage({ admin }: FeeRulesPageProps) {
     setError(null);
   }
 
-  if (loading) {
-    return <p>Loading fee rules...</p>;
+if (loading) {
+    return (
+      <RallyLedgerLoading
+        heading="Getting your fees ready"
+        message="Loading rules..."
+        portalLabel="RallyLedger Admin Portal"
+      />
+    );
   }
 
   return (

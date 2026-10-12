@@ -8,6 +8,7 @@ import type { Product } from "../types/product";
 import type { Sale } from "../types/sale";
 import ParticipantPicker from "../components/ui/ParticipantPicker";
 import { formatCurrency } from "../utils/format";
+import RallyLedgerLoading from "../components/RallyLedgerLoadingScreen";
 
 type SalesPageProps = {
   admin: AdminUser;
@@ -228,9 +229,15 @@ function SalesPage({ admin }: SalesPageProps) {
     }
   }
 
-  if (loading) {
-    return <div className="p-4 text-sm text-zinc-500">Loading sales...</div>;
-  }
+ if (loading) {
+   return (
+     <RallyLedgerLoading
+       heading="Getting your sales ready"
+       message="Loading..."
+       portalLabel="RallyLedger Admin Portal"
+     />
+   );
+ }
 
   return (
     <div className="p-4">

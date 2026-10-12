@@ -1,10 +1,14 @@
-type PlayerPortalLoadingProps = {
+type RallyLedgerLoadingProps = {
   message?: string;
+  heading?: string;
+  portalLabel?: string;
 };
 
-export default function PlayerPortalLoading({
+export default function RallyLedgerLoading({
   message = "Getting your court ready...",
-}: PlayerPortalLoadingProps) {
+  heading = "Getting your court ready",
+  portalLabel = "RallyLedger Player Portal",
+}: RallyLedgerLoadingProps) {
   return (
     <main className="min-h-screen bg-[#f1eee5] px-5 py-6 text-[#103f25] dark:bg-zinc-950 dark:text-white sm:px-8">
       <div className="mx-auto flex min-h-[80vh] max-w-6xl items-center justify-center">
@@ -26,8 +30,8 @@ export default function PlayerPortalLoading({
           </div>
 
           {/* Heading */}
-          <h1 className="text-2xl font-black tracking-tight sm:text-3xl">
-            Getting your court ready
+          <h1 className="mx-auto max-w-full text-pretty break-words text-2xl font-black tracking-tight sm:text-3xl">
+            {heading}
           </h1>
 
           {/* Current loading step */}
@@ -42,7 +46,7 @@ export default function PlayerPortalLoading({
 
           {/* Brand */}
           <p className="mt-6 text-[10px] font-black uppercase tracking-[0.22em] text-[#103f25]/35 dark:text-white/30">
-            RallyLedger Player Portal
+            {portalLabel}
           </p>
         </div>
       </div>

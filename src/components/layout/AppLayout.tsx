@@ -24,6 +24,7 @@ import {
   WalletCards,
   type LucideIcon,
   FileSpreadsheet,
+  GitBranch,
 } from "lucide-react";
 import type { AdminUser } from "../../api/auth";
 import type {
@@ -83,6 +84,11 @@ function AppLayout({
       to: "/sessions",
       label: "Sessions",
       icon: CalendarClock,
+    },
+    {
+      to: "/tournaments",
+      label: "Tournaments",
+      icon: GitBranch,
     },
     {
       to: "/records",

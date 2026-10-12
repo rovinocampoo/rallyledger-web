@@ -22,6 +22,7 @@ import PlayerRecordsChart from "../components/ui/PlayerRecordsChart";
 import PaymentMethodChart from "../components/ui/PaymentMethodChart";
 import SessionTypeChart from "../components/ui/SessionTypeChart";
 import MatchTrendChart from "../components/ui/MatchTrendChart";
+import RallyLedgerLoading from "../components/RallyLedgerLoadingScreen";
 
 type DateFilter = "ALL_TIME" | "TODAY" | "THIS_MONTH" | "CUSTOM";
 
@@ -187,7 +188,13 @@ function DashboardPage() {
   }, [appliedDateRange]);
 
   if (loading) {
-    return <p>Loading dashboard...</p>;
+    return (
+      <RallyLedgerLoading
+        heading={`Getting ${organization?.name || "your club"} ready`}
+        message="Loading dashboard..."
+        portalLabel="RallyLedger Admin Portal"
+      />
+    );
   }
 
   if (error) {

@@ -4,6 +4,7 @@ import { deleteCourt, getCourts } from "../api/courts";
 import type { Court } from "../types/court";
 import CourtCard from "../components/ui/CourtCard";
 import CourtForm from "../components/ui/CourtForm";
+import RallyLedgerLoading from "../components/RallyLedgerLoadingScreen";
 
 type CourtsPageProps = {
   admin: AdminUser;
@@ -107,8 +108,14 @@ function CourtsPage({ admin }: CourtsPageProps) {
     }
   }
 
-  if (loading) {
-    return <p>Loading courts...</p>;
+if (loading) {
+    return (
+      <RallyLedgerLoading
+        heading="Getting your courts ready"
+        message="Loading..."
+        portalLabel="RallyLedger Admin Portal"
+      />
+    );
   }
 
   if (error) {
