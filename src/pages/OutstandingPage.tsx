@@ -16,6 +16,7 @@ import type { Organization } from "../types/organization";
 
 import { getProducts } from "../api/products";
 import type { Product } from "../types/product";
+import RallyLedgerLoading from "../components/RallyLedgerLoadingScreen";
 
 type OutstandingPageProps = {
   admin: AdminUser;
@@ -201,9 +202,15 @@ function OutstandingPage({
     }
   }
 
-  if (loading) {
-    return <p>Loading outstanding balances...</p>;
-  }
+ if (loading) {
+     return (
+       <RallyLedgerLoading
+         heading="Getting your balances ready"
+         message="Loading..."
+         portalLabel="RallyLedger Admin Portal"
+       />
+     );
+   }
 
   if (error) {
     return <p className="text-red-400">{error}</p>;

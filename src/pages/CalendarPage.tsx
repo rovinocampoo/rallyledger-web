@@ -17,6 +17,7 @@ import type { Session } from "../types/session";
 import type { Match } from "../types/match";
 import { getParticipants } from "../api/participants";
 import { getMatchParticipants } from "../api/matchParticipants";
+import RallyLedgerLoading from "../components/RallyLedgerLoadingScreen";
 
 type CalendarPageProps = {
   onSessionSelected: (session: Session) => void;
@@ -309,13 +310,13 @@ function CalendarPage({
     0,
   );
 
-  if (loading) {
+if (loading) {
     return (
-      <div className="mx-auto max-w-7xl">
-        <div className="rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
-          <p className="text-sm text-zinc-500">Loading calendar...</p>
-        </div>
-      </div>
+      <RallyLedgerLoading
+        heading="Getting your calendar ready"
+        message="Loading..."
+        portalLabel="RallyLedger Admin Portal"
+      />
     );
   }
 

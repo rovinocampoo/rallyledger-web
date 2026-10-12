@@ -18,6 +18,7 @@ import type { AdminUser } from "../api/auth";
 import type { Organization } from "../types/organization";
 import { getProducts } from "../api/products";
 import type { Product } from "../types/product";
+import RallyLedgerLoading from "../components/RallyLedgerLoadingScreen";
 
 type SortKey = "type" | "name" | "nickname";
 type SortDirection = "asc" | "desc";
@@ -206,8 +207,14 @@ function ParticipantsPage({
     setCategories(data);
   }
 
-  if (loading) {
-    return <p>Loading participants...</p>;
+if (loading) {
+    return (
+      <RallyLedgerLoading
+        heading="Getting your players ready"
+        message="Loading..."
+        portalLabel="RallyLedger Admin Portal"
+      />
+    );
   }
 
   if (error) {

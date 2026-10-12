@@ -11,6 +11,7 @@ import type {
   PlayerRecord,
   RecordMatchHistory,
 } from "../types/record";
+import RallyLedgerLoading from "../components/RallyLedgerLoadingScreen";
 function formatRecord(wins: number, losses: number, draws: number) {
   return (
     <span className="inline-flex items-center">
@@ -593,7 +594,13 @@ function RecordsPage() {
   }
 
   if (loading) {
-    return <p>Loading records...</p>;
+    return (
+      <RallyLedgerLoading
+        heading="Getting your records ready"
+        message="Loading..."
+        portalLabel="RallyLedger Admin Portal"
+      />
+    );
   }
 
   if (error) {

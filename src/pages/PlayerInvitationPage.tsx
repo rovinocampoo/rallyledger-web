@@ -6,6 +6,7 @@ import {
   type PlayerInvitation,
 } from "../api/playerauth";
 import { neonAuth } from "../auth/neon";
+import RallyLedgerLoading from "../components/RallyLedgerLoadingScreen";
 
 export default function PlayerInvitationPage() {
   const { token } = useParams<{ token: string }>();
@@ -74,11 +75,13 @@ export default function PlayerInvitationPage() {
     );
   }
 
-  if (loading) {
+if (loading) {
     return (
-      <div className="mx-auto max-w-lg p-6 text-center">
-        <p className="text-sm text-zinc-500">Loading invitation...</p>
-      </div>
+      <RallyLedgerLoading
+        heading="Getting your invitation ready"
+        message="Loading..."
+        portalLabel="RallyLedger Admin Portal"
+      />
     );
   }
 

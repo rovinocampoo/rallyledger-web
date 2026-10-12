@@ -9,6 +9,7 @@ import {
 } from "../api/adminAccess";
 import { ApiError } from "../api/client";
 import type { AdminUser } from "../api/auth";
+import RallyLedgerLoading from "../components/RallyLedgerLoadingScreen";
 
 type AdminAccessPageProps = {
   admin: AdminUser;
@@ -276,7 +277,11 @@ function AdminAccessPage({ admin }: AdminAccessPageProps) {
         </div>
 
         {loading ? (
-          <p className="p-5 text-sm text-zinc-500">Loading administrators...</p>
+          <RallyLedgerLoading
+            heading="Getting your admins ready"
+            message="Loading..."
+            portalLabel="RallyLedger Admin Portal"
+          />
         ) : access.length === 0 ? (
           <p className="p-5 text-sm text-zinc-500">No administrators found.</p>
         ) : (

@@ -29,6 +29,7 @@ import SessionChargeReviewModal, {
 } from "../components/ui/SessionChargeReviewModal";
 import { getProducts } from "../api/products";
 import type { Product } from "../types/product";
+import RallyLedgerLoading from "../components/RallyLedgerLoadingScreen";
 function sortSessions(items: Session[]) {
   return [...items].sort((a, b) => {
     if (a.sessionDate !== b.sessionDate) {
@@ -380,9 +381,15 @@ function SessionsPage({
     };
   }, [loading, sessions]);
 
-  if (loading) {
-    return <p>Loading sessions...</p>;
-  }
+if (loading) {
+  return (
+    <RallyLedgerLoading
+      heading="Getting your sessions ready"
+      message="Loading..."
+      portalLabel="RallyLedger Admin Portal"
+    />
+  );
+}
 
   if (error) {
     return <p>{error}</p>;

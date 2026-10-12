@@ -4,6 +4,7 @@ import type { FinancialReport } from "../types/report";
 import FinancialTrendChart from "../components/ui/FinancialTrendChart";
 import { formatCurrency, formatLabel } from "../utils/format";
 import { escapeCsvValue } from "../utils/csv";
+import RallyLedgerLoading from "../components/RallyLedgerLoadingScreen";
 
 type DateFilter = "ALL_TIME" | "TODAY" | "THIS_WEEK" | "THIS_MONTH" | "CUSTOM";
 
@@ -286,8 +287,14 @@ function FinancialReportPage() {
     URL.revokeObjectURL(url);
   }
 
-  if (loading) {
-    return <p>Loading financial report...</p>;
+if (loading) {
+    return (
+      <RallyLedgerLoading
+        heading="Getting your finances ready"
+        message="Loading reports..."
+        portalLabel="RallyLedger Admin Portal"
+      />
+    );
   }
 
   if (error) {

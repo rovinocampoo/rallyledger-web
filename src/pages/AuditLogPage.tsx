@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { formatCurrency, formatDate, formatLabel } from "../utils/format";
 import { getAuditLogs, type AuditLog } from "../api/audit";
+import RallyLedgerLoading from "../components/RallyLedgerLoadingScreen";
 
 function formatDateTime(value: string) {
   return new Intl.DateTimeFormat(undefined, {
@@ -327,7 +328,11 @@ function AuditLogPage() {
 
       <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
         {loading && logs.length === 0 ? (
-          <p className="p-5 text-sm text-zinc-500">Loading audit log...</p>
+          <RallyLedgerLoading
+            heading="Getting your audits ready"
+            message="Loading logs..."
+            portalLabel="RallyLedger Admin Portal"
+          />
         ) : logs.length === 0 ? (
           <p className="p-5 text-sm text-zinc-500">No audit events yet.</p>
         ) : (

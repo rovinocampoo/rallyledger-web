@@ -52,6 +52,8 @@ import FinancialReportPage from "./pages/FinancialReportPage";
 import PlayerLoginPage from "./pages/PlayerLoginPage";
 import PlayerPortalPage from "./pages/PlayerPortalPage";
 import PlayerInvitationPage from "./pages/PlayerInvitationPage";
+import TournamentsPage from "./pages/TournamentsPage";
+import TournamentDetailPage from "./pages/TournamentDetailPage";
 
 type Theme = "light" | "dark";
 
@@ -378,6 +380,14 @@ function App() {
           }
         />
         <Route path="/records" element={<RecordsPage />} />
+        <Route
+          path="/tournaments"
+          element={<TournamentsPage admin={admin} />}
+        />
+        <Route
+          path="/tournaments/:tournamentId"
+          element={<TournamentDetailPage admin={admin} />}
+        />
         <Route path="/courts" element={<CourtsPage admin={admin} />} />
         <Route path="/products" element={<ProductsPage admin={admin} />} />
         <Route path="/sales" element={<SalesPage admin={admin} />} />
