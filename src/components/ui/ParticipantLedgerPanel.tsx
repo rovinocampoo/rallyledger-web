@@ -307,7 +307,6 @@ function PaymentReceipt({
                 </div>
               </div>
             </div>
-
             {/* PARTICIPANT */}
             <div className="mt-5">
               <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">
@@ -322,15 +321,16 @@ function PaymentReceipt({
                 </p>
               )}
             </div>
-
-            {/* PAYMENT DETAILS */}
-            <div className="mt-5 rounded-lg bg-zinc-50 p-4">
-              {isReversed && (
-                <p className="mb-3 text-sm font-bold tracking-wide text-amber-700">
+            {/* REVERSED STATUS */}
+            {isReversed && (
+              <div className="mt-5 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
+                <p className="text-sm font-bold tracking-wide text-amber-700">
                   PAYMENT REVERSED
                 </p>
-              )}
-
+              </div>
+            )}
+            {/* PAYMENT DETAILS */}
+            <div className="mt-5 rounded-lg bg-zinc-50 p-4">
               <div className="grid grid-cols-2 gap-y-3 text-sm">
                 <span className="text-zinc-500">Payment Date</span>
                 <span className="text-right font-medium">
@@ -350,14 +350,22 @@ function PaymentReceipt({
                     </span>
                   </>
                 )}
+              </div>
+            </div>
+            {/* PAYMENT AMOUNT */}
+            <div className="mt-5">
+              <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+                Payment
+              </p>
 
-                <span className="text-zinc-500">Total Paid</span>
-                <span className="text-right text-lg font-bold">
+              <div className="mt-2 flex items-end justify-between">
+                <span className="text-sm text-zinc-600">Total Paid</span>
+
+                <span className="text-2xl font-bold">
                   {formatCurrency(payment.amount)}
                 </span>
               </div>
             </div>
-
             {/* ALLOCATION HISTORY */}
             <div className="mt-6">
               <div className="flex items-center justify-between gap-3">
@@ -382,35 +390,58 @@ function PaymentReceipt({
                 </div>
               ) : (
                 <div className="mt-3 divide-y divide-zinc-200 rounded-lg border border-zinc-200">
-                  {pageAllocations.map((allocation, index) => (
+                  {Object.entries(
+                    pageAllocations.reduce<
+                      Record<string, Record<string, ReceiptAllocationLine[]>>
+                    >((dates, allocation) => {
+                      const dateKey = allocation.chargeDate;
+                      const feeKey = allocation.feeType;
+                      dates[dateKey] ??= {};
+                      dates[dateKey][feeKey] ??= [];
+                      dates[dateKey][feeKey].push(allocation);
+                      return dates;
+                    }, {}),
+                  ).map(([date, feeGroups]) => (
                     <div
-                      key={`${allocation.chargeDate}-${allocation.feeType}-${pageIndex}-${index}`}
-                      className="px-3 py-3"
+                      key={`${pageIndex}-${date}`}
+                      className="border-b border-zinc-100 px-3 py-3 last:border-b-0"
                     >
-                      <p className="text-xs font-semibold text-zinc-500">
-                        {formatDate(allocation.chargeDate)}
+                      <p className="mb-3 text-sm font-bold">
+                        {formatDate(date)}
                       </p>
-                      <div className="mt-1 flex items-center justify-between gap-4">
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold text-zinc-900">
-                            {allocation.feeType}
-                          </p>
-                          <p className="text-xs text-zinc-500">
-                            {allocation.allocationType === "RELEASE"
-                              ? "Allocation released"
-                              : "Payment allocated"}
-                          </p>
-                        </div>
-                        <span className="shrink-0 text-sm font-semibold text-zinc-950">
-                          {formatCurrency(allocation.amount)}
-                        </span>
+                      <div className="space-y-3 pl-3">
+                        {Object.entries(feeGroups).map(
+                          ([feeType, feeAllocations]) => (
+                            <div key={feeType}>
+                              <p className="mb-1 text-sm font-semibold uppercase tracking-wide text-zinc-900">
+                                {feeType}{" "}
+                              </p>
+                              <div className="space-y-2 pl-3">
+                                {feeAllocations.map((allocation, index) => (
+                                  <div
+                                    key={`${date}-${feeType}-${pageIndex}-${index}`}
+                                    className="flex items-center justify-between gap-4"
+                                  >
+                                    <span className="text-sm text-zinc-600">
+                                      {allocation.allocationType === "RELEASE"
+                                        ? `Release # ${index + 1}`
+                                        : `${feeType} Fee # ${index + 1}`}{" "}
+                                    </span>
+                                    <span className="shrink-0 text-sm font-medium text-zinc-950">
+                                      {formatCurrency(allocation.amount)}{" "}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ),
+                        )}
                       </div>
                     </div>
                   ))}
                 </div>
               )}
             </div>
-
             {/* FINAL-PAGE SUMMARY AND HISTORY */}
             {isLastPage && (
               <>
@@ -479,14 +510,13 @@ function PaymentReceipt({
 
                 {/* FOOTER */}
                 <div className="mt-8 border-t border-zinc-200 pt-5">
-                  <div className="flex items-center justify-center gap-2">
+                  <div className="flex items-center justify-center">
                     <img
                       src={rallyLedgerLogo}
                       alt="RallyLedger"
                       className="h-4 w-auto object-contain"
                       crossOrigin="anonymous"
                     />
-                    <p className="text-[8px] text-zinc-400">by kurovin.</p>
                   </div>
                 </div>
               </>
@@ -826,9 +856,6 @@ function LedgerStatement({
               className="h-4 w-auto object-contain"
               crossOrigin="anonymous"
             />
-            <p className="mt-1 text-center text-[8px] text-zinc-400">
-              by kurovin.
-            </p>
           </div>
         </div>
       </div>
