@@ -180,6 +180,7 @@ type PaymentReceiptProps = {
 type ReceiptAllocationLine = {
   chargeDate: string;
   feeType: string;
+  itemName: string | null;
   amount: number;
   allocationType: PaymentAllocation["allocationType"];
 };
@@ -193,14 +194,15 @@ function groupAllocationsForReceipt(
     .map((allocation) => {
       const charge = charges.find((item) => item.id === allocation.chargeId);
 
-      const feeType =
-        charge != null
-          ? getChargeLabel(charge, products)
-          : formatLabel(allocation.feeType);
+      const feeType = charge?.feeType ?? allocation.feeType;
+
+      const itemName =
+        charge?.feeType === "PRODUCT" ? getChargeLabel(charge, products) : null;
 
       return {
         chargeDate: allocation.chargeDate,
         feeType,
+        itemName,
         amount:
           allocation.allocationType === "ALLOCATE"
             ? allocation.amount
@@ -214,6 +216,9 @@ function groupAllocationsForReceipt(
 
       const typeComparison = a.feeType.localeCompare(b.feeType);
       if (typeComparison !== 0) return typeComparison;
+
+      const nameComparison = (a.itemName ?? "").localeCompare(b.itemName ?? "");
+      if (nameComparison !== 0) return nameComparison;
 
       return a.allocationType.localeCompare(b.allocationType);
     });
@@ -425,7 +430,9 @@ function PaymentReceipt({
                                     <span className="text-sm text-zinc-600">
                                       {allocation.allocationType === "RELEASE"
                                         ? `Release # ${index + 1}`
-                                        : `${feeType} Fee # ${index + 1}`}{" "}
+                                        : feeType === "PRODUCT"
+                                          ? `${allocation.itemName ?? "Product"} #${index + 1}`
+                                          : `${feeType} Fee # ${index + 1}`}
                                     </span>
                                     <span className="shrink-0 text-sm font-medium text-zinc-950">
                                       {formatCurrency(allocation.amount)}{" "}
@@ -2028,46 +2035,88 @@ function ParticipantLedgerPanel({
 
         {showChargeDetails && (
           <div>
-            {/* DESKTOP HEADER */}
-            <div className="hidden grid-cols-[minmax(0,1fr)_160px_120px] gap-4 border-t border-zinc-200 bg-zinc-50 px-4 py-3 text-left text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-950 md:grid">
-              <span>Type</span>
-              <span>Date</span>
-              <span className="text-right">Amount</span>
-            </div>
+            {showChargeDetails && (
+              <div>
+                {statementCharges.length === 0 ? (
+                  <p className="border-t border-zinc-200 px-4 py-4 text-sm text-zinc-500 dark:border-zinc-800">
+                    No charges recorded.
+                  </p>
+                ) : (
+                  Object.entries(
+                    statementCharges.reduce<
+                      Record<string, typeof statementCharges>
+                    >((groups, charge) => {
+                      const date = charge.chargeDate;
+                      groups[date] ??= [];
+                      groups[date].push(charge);
+                      return groups;
+                    }, {}),
+                  )
+                    .sort(([dateA], [dateB]) => dateA.localeCompare(dateB))
+                    .map(([date, dateCharges]) => {
+                      const dateTotal = dateCharges.reduce(
+                        (total, charge) => total + charge.amount,
+                        0,
+                      );
 
-            {statementCharges.length === 0 ? (
-              <p className="border-t border-zinc-200 px-4 py-4 text-sm text-zinc-500 dark:border-zinc-800">
-                No charges recorded.
-              </p>
-            ) : (
-              statementCharges.map((charge) => (
-                <div
-                  key={charge.id}
-                  className="border-t border-zinc-200 bg-white px-4 py-3 text-left dark:border-zinc-800 dark:bg-zinc-900"
-                >
-                  <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 md:grid-cols-[minmax(0,1fr)_160px_120px]">
-                    <div className="min-w-0">
-                      <p className="truncate font-medium">
-                        {getChargeLabel(charge, products)}
-                      </p>
+                      return (
+                        <details
+                          key={date}
+                          className="group border-t border-zinc-200 dark:border-zinc-800"
+                        >
+                          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 bg-white px-4 py-3 text-left hover:bg-zinc-50 dark:bg-zinc-900 dark:hover:bg-zinc-800 [&::-webkit-details-marker]:hidden">
+                            <div>
+                              <p className="text-sm font-semibold">
+                                {formatDate(date)}
+                              </p>
+                              <p className="mt-1 text-xs text-zinc-500">
+                                {dateCharges.length}{" "}
+                                {dateCharges.length === 1
+                                  ? "charge"
+                                  : "charges"}
+                              </p>
+                            </div>
 
-                      <p className="mt-1 text-xs text-zinc-500 md:hidden">
-                        {formatDate(charge.chargeDate)}
-                      </p>
-                    </div>
+                            <div className="flex shrink-0 items-center gap-3">
+                              <span className="text-sm font-semibold">
+                                {formatCurrency(dateTotal)}
+                              </span>
+                              <span className="text-xs text-zinc-500 group-open:hidden">
+                                ▼
+                              </span>
+                              <span className="hidden text-xs text-zinc-500 group-open:inline">
+                                ▲
+                              </span>
+                            </div>
+                          </summary>
 
-                    <p className="hidden text-sm text-zinc-500 md:block">
-                      {formatDate(charge.chargeDate)}
-                    </p>
+                          <div className="border-t border-zinc-200 dark:border-zinc-800">
+                            {dateCharges.map((charge) => (
+                              <div
+                                key={charge.id}
+                                className="border-b border-zinc-100 bg-white px-4 py-3 last:border-b-0 dark:border-zinc-800 dark:bg-zinc-950"
+                              >
+                                <div className="flex items-center justify-between gap-4">
+                                  <div className="min-w-0">
+                                    <p className="truncate text-sm font-medium">
+                                      {getChargeLabel(charge, products)}
+                                    </p>
+                                  </div>
 
-                    <p className="text-right font-semibold">
-                      {formatCurrency(charge.amount)}
-                    </p>
-                  </div>
+                                  <p className="shrink-0 text-sm font-semibold">
+                                    {formatCurrency(charge.amount)}
+                                  </p>
+                                </div>
 
-                  <ChargeAdjustmentHistory chargeId={charge.id} />
-                </div>
-              ))
+                                <ChargeAdjustmentHistory chargeId={charge.id} />
+                              </div>
+                            ))}
+                          </div>
+                        </details>
+                      );
+                    })
+                )}
+              </div>
             )}
           </div>
         )}
@@ -2214,6 +2263,36 @@ function ParticipantLedgerPanel({
                       );
 
                       const hasAllocations = allocations.length > 0;
+                      const allocationGroups = Object.entries(
+                        allocations.reduce<
+                          Record<
+                            string,
+                            {
+                              allocation: PaymentAllocation;
+                              chargeLabel: string;
+                              isRelease: boolean;
+                            }[]
+                          >
+                        >((groups, allocation) => {
+                          const charge = ledger?.charges.find(
+                            (item) => item.id === allocation.chargeId,
+                          );
+
+                          const chargeLabel = charge
+                            ? getChargeLabel(charge, products)
+                            : formatLabel(allocation.feeType);
+
+                          const date = allocation.chargeDate;
+                          groups[date] ??= [];
+                          groups[date].push({
+                            allocation,
+                            chargeLabel,
+                            isRelease: allocation.allocationType === "RELEASE",
+                          });
+
+                          return groups;
+                        }, {}),
+                      ).sort(([dateA], [dateB]) => dateA.localeCompare(dateB));
                       const isExpanded =
                         expandedPaymentAllocations[payment.id] ?? false;
                       const isLoading =
@@ -2276,56 +2355,92 @@ function ParticipantLedgerPanel({
                                 </div>
                               ) : (
                                 <div className="divide-y divide-zinc-200 dark:divide-zinc-800">
-                                  {allocations.map((allocation) => {
-                                    const isRelease =
-                                      allocation.allocationType === "RELEASE";
+                                  {allocationGroups.map(([date, entries]) => {
+                                    const dateTotal = entries.reduce(
+                                      (total, entry) =>
+                                        total +
+                                        (entry.isRelease
+                                          ? -entry.allocation.amount
+                                          : entry.allocation.amount),
+                                      0,
+                                    );
 
                                     return (
-                                      <div
-                                        key={allocation.id}
-                                        className="flex items-center justify-between gap-4 px-3 py-3"
-                                      >
-                                        <div className="min-w-0">
-                                          <p className="text-xs font-semibold">
-                                            {(() => {
-                                              const charge =
-                                                ledger?.charges.find(
-                                                  (item) =>
-                                                    item.id ===
-                                                    allocation.chargeId,
-                                                );
+                                      <details key={date} className="group">
+                                        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-3 hover:bg-zinc-100 dark:hover:bg-zinc-900 [&::-webkit-details-marker]:hidden">
+                                          <div className="min-w-0">
+                                            <p className="text-sm font-semibold">
+                                              {formatDate(date)}
+                                            </p>
+                                            <p className="mt-1 text-xs text-zinc-500">
+                                              {entries.length}{" "}
+                                              {entries.length === 1
+                                                ? "entry"
+                                                : "entries"}
+                                            </p>
+                                          </div>
 
-                                              return charge
-                                                ? getChargeLabel(
-                                                    charge,
-                                                    products,
-                                                  )
-                                                : formatLabel(
-                                                    allocation.feeType,
-                                                  );
-                                            })()}
-                                          </p>
+                                          <div className="flex shrink-0 items-center gap-3">
+                                            <span className="text-sm font-semibold">
+                                              {dateTotal < 0 ? "-" : ""}
+                                              {formatCurrency(
+                                                Math.abs(dateTotal),
+                                              )}
+                                            </span>
+                                            <span className="text-xs text-zinc-500 group-open:hidden">
+                                              ▼
+                                            </span>
+                                            <span className="hidden text-xs text-zinc-500 group-open:inline">
+                                              ▲
+                                            </span>
+                                          </div>
+                                        </summary>
 
-                                          <p className="mt-1 text-[11px] text-zinc-500">
-                                            {formatDate(allocation.chargeDate)}
-                                            {" · "}
-                                            {isRelease
-                                              ? "Released"
-                                              : "Allocated"}
-                                          </p>
+                                        <div className="space-y-3 border-t border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-950">
+                                          {entries.map(
+                                            ({
+                                              allocation,
+                                              chargeLabel,
+                                              isRelease,
+                                            }) => (
+                                              <div
+                                                key={allocation.id}
+                                                className="flex items-center justify-between gap-4"
+                                              >
+                                                <div className="min-w-0">
+                                                  <p className="text-xs font-semibold">
+                                                    {allocation.feeType ===
+                                                    "PRODUCT"
+                                                      ? "PRODUCT"
+                                                      : formatLabel(
+                                                          allocation.feeType,
+                                                        )}
+                                                  </p>
+                                                  <p className="mt-1 truncate text-xs text-zinc-500">
+                                                    {chargeLabel}
+                                                    {isRelease
+                                                      ? " · Released"
+                                                      : ""}
+                                                  </p>
+                                                </div>
+
+                                                <p
+                                                  className={`shrink-0 text-sm font-medium ${
+                                                    isRelease
+                                                      ? "text-amber-600 dark:text-amber-400"
+                                                      : "text-zinc-900 dark:text-zinc-100"
+                                                  }`}
+                                                >
+                                                  {isRelease ? "-" : "+"}
+                                                  {formatCurrency(
+                                                    allocation.amount,
+                                                  )}
+                                                </p>
+                                              </div>
+                                            ),
+                                          )}
                                         </div>
-
-                                        <p
-                                          className={`shrink-0 text-xs font-semibold ${
-                                            isRelease
-                                              ? "text-amber-600 dark:text-amber-400"
-                                              : "text-zinc-900 dark:text-zinc-100"
-                                          }`}
-                                        >
-                                          {isRelease ? "-" : "+"}
-                                          {formatCurrency(allocation.amount)}
-                                        </p>
-                                      </div>
+                                      </details>
                                     );
                                   })}
                                 </div>
