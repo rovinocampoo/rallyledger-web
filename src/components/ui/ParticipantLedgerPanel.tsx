@@ -165,6 +165,65 @@ function waitForRender() {
     });
   });
 }
+
+async function waitForImages(root: HTMLElement): Promise<void> {
+  const images = Array.from(root.querySelectorAll("img")).filter(
+    (image) => image.currentSrc || image.getAttribute("src")?.trim(),
+  );
+
+  await Promise.all(
+    images.map(async (image) => {
+      if (!image.complete) {
+        await new Promise<void>((resolve, reject) => {
+          const cleanup = () => {
+            image.removeEventListener("load", handleLoad);
+            image.removeEventListener("error", handleError);
+          };
+
+          const handleLoad = () => {
+            cleanup();
+            resolve();
+          };
+
+          const handleError = () => {
+            cleanup();
+            reject(
+              new Error(
+                `Failed to load image: ${image.currentSrc || image.src}`,
+              ),
+            );
+          };
+
+          image.addEventListener("load", handleLoad);
+          image.addEventListener("error", handleError);
+
+          if (image.complete) {
+            cleanup();
+
+            if (image.naturalWidth > 0) {
+              resolve();
+            } else {
+              reject(
+                new Error(
+                  `Failed to load image: ${image.currentSrc || image.src}`,
+                ),
+              );
+            }
+          }
+        });
+      }
+
+      if (image.naturalWidth === 0) {
+        throw new Error(
+          `Image is unavailable: ${image.currentSrc || image.src}`,
+        );
+      }
+
+      await image.decode();
+    }),
+  );
+}
+
 type PaymentReceiptProps = {
   participant: Participant;
   payment: Payment;
@@ -514,7 +573,31 @@ function PaymentReceipt({
                     </div>
                   </div>
                 )}
+                {/* PAYMENT ACKNOWLEDGMENT */}
+                <div className="mt-8 border-t border-zinc-200 pt-5">
+                  <p className="text-sm font-semibold text-zinc-700">
+                    Received by:
+                  </p>
 
+                  <div className="mt-3 px-1 text-center">
+                    <p className="mb-1 text-sm italic text-zinc-400">
+                      <img
+                        src="/branding/Signature-pres.png"
+                        alt="Hannah Lois Mata signature"
+                        className="mx-auto mb-2 h-8 w-auto object-contain"
+                        crossOrigin="anonymous"
+                      />
+                    </p>
+                    <div className="mx-auto w-2/5 border-b border-zinc-500" />
+                    <p className="mt-2 text-sm font-semibold text-zinc-900">
+                      Hannah Lois Mata
+                    </p>
+                    <p className="mt-1 text-xs text-zinc-500">Club President</p>
+                    <p className="mt-1 text-xs text-zinc-500">
+                      Date Signed: {formatDate(payment.paymentDate)}
+                    </p>
+                  </div>
+                </div>
                 {/* FOOTER */}
                 <div className="mt-8 border-t border-zinc-200 pt-5">
                   <div className="flex items-center justify-center">
@@ -1366,6 +1449,7 @@ function ParticipantLedgerPanel({
     const files: File[] = [];
 
     for (let index = 0; index < pageElements.length; index += 1) {
+      await waitForImages(pageElements[index]);
       const blob = await toBlob(pageElements[index], {
         cacheBust: true,
         pixelRatio: 2,
@@ -1392,7 +1476,7 @@ function ParticipantLedgerPanel({
     if (!statementRef.current) {
       return null;
     }
-
+    await waitForImages(statementRef.current);
     const blob = await toBlob(statementRef.current, {
       cacheBust: true,
       pixelRatio: 2,
