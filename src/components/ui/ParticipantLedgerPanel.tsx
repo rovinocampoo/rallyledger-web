@@ -29,6 +29,7 @@ import type {
 } from "../../types/payment";
 import type { Organization } from "../../types/organization";
 import type { Charge } from "../../types/charge";
+import presidentSignature from "../../assets/Signature-pres.png?inline";
 
 type ParticipantLedgerPanelProps = {
   participant: Participant;
@@ -582,10 +583,9 @@ function PaymentReceipt({
                   <div className="mt-3 px-1 text-center">
                     <p className="mb-1 text-sm italic text-zinc-400">
                       <img
-                        src="/branding/Signature-pres.png"
+                        src={presidentSignature}
                         alt="Hannah Lois Mata signature"
                         className="mx-auto mb-2 h-8 w-auto object-contain"
-                        crossOrigin="anonymous"
                       />
                     </p>
                     <div className="mx-auto w-2/5 border-b border-zinc-500" />
