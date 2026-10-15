@@ -61,6 +61,7 @@ function SessionTrainingPanel({
   const [products, setProducts] = useState<Product[]>([]);
   const [showCharges, setShowCharges] = useState(false);
   const [generatingCharges, setGeneratingCharges] = useState(false);
+  const [showChargeConfirmation, setShowChargeConfirmation] = useState(false);
   const [packages, setPackages] = useState<PackageDetails[]>([]);
 
   const [racketRentalParticipantId, setRacketRentalParticipantId] =
@@ -242,7 +243,7 @@ function SessionTrainingPanel({
     }
   }
 
-  async function handleGenerateCharges() {
+  function handleGenerateCharges() {
     if (checkedInParticipants.length === 0) {
       setError("Check in at least one participant first");
       return;
@@ -253,17 +254,12 @@ function SessionTrainingPanel({
       return;
     }
 
-    const confirmed = window.confirm(
-      hasGeneratedTrainingCharges
-        ? `Recalculate training charges for ${unpricedParticipantCount} participant${
-            unpricedParticipantCount === 1 ? "" : "s"
-          }? Unedited Light charges will be rebalanced.`
-        : `Generate training charges for ${unpricedParticipantCount} participant${
-            unpricedParticipantCount === 1 ? "" : "s"
-          }?`,
-    );
+    setError(null);
+    setShowChargeConfirmation(true);
+  }
 
-    if (!confirmed) {
+  async function confirmGenerateCharges() {
+    if (generatingCharges) {
       return;
     }
 
@@ -275,6 +271,7 @@ function SessionTrainingPanel({
       await loadCharges();
 
       setShowCharges(true);
+      setShowChargeConfirmation(false);
     } catch (err) {
       console.error(err);
 
@@ -733,7 +730,87 @@ function SessionTrainingPanel({
             )}
           </div>
         )}
+        {showChargeConfirmation && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
+            <div className="flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-900">
+              <div className="border-b border-zinc-200 px-5 py-4 dark:border-zinc-800">
+                <h2 className="text-lg font-semibold text-zinc-950 dark:text-white">
+                  Review Training Participants
+                </h2>
 
+                <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+                  {session.name}
+                </p>
+              </div>
+
+              <div className="overflow-y-auto p-5">
+                <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200">
+                  Verify that these are the correct participants before
+                  generating charges. Training and court fees are charged
+                  individually, while eligible light fees are shared.
+                  {hasGeneratedTrainingCharges &&
+                    " Recalculating may rebalance unedited light charges."}
+                </div>
+
+                <div className="space-y-2">
+                  {checkedInParticipants.map((participant) => (
+                    <div
+                      key={participant.id}
+                      className="flex items-center justify-between gap-3 rounded-lg border border-zinc-200 px-3 py-2 dark:border-zinc-800"
+                    >
+                      <div>
+                        <p className="text-sm font-medium text-zinc-950 dark:text-white">
+                          {participant.firstName} {participant.lastName}
+                        </p>
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                          ID: {participant.id}
+                          {participant.nickname
+                            ? ` · ${participant.nickname}`
+                            : ""}
+                        </p>
+                      </div>
+
+                      <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                        {participant.participantTypeName ||
+                          formatLabel(participant.participantType)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">
+                  {unpricedParticipantCount} participant
+                  {unpricedParticipantCount === 1 ? "" : "s"} not covered by
+                  packages.
+                </p>
+              </div>
+
+              <div className="flex flex-col-reverse gap-2 border-t border-zinc-200 p-5 sm:flex-row sm:justify-end dark:border-zinc-800">
+                <button
+                  type="button"
+                  onClick={() => setShowChargeConfirmation(false)}
+                  disabled={generatingCharges}
+                  className="w-full rounded-lg border border-zinc-300 px-4 py-2.5 text-sm font-medium hover:bg-zinc-100 disabled:opacity-50 sm:w-auto dark:border-zinc-700 dark:hover:bg-zinc-800"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => void confirmGenerateCharges()}
+                  disabled={generatingCharges}
+                  className="primary-action w-full rounded-lg px-4 py-2.5 text-sm font-medium disabled:opacity-50 sm:w-auto"
+                >
+                  {generatingCharges
+                    ? "Generating Charges..."
+                    : hasGeneratedTrainingCharges
+                      ? "Recalculate Charges"
+                      : "Generate Charges"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         {ledgerParticipant && (
           <div className="mt-4">
             <ParticipantLedgerPanel
