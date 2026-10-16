@@ -29,7 +29,7 @@ import type {
 } from "../../types/payment";
 import type { Organization } from "../../types/organization";
 import type { Charge } from "../../types/charge";
-import presidentSignature from "../../assets/Signature-pres.png?inline";
+// import presidentSignature from "../../assets/Signature-pres.png?inline";
 
 type ParticipantLedgerPanelProps = {
   participant: Participant;
@@ -574,7 +574,9 @@ function PaymentReceipt({
                     </div>
                   </div>
                 )}
-                {/* PAYMENT ACKNOWLEDGMENT */}
+                {/* Temporarily hidden per client request.
+    Restore this block if the client wants signatures back. */}
+                {/* PAYMENT ACKNOWLEDGMENT
                 <div className="mt-8 border-t border-zinc-200 pt-5">
                   <p className="text-sm font-semibold text-zinc-700">
                     Received by:
@@ -597,7 +599,7 @@ function PaymentReceipt({
                       Date Signed: {formatDate(payment.paymentDate)}
                     </p>
                   </div>
-                </div>
+                </div> */}
                 {/* FOOTER */}
                 <div className="mt-8 border-t border-zinc-200 pt-5">
                   <div className="flex items-center justify-center">
