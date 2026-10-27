@@ -485,6 +485,15 @@ function AppLayout({
             >
               Change Password
             </NavLink>
+            <a
+              href="https://mmsutennisbooking.vercel.app/admin"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-3 flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-white"
+            >
+              <ShieldCheck className="h-4 w-4 shrink-0" />
+              <span>Bookings</span>
+            </a>
             <button
               type="button"
               onClick={onThemeToggle}
@@ -730,7 +739,16 @@ function AppLayout({
                     })}
                   </>
                 )}
-
+                <a
+                  href="https://mmsutennisbooking.vercel.app/admin"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={closeMobileMenus}
+                  className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                >
+                  <ShieldCheck className="h-4 w-4 shrink-0" />
+                  <span>Bookings</span>
+                </a>
                 <p className="mt-3 px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
                   Account
                 </p>

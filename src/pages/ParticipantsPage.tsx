@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import {
   getParticipants,
   deleteParticipant,
+  getPlayerInvitation,
   createPlayerInvitation,
 } from "../api/participants";
 import type { Participant } from "../types/participant";
@@ -69,11 +70,13 @@ function ParticipantsPage({
   const [actionError, setActionError] = useState<string | null>(null);
   const [invitation, setInvitation] = useState<{
     participantId: number;
-    link: string;
+    link: string | null;
+    status: "pending" | "expired" | "unavailable" | "accepted";
   } | null>(null);
   const [invitationParticipantId, setInvitationParticipantId] = useState<
     number | null
   >(null);
+  const [invitationCopied, setInvitationCopied] = useState(false);
 
   function handleSort(key: SortKey) {
     if (sortKey === key) {
@@ -178,18 +181,37 @@ function ParticipantsPage({
     setEditingParticipant(null);
   }
 
-  async function handleCreatePlayerInvitation(participant: Participant) {
+  async function handleCreatePlayerInvitation(
+    participant: Participant,
+    regenerate = false,
+  ) {
     try {
       setActionError(null);
-      setInvitation(null);
+      setInvitationCopied(false);
+      if (!regenerate) setInvitation(null);
       setInvitationParticipantId(participant.id);
 
-      const result = await createPlayerInvitation(participant.id);
-
-      setInvitation({
-        participantId: participant.id,
-        link: `${window.location.origin}/player/invite/${result.token}`,
-      });
+      const existing = await getPlayerInvitation(participant.id);
+      if (existing.status === "accepted" || ((existing.status === "expired" || existing.status === "unavailable") && !regenerate)) {
+        setInvitation({
+          participantId: participant.id,
+          status: existing.status,
+          link: null,
+        });
+      } else if (existing.status === "pending") {
+        setInvitation({
+          participantId: participant.id,
+          status: "pending",
+          link: `${window.location.origin}/player/invite/${existing.token}`,
+        });
+      } else {
+        const result = await createPlayerInvitation(participant.id);
+        setInvitation({
+          participantId: participant.id,
+          status: "pending",
+          link: `${window.location.origin}/player/invite/${result.token}`,
+        });
+      }
     } catch (err) {
       console.error(err);
       setActionError(
@@ -371,29 +393,62 @@ if (loading) {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
               <p className="text-sm font-semibold text-zinc-950 dark:text-white">
-                Player invitation created
+                {{
+                  pending: "Invitation pending",
+                  expired: "Invitation expired",
+                  unavailable: "Invitation link unavailable",
+                  accepted: "Invitation accepted",
+                }[invitation.status]}
               </p>
-              <p className="mt-1 break-all text-sm text-zinc-600 dark:text-zinc-400">
-                {invitation.link}
-              </p>
+              {invitation.link && (
+                <p className="mt-1 break-all text-sm text-zinc-600 dark:text-zinc-400">
+                  {invitation.link}
+                </p>
+              )}
             </div>
 
             <div className="flex shrink-0 gap-2">
-              <button
-                type="button"
-                onClick={async () => {
-                  try {
-                    await navigator.clipboard.writeText(invitation.link);
-                    setActionError(null);
-                  } catch (err) {
-                    console.error(err);
-                    setActionError("Failed to copy invitation link.");
-                  }
-                }}
-                className="primary-action rounded-lg px-4 py-2 text-sm font-medium"
-              >
-                Copy Link
-              </button>
+              {invitation.status === "pending" && invitation.link && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!invitation.link) return;
+                    try {
+                      await navigator.clipboard.writeText(invitation.link);
+                      setActionError(null);
+                      setInvitationCopied(true);
+                    } catch (err) {
+                      console.error(err);
+                      setActionError("Failed to copy invitation link.");
+                    }
+                  }}
+                  className="primary-action rounded-lg px-4 py-2 text-sm font-medium"
+                >
+                  {invitationCopied ? "Copied" : "Copy Link"}
+                </button>
+              )}
+
+              {(invitation.status === "expired" || invitation.status === "unavailable") && (
+                <button
+                  type="button"
+                  disabled={invitationParticipantId === invitation.participantId}
+                  onClick={() => {
+                    const participant = participants.find(
+                      (item) => item.id === invitation.participantId,
+                    );
+                    if (participant) {
+                      void handleCreatePlayerInvitation(participant, true);
+                    }
+                  }}
+                  className="primary-action rounded-lg px-4 py-2 text-sm font-medium"
+                >
+                  {invitationParticipantId === invitation.participantId
+                    ? "Regenerating..."
+                    : invitation.status === "expired"
+                      ? "Regenerate invitation link"
+                      : "Create new invitation link"}
+                </button>
+              )}
 
               <button
                 type="button"

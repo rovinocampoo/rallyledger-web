@@ -43,6 +43,18 @@ export type PlayerInvitationResponse = {
   token: string;
 };
 
+export type PlayerInvitationStatusResponse = {
+  status: "not_invited" | "pending" | "expired" | "unavailable" | "accepted";
+  invitation: PlayerInvitationResponse["invitation"] | null;
+  token: string;
+};
+
+export function getPlayerInvitation(participantId: number) {
+  return apiFetch<PlayerInvitationStatusResponse>(
+    `/participants/${participantId}/player-invitation`,
+  );
+}
+
 export function createPlayerInvitation(participantId: number) {
   return apiFetch<PlayerInvitationResponse>(
     `/participants/${participantId}/player-invitation`,
