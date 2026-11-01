@@ -27,6 +27,13 @@ function PublicLayout({ theme, onThemeToggle }: PublicLayoutProps) {
             {/* Desktop links */}
             <nav className="hidden items-center gap-5 text-sm font-medium md:flex">
               <NavLink
+                to="/for-clubs"
+                className="text-zinc-600 transition hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white"
+              >
+                For clubs
+              </NavLink>
+
+              <NavLink
                 to="/walkthrough"
                 className="text-zinc-600 transition hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white"
               >
@@ -98,6 +105,12 @@ function PublicLayout({ theme, onThemeToggle }: PublicLayoutProps) {
             </div>
 
             <div className="grid grid-cols-2 gap-x-8 gap-y-3 text-sm sm:grid-cols-3">
+              <NavLink
+                to="/for-clubs"
+                className="text-zinc-500 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white"
+              >
+                For clubs
+              </NavLink>
               <NavLink
                 to="/walkthrough"
                 className="text-zinc-500 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white"
