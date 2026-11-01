@@ -9,6 +9,7 @@ import { useSearchParams } from "react-router-dom";
 import { getSessions, deleteSession } from "../api/sessions";
 import type { Session, SessionType } from "../types/session";
 import SessionCard from "../components/ui/SessionCard";
+import type { SessionChargeOverviewState, SessionOverviewStats, SessionSection } from "../components/ui/SessionCard";
 import SessionForm from "../components/ui/SessionForm";
 import SessionParticipantsPanel from "../components/ui/SessionParticipantsPanel";
 import SessionMatchesPanel from "../components/ui/SessionMatchesPanel";
@@ -23,6 +24,8 @@ import type { AdminUser } from "../api/auth";
 import type { Organization } from "../types/organization";
 import { getSessionMatches } from "../api/matches";
 import { getMatchParticipants } from "../api/matchParticipants";
+import { getSessionParticipants } from "../api/sessionParticipants";
+import { getMatchBoardCounts } from "../utils/matchBoard";
 import { generateSessionMatchCharges, getSessionCharges } from "../api/charges";
 import SessionChargeReviewModal, {
   type SessionChargeReviewMatch,
@@ -44,10 +47,38 @@ function sortSessions(items: Session[]) {
   });
 }
 
+function nextSequence(sequenceRef: { current: Map<number, number> }, sessionId: number) {
+  const next = (sequenceRef.current.get(sessionId) ?? 0) + 1;
+  sequenceRef.current.set(sessionId, next);
+  return next;
+}
+
+function calculateFullyCharged(
+  matches: Awaited<ReturnType<typeof getSessionMatches>>,
+  charges: Awaited<ReturnType<typeof getSessionCharges>>,
+) {
+  const chargeableResults = new Set([
+    "TEAM_A_WIN", "TEAM_B_WIN", "DRAW", "WALKOVER_A", "WALKOVER_B", "ABANDONED",
+  ]);
+  const chargeableMatches = matches.filter((match) => chargeableResults.has(match.result));
+  const chargedMatchIds = new Set(
+    charges.map((charge) => charge.matchId).filter((matchId): matchId is number => matchId !== null),
+  );
+  const allMatchesFinished = matches.every((match) => chargeableResults.has(match.result));
+  return matches.length > 0 && allMatchesFinished && chargeableMatches.length > 0 &&
+    chargeableMatches.every((match) => chargedMatchIds.has(match.id));
+}
+
 type SessionsPageProps = {
   admin: AdminUser;
   organization: Organization | null;
   organizationLogo: string | null;
+};
+
+type SessionRefreshOutcome = {
+  overviewRefreshed: boolean;
+  superseded?: boolean;
+  message?: string;
 };
 
 function SessionsPage({
@@ -59,6 +90,7 @@ function SessionsPage({
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [sessions, setSessions] = useState<Session[]>([]);
+  const [overviewStats, setOverviewStats] = useState<Record<number, SessionOverviewStats>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
@@ -77,6 +109,11 @@ function SessionsPage({
   const [returnToChargeSession, setReturnToChargeSession] =
     useState<Session | null>(null);
   const sessionPanelRef = useRef<HTMLDivElement | null>(null);
+  const pageMountedRef = useRef(false);
+  const sessionParticipantRefreshSequenceRef = useRef(new Map<number, number>());
+  const sessionMatchOverviewRefreshSequenceRef = useRef(new Map<number, number>());
+  const sessionChargeRefreshSequenceRef = useRef(new Map<number, number>());
+  const sessionChargePreflightSequenceRef = useRef(new Map<number, number>());
   const [sessionPanelScrollRequest, setSessionPanelScrollRequest] = useState(0);
   const [resultsSession, setResultsSession] = useState<Session | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -92,18 +129,46 @@ function SessionsPage({
 
   const [generatingSessionCharges, setGeneratingSessionCharges] =
     useState(false);
+  const [matchChargeRefreshSignal, setMatchChargeRefreshSignal] = useState(0);
   const [chargeStatusSession, setChargeStatusSession] =
     useState<Session | null>(null);
   const [chargeReviewLoadingSessionId, setChargeReviewLoadingSessionId] =
     useState<number | null>(null);
-  const [fullyChargedSessionIds, setFullyChargedSessionIds] = useState<
-    Set<number>
-  >(new Set());
+  const [sessionChargeStates, setSessionChargeStates] = useState<
+    Record<number, SessionChargeOverviewState>
+  >({});
   const [initialSessionType, setInitialSessionType] = useState<
     SessionType | undefined
   >(undefined);
+
+  useEffect(() => {
+    const participantSequences = sessionParticipantRefreshSequenceRef.current;
+    const matchOverviewSequences = sessionMatchOverviewRefreshSequenceRef.current;
+    const chargeSequences = sessionChargeRefreshSequenceRef.current;
+    const chargePreflightSequences = sessionChargePreflightSequenceRef.current;
+    pageMountedRef.current = true;
+    return () => {
+      pageMountedRef.current = false;
+      participantSequences.clear();
+      matchOverviewSequences.clear();
+      chargeSequences.clear();
+      chargePreflightSequences.clear();
+    };
+  }, []);
+
   const handleAddMatchOpened = useCallback(() => {
     setOpenAddMatch(false);
+  }, []);
+
+  const updateSessionChargeState = useCallback((
+    sessionId: number,
+    chargeState: SessionChargeOverviewState,
+    isCurrent: () => boolean = () => true,
+  ) => {
+    setSessionChargeStates((current) => {
+      if (!pageMountedRef.current || !isCurrent()) return current;
+      return { ...current, [sessionId]: chargeState };
+    });
   }, []);
 
   useLayoutEffect(() => {
@@ -131,6 +196,185 @@ function SessionsPage({
       });
     });
   }, [sessionPanelScrollRequest]);
+
+  const setStatisticsLoading = useCallback((sessionId: number) => {
+    setOverviewStats((current) => ({
+      ...current,
+      [sessionId]: {
+        ...(current[sessionId] ?? {
+          participantCount: null,
+          matchCount: null,
+          matchCounts: null,
+        }),
+        participantStatus: "loading",
+        matchStatus: "loading",
+      },
+    }));
+  }, []);
+
+  const refreshSessionSnapshot = useCallback(async (
+    sessionId: number,
+    isActive: () => boolean = () => true,
+    snapshot?: { matches: Awaited<ReturnType<typeof getSessionMatches>>; participantCount: number },
+  ): Promise<SessionRefreshOutcome> => {
+    const participantSequence = nextSequence(sessionParticipantRefreshSequenceRef, sessionId);
+    const matchOverviewSequence = nextSequence(sessionMatchOverviewRefreshSequenceRef, sessionId);
+    const chargeSequence = nextSequence(sessionChargeRefreshSequenceRef, sessionId);
+    setStatisticsLoading(sessionId);
+    updateSessionChargeState(sessionId, { status: "loading", fullyCharged: null }, () =>
+      sessionChargeRefreshSequenceRef.current.get(sessionId) === chargeSequence,
+    );
+
+    const [matchesResult, participantCountResult, chargesResult] = await Promise.allSettled([
+      snapshot ? Promise.resolve(snapshot.matches) : getSessionMatches(sessionId),
+      snapshot ? Promise.resolve(snapshot.participantCount) : getSessionParticipants(sessionId).then((items) => items.length),
+      getSessionCharges(sessionId),
+    ]);
+    const mountedAndActive = pageMountedRef.current && isActive();
+
+    const participantIsCurrent = mountedAndActive &&
+      sessionParticipantRefreshSequenceRef.current.get(sessionId) === participantSequence;
+    const matchOverviewIsCurrent = mountedAndActive &&
+      sessionMatchOverviewRefreshSequenceRef.current.get(sessionId) === matchOverviewSequence;
+    if (participantIsCurrent || matchOverviewIsCurrent) {
+      setOverviewStats((current) => {
+      if (!pageMountedRef.current) return current;
+        const previous = current[sessionId] ?? {
+          participantCount: null,
+          participantStatus: "loading" as const,
+          matchCount: null,
+          matchCounts: null,
+          matchStatus: "loading" as const,
+        };
+        const participantStillCurrent = mountedAndActive &&
+          sessionParticipantRefreshSequenceRef.current.get(sessionId) === participantSequence;
+        const matchOverviewStillCurrent = mountedAndActive &&
+          sessionMatchOverviewRefreshSequenceRef.current.get(sessionId) === matchOverviewSequence;
+        return {
+          ...current,
+          [sessionId]: {
+            participantCount: !participantStillCurrent
+              ? previous.participantCount
+              : participantCountResult.status === "fulfilled" ? participantCountResult.value : previous.participantCount,
+            participantStatus: !participantStillCurrent
+              ? previous.participantStatus
+              : participantCountResult.status === "fulfilled" ? "loaded" : "error",
+            matchCount: !matchOverviewStillCurrent
+              ? previous.matchCount
+              : matchesResult.status === "fulfilled" ? matchesResult.value.length : previous.matchCount,
+            matchCounts: !matchOverviewStillCurrent
+              ? previous.matchCounts
+              : matchesResult.status === "fulfilled" ? getMatchBoardCounts(matchesResult.value) : previous.matchCounts,
+            matchStatus: !matchOverviewStillCurrent
+              ? previous.matchStatus
+              : matchesResult.status === "fulfilled" ? "loaded" : "error",
+          },
+        };
+      });
+    }
+
+    const chargeIsCurrent = mountedAndActive &&
+      sessionChargeRefreshSequenceRef.current.get(sessionId) === chargeSequence;
+    if (chargeIsCurrent) {
+      if (matchesResult.status === "fulfilled" && chargesResult.status === "fulfilled") {
+        updateSessionChargeState(sessionId, {
+          status: "known",
+          fullyCharged: calculateFullyCharged(matchesResult.value, chargesResult.value),
+        }, () => sessionChargeRefreshSequenceRef.current.get(sessionId) === chargeSequence);
+      } else {
+        updateSessionChargeState(sessionId, {
+          status: "unknown",
+          fullyCharged: null,
+          message: "Session charge status could not be refreshed.",
+        }, () => sessionChargeRefreshSequenceRef.current.get(sessionId) === chargeSequence);
+      }
+    }
+
+    if (!participantIsCurrent && !matchOverviewIsCurrent) {
+      return { overviewRefreshed: false, superseded: true };
+    }
+    const failures = [
+      participantIsCurrent && participantCountResult.status === "rejected" ? "participant count" : null,
+      matchOverviewIsCurrent && matchesResult.status === "rejected" ? "match statistics" : null,
+      chargeIsCurrent && (matchesResult.status === "rejected" || chargesResult.status === "rejected") ? "charge status" : null,
+    ].filter((item): item is string => item !== null);
+    if (failures.length > 0) return { overviewRefreshed: false, message: `Could not refresh ${failures.join(" and ")}.` };
+    return participantIsCurrent && matchOverviewIsCurrent
+      ? { overviewRefreshed: true }
+      : { overviewRefreshed: false, superseded: true };
+  }, [setStatisticsLoading, updateSessionChargeState]);
+
+  const refreshSessionStatistics = useCallback(async (sessionId: number): Promise<SessionRefreshOutcome> => {
+    const participantSequence = nextSequence(sessionParticipantRefreshSequenceRef, sessionId);
+    const matchOverviewSequence = nextSequence(sessionMatchOverviewRefreshSequenceRef, sessionId);
+    setStatisticsLoading(sessionId);
+    const [matchesResult, participantsResult] = await Promise.allSettled([
+      getSessionMatches(sessionId),
+      getSessionParticipants(sessionId),
+    ]);
+    if (!pageMountedRef.current || (
+      sessionParticipantRefreshSequenceRef.current.get(sessionId) !== participantSequence &&
+      sessionMatchOverviewRefreshSequenceRef.current.get(sessionId) !== matchOverviewSequence
+    )) {
+      return { overviewRefreshed: false, superseded: true };
+    }
+    setOverviewStats((current) => {
+      if (!pageMountedRef.current) return current;
+      const previous = current[sessionId] ?? {
+        participantCount: null,
+        participantStatus: "loading" as const,
+        matchCount: null,
+        matchCounts: null,
+        matchStatus: "loading" as const,
+      };
+      return {
+        ...current,
+        [sessionId]: {
+          participantCount: sessionParticipantRefreshSequenceRef.current.get(sessionId) === participantSequence && participantsResult.status === "fulfilled" ? participantsResult.value.length : previous.participantCount,
+          participantStatus: sessionParticipantRefreshSequenceRef.current.get(sessionId) !== participantSequence ? previous.participantStatus : participantsResult.status === "fulfilled" ? "loaded" : "error",
+          matchCount: sessionMatchOverviewRefreshSequenceRef.current.get(sessionId) === matchOverviewSequence && matchesResult.status === "fulfilled" ? matchesResult.value.length : previous.matchCount,
+          matchCounts: sessionMatchOverviewRefreshSequenceRef.current.get(sessionId) === matchOverviewSequence && matchesResult.status === "fulfilled" ? getMatchBoardCounts(matchesResult.value) : previous.matchCounts,
+          matchStatus: sessionMatchOverviewRefreshSequenceRef.current.get(sessionId) !== matchOverviewSequence ? previous.matchStatus : matchesResult.status === "fulfilled" ? "loaded" : "error",
+        },
+      };
+    });
+    const failures = [
+      sessionParticipantRefreshSequenceRef.current.get(sessionId) === participantSequence && participantsResult.status === "rejected" ? "participant count" : null,
+      sessionMatchOverviewRefreshSequenceRef.current.get(sessionId) === matchOverviewSequence && matchesResult.status === "rejected" ? "match statistics" : null,
+    ].filter((item): item is string => item !== null);
+    if (failures.length > 0) return { overviewRefreshed: false, message: `Could not refresh ${failures.join(" and ")}.` };
+    return sessionParticipantRefreshSequenceRef.current.get(sessionId) === participantSequence &&
+      sessionMatchOverviewRefreshSequenceRef.current.get(sessionId) === matchOverviewSequence
+      ? { overviewRefreshed: true }
+      : { overviewRefreshed: false, superseded: true };
+  }, [setStatisticsLoading]);
+
+  const refreshSessionChargeState = useCallback(async (sessionId: number): Promise<boolean | null> => {
+    const sequence = nextSequence(sessionChargeRefreshSequenceRef, sessionId);
+    updateSessionChargeState(sessionId, { status: "loading", fullyCharged: null }, () =>
+      sessionChargeRefreshSequenceRef.current.get(sessionId) === sequence,
+    );
+    const [matchesResult, chargesResult] = await Promise.allSettled([
+      getSessionMatches(sessionId),
+      getSessionCharges(sessionId),
+    ]);
+    if (!pageMountedRef.current || sessionChargeRefreshSequenceRef.current.get(sessionId) !== sequence) {
+      return null;
+    }
+    if (matchesResult.status === "rejected" || chargesResult.status === "rejected") {
+      updateSessionChargeState(sessionId, {
+        status: "unknown",
+        fullyCharged: null,
+        message: "Session charge status could not be refreshed.",
+      }, () => sessionChargeRefreshSequenceRef.current.get(sessionId) === sequence);
+      return false;
+    }
+    updateSessionChargeState(sessionId, {
+      status: "known",
+      fullyCharged: calculateFullyCharged(matchesResult.value, chargesResult.value),
+    }, () => sessionChargeRefreshSequenceRef.current.get(sessionId) === sequence);
+    return true;
+  }, [updateSessionChargeState]);
 
   useEffect(() => {
     let ignore = false;
@@ -305,81 +549,19 @@ function SessionsPage({
     }
 
     let ignore = false;
-
-    async function loadChargeStatus() {
-      try {
-        const regularPlaySessions = sessions.filter(
-          (session) => session.sessionType === "REGULAR_PLAY",
-        );
-
-        const statusResults = await Promise.all(
-          regularPlaySessions.map(async (session) => {
-            const [matches, charges] = await Promise.all([
-              getSessionMatches(session.id),
-              getSessionCharges(session.id),
-            ]);
-
-            const chargeableResults = new Set([
-              "TEAM_A_WIN",
-              "TEAM_B_WIN",
-              "DRAW",
-              "WALKOVER_A",
-              "WALKOVER_B",
-              "ABANDONED",
-            ]);
-
-            const chargeableMatchIds = new Set(
-              matches
-                .filter((match) => chargeableResults.has(match.result))
-                .map((match) => match.id),
-            );
-
-            const chargedMatchIds = new Set(
-              charges
-                .map((charge) => charge.matchId)
-                .filter((matchId): matchId is number => matchId !== null),
-            );
-
-            const unfinishedMatchCount = matches.filter(
-              (match) => !chargeableResults.has(match.result),
-            ).length;
-
-            const fullyCharged =
-              matches.length > 0 &&
-              unfinishedMatchCount === 0 &&
-              chargeableMatchIds.size > 0 &&
-              [...chargeableMatchIds].every((matchId) =>
-                chargedMatchIds.has(matchId),
-              );
-            return {
-              sessionId: session.id,
-              fullyCharged,
-            };
-          }),
-        );
-
-        if (ignore) {
-          return;
-        }
-
-        setFullyChargedSessionIds(
-          new Set(
-            statusResults
-              .filter((result) => result.fullyCharged)
-              .map((result) => result.sessionId),
-          ),
-        );
-      } catch (err) {
-        console.error("Failed to load session charge status:", err);
-      }
-    }
-
-    loadChargeStatus();
+    const regularPlaySessions = sessions.filter(
+      (session) => session.sessionType === "REGULAR_PLAY",
+    );
+    void Promise.all(
+      regularPlaySessions.map((session) =>
+        refreshSessionSnapshot(session.id, () => !ignore),
+      ),
+    );
 
     return () => {
       ignore = true;
     };
-  }, [loading, sessions]);
+  }, [loading, sessions, refreshSessionSnapshot]);
 
 if (loading) {
   return (
@@ -442,6 +624,13 @@ if (loading) {
   }
 
   async function handleGenerateSessionCharges(session: Session) {
+    const preflightSequence = nextSequence(sessionChargePreflightSequenceRef, session.id);
+    const refreshSequence = nextSequence(sessionChargeRefreshSequenceRef, session.id);
+    const preflightIsCurrent = () =>
+      pageMountedRef.current &&
+      sessionChargePreflightSequenceRef.current.get(session.id) === preflightSequence &&
+      sessionChargeRefreshSequenceRef.current.get(session.id) === refreshSequence;
+    updateSessionChargeState(session.id, { status: "loading", fullyCharged: null }, preflightIsCurrent);
     try {
       setActionError(null);
       setChargeStatus(null);
@@ -449,8 +638,10 @@ if (loading) {
       setChargeReviewLoadingSessionId(session.id);
 
       const matches = await getSessionMatches(session.id);
+      if (!preflightIsCurrent()) return;
 
       if (matches.length === 0) {
+        updateSessionChargeState(session.id, { status: "known", fullyCharged: false }, preflightIsCurrent);
         setChargeStatus(
           "No matches have been added to this session yet. Add and finish matches before generating charges.",
         );
@@ -458,6 +649,11 @@ if (loading) {
       }
 
       const existingCharges = await getSessionCharges(session.id);
+      if (!preflightIsCurrent()) return;
+      updateSessionChargeState(session.id, {
+        status: "known",
+        fullyCharged: calculateFullyCharged(matches, existingCharges),
+      }, preflightIsCurrent);
 
       const chargedMatchIds = new Set(
         existingCharges
@@ -484,12 +680,6 @@ if (loading) {
       );
 
       if (chargeableMatches.length === 0) {
-        setFullyChargedSessionIds((current) => {
-          const next = new Set(current);
-          next.delete(session.id);
-          return next;
-        });
-
         const unfinishedCount = matches.length;
 
         setChargeStatus(
@@ -507,12 +697,6 @@ if (loading) {
         );
 
         if (unfinishedMatches.length > 0) {
-          setFullyChargedSessionIds((current) => {
-            const next = new Set(current);
-            next.delete(session.id);
-            return next;
-          });
-
           setChargeStatus(
             unfinishedMatches.length === 1
               ? "1 match still needs a final result. Finish the match before generating charges."
@@ -522,23 +706,11 @@ if (loading) {
           return;
         }
 
-        setFullyChargedSessionIds((current) => {
-          const next = new Set(current);
-          next.add(session.id);
-          return next;
-        });
-
         setChargeStatus(
           "All finished matches in this session have already been charged.",
         );
         return;
       }
-
-      setFullyChargedSessionIds((current) => {
-        const next = new Set(current);
-        next.delete(session.id);
-        return next;
-      });
 
       const participantResults = await Promise.all(
         unchargedMatches.map(async (match) => {
@@ -568,6 +740,7 @@ if (loading) {
           };
         }),
       );
+      if (!preflightIsCurrent()) return;
 
       setChargeStatus(null);
       setChargeStatusSession(null);
@@ -576,73 +749,79 @@ if (loading) {
     } catch (err) {
       console.error(err);
 
-      setActionError(
-        err instanceof Error ? err.message : "Failed to prepare charges",
-      );
+      if (preflightIsCurrent()) {
+        updateSessionChargeState(session.id, {
+          status: "unknown",
+          fullyCharged: null,
+          message: "Session charge status could not be verified.",
+        }, preflightIsCurrent);
+        setActionError(
+          err instanceof Error ? err.message : "Failed to prepare charges",
+        );
+      }
     } finally {
-      setChargeReviewLoadingSessionId(null);
+      if (sessionChargePreflightSequenceRef.current.get(session.id) === preflightSequence) {
+        setChargeReviewLoadingSessionId((current) => current === session.id ? null : current);
+      }
+    }
+  }
+
+  function handleSessionSection(session: Session, section: SessionSection) {
+    setActionError(null);
+    setShowForm(false);
+    setEditingSession(null);
+    setOpenAddMatch(false);
+    setSelectedMatchId(null);
+    setSelectedSession(null);
+    setMatchSession(null);
+    setResultsSession(null);
+    setTrainingSession(null);
+    setOutsiderSession(null);
+    setChargeSession(null);
+    setLedgerParticipant(null);
+    if (section === "PLAYERS") setSelectedSession(session);
+    if (section === "MATCHES") setMatchSession(session);
+    if (section === "RESULTS") setResultsSession(session);
+    if (section !== "OVERVIEW") {
+      requestAnimationFrame(() => {
+        const element = document.getElementById(`session-${session.id}`);
+        element?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      });
     }
   }
   async function handleConfirmSessionCharges() {
     if (!chargeReviewSession) {
       return;
     }
+    const sessionId = chargeReviewSession.id;
+    nextSequence(sessionChargeRefreshSequenceRef, sessionId);
+    const chargeSequence = sessionChargeRefreshSequenceRef.current.get(sessionId);
+    updateSessionChargeState(sessionId, { status: "loading", fullyCharged: null }, () =>
+      sessionChargeRefreshSequenceRef.current.get(sessionId) === chargeSequence,
+    );
 
     try {
       setActionError(null);
       setGeneratingSessionCharges(true);
 
-      await generateSessionMatchCharges(chargeReviewSession.id);
-      const updatedCharges = await getSessionCharges(chargeReviewSession.id);
-      const updatedMatches = await getSessionMatches(chargeReviewSession.id);
-      const chargedMatchIds = new Set(
-        updatedCharges
-          .map((charge) => charge.matchId)
-          .filter((matchId): matchId is number => matchId !== null),
-      );
-
-      const chargeableResults = new Set([
-        "TEAM_A_WIN",
-        "TEAM_B_WIN",
-        "DRAW",
-        "WALKOVER_A",
-        "WALKOVER_B",
-        "ABANDONED",
-      ]);
-
-      const updatedChargeableMatches = updatedMatches.filter((match) =>
-        chargeableResults.has(match.result),
-      );
-
-      const remainingUnchargedMatches = updatedChargeableMatches.filter(
-        (match) => !chargedMatchIds.has(match.id),
-      );
-
-      const unfinishedMatchCount = updatedMatches.filter(
-        (match) => !chargeableResults.has(match.result),
-      ).length;
-      setFullyChargedSessionIds((current) => {
-        const next = new Set(current);
-
-        const fullyCharged =
-          updatedMatches.length > 0 &&
-          unfinishedMatchCount === 0 &&
-          updatedChargeableMatches.length > 0 &&
-          remainingUnchargedMatches.length === 0;
-
-        if (fullyCharged) {
-          next.add(chargeReviewSession.id);
-        } else {
-          next.delete(chargeReviewSession.id);
-        }
-
-        return next;
-      });
-
+      await generateSessionMatchCharges(sessionId);
+      if (pageMountedRef.current) {
+        setMatchChargeRefreshSignal((current) => current + 1);
+      }
       setChargeReviewSession(null);
       setChargeReviewMatches([]);
+      const chargeStateRefreshed = await refreshSessionChargeState(sessionId);
+      if (chargeStateRefreshed === false) {
+        setActionError("Charges were generated successfully, but the session charge status could not be refreshed. Review the Charges panel before trying to generate charges again.");
+      }
     } catch (err) {
       console.error(err);
+
+      updateSessionChargeState(sessionId, {
+        status: "unknown",
+        fullyCharged: null,
+        message: "Charge generation did not return a confirmed status. Verify charge state before retrying.",
+      }, () => sessionChargeRefreshSequenceRef.current.get(sessionId) === chargeSequence);
 
       setActionError(
         err instanceof Error ? err.message : "Failed to generate charges",
@@ -735,17 +914,22 @@ if (loading) {
               <SessionCard
                 session={session}
                 canDelete={canDeleteSessions}
+                stats={overviewStats[session.id]}
+                chargeState={sessionChargeStates[session.id] ?? { status: "loading", fullyCharged: null }}
+                activeSection={
+                  selectedSession?.id === session.id ? "PLAYERS" :
+                  matchSession?.id === session.id ? "MATCHES" :
+                  resultsSession?.id === session.id ? "RESULTS" : "OVERVIEW"
+                }
                 onGenerateCharges={handleGenerateSessionCharges}
                 generatingCharges={chargeReviewLoadingSessionId === session.id}
-                hasUnchargedMatches={
-                  session.sessionType === "REGULAR_PLAY"
-                    ? !fullyChargedSessionIds.has(session.id)
-                    : false
-                }
                 onEdit={(session) => {
                   setEditingSession(session);
                   setShowForm(true);
                 }}
+                onViewOverview={(session) => handleSessionSection(session, "OVERVIEW")}
+                onRetryStatistics={(session) => { void refreshSessionStatistics(session.id); }}
+                onRetryChargeState={(session) => { void refreshSessionChargeState(session.id); }}
                 onViewCharges={() => {
                   setChargeSession(session);
                   setSelectedSession(null);
@@ -757,42 +941,10 @@ if (loading) {
                   setEditingSession(null);
                   setShowForm(false);
                 }}
-                onViewResults={(session) => {
-                  setResultsSession(session);
-                  setSelectedSession(null);
-                  setMatchSession(null);
-                  setTrainingSession(null);
-                  setOutsiderSession(null);
-                  setChargeSession(null);
-                  setLedgerParticipant(null);
-                  setEditingSession(null);
-                  setShowForm(false);
-                }}
+                onViewResults={(session) => handleSessionSection(session, "RESULTS")}
                 onDelete={handleSessionDelete}
-                onManagePlayers={(session) => {
-                  setSelectedSession(session);
-                  setMatchSession(null);
-                  setTrainingSession(null);
-                  setOutsiderSession(null);
-                  setResultsSession(null);
-                  setChargeSession(null);
-                  setLedgerParticipant(null);
-                  setEditingSession(null);
-                  setShowForm(false);
-                }}
-                onManageMatches={(session) => {
-                  setMatchSession(session);
-                  setSelectedMatchId(null);
-                  setOpenAddMatch(false);
-                  setTrainingSession(null);
-                  setOutsiderSession(null);
-                  setResultsSession(null);
-                  setSelectedSession(null);
-                  setChargeSession(null);
-                  setLedgerParticipant(null);
-                  setEditingSession(null);
-                  setShowForm(false);
-                }}
+                onManagePlayers={(session) => handleSessionSection(session, "PLAYERS")}
+                onManageMatches={(session) => handleSessionSection(session, "MATCHES")}
                 onManageTraining={(session) => {
                   setTrainingSession(session);
 
@@ -837,6 +989,22 @@ if (loading) {
                   <SessionParticipantsPanel
                     session={session}
                     onClose={() => setSelectedSession(null)}
+                    onParticipantsChanged={(participantCount) => {
+                      nextSequence(sessionParticipantRefreshSequenceRef, session.id);
+                      setOverviewStats((current) => ({
+                        ...current,
+                        [session.id]: {
+                          ...(current[session.id] ?? {
+                            participantCount: null,
+                            matchCount: null,
+                            matchCounts: null,
+                            matchStatus: "loading" as const,
+                          }),
+                          participantCount,
+                          participantStatus: "loaded",
+                        },
+                      }));
+                    }}
                   />
                 </div>
               )}
@@ -846,6 +1014,7 @@ if (loading) {
                   <SessionMatchesPanel
                     session={session}
                     admin={admin}
+                    chargeRefreshSignal={matchChargeRefreshSignal}
                     selectedMatchId={selectedMatchId}
                     openAddMatch={openAddMatch}
                     onAddMatchOpened={handleAddMatchOpened}
@@ -854,13 +1023,12 @@ if (loading) {
                       setSelectedMatchId(null);
                       setOpenAddMatch(false);
                     }}
-                    onMatchesChanged={() => {
-                      setFullyChargedSessionIds((current) => {
-                        const next = new Set(current);
-                        next.delete(session.id);
-                        return next;
-                      });
+                    onManageParticipants={() => {
+                      setSelectedSession(session);
+                      setMatchSession(null);
+                      setSelectedMatchId(null);
                     }}
+                    onMatchesChanged={(snapshot) => refreshSessionSnapshot(session.id, undefined, snapshot)}
                   />
                 </div>
               )}
@@ -891,6 +1059,10 @@ if (loading) {
                     organization={organization}
                     organizationLogo={organizationLogo}
                     onClose={() => setResultsSession(null)}
+                    onViewMatch={(matchId) => {
+                      handleSessionSection(session, "MATCHES");
+                      setSelectedMatchId(matchId);
+                    }}
                   />
                 </div>
               )}
