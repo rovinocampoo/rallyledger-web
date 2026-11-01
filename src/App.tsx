@@ -22,6 +22,7 @@ import AppLayout from "./components/layout/AppLayout";
 import PublicLayout from "./components/layout/PublicLayout";
 
 import LandingPage from "./pages/public/LandingPage";
+import ForClubsPage from "./pages/public/ForClubsPage";
 import WalkthroughPage from "./pages/public/WalkthroughPage";
 import FaqPage from "./pages/public/FaqPage";
 import PrivacyPage from "./pages/public/PrivacyPage";
@@ -269,6 +270,7 @@ function App() {
           }
         >
           <Route path="/" element={<LandingPage />} />
+          <Route path="/for-clubs" element={<ForClubsPage />} />
           <Route path="/walkthrough" element={<WalkthroughPage />} />
           <Route path="/faq" element={<FaqPage />} />
           <Route path="/privacy" element={<PrivacyPage />} />
@@ -318,6 +320,7 @@ function App() {
           <PublicLayout theme={theme} onThemeToggle={handleThemeToggle} />
         }
       >
+        <Route path="/for-clubs" element={<ForClubsPage />} />
         <Route path="/walkthrough" element={<WalkthroughPage />} />
         <Route path="/faq" element={<FaqPage />} />
         <Route path="/privacy" element={<PrivacyPage />} />
