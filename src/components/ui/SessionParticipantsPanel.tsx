@@ -14,11 +14,13 @@ import ParticipantPicker from "../ui/ParticipantPicker";
 type SessionParticipantsPanelProps = {
   session: Session;
   onClose: () => void;
+  onParticipantsChanged?: (participantCount: number) => void;
 };
 
 function SessionParticipantsPanel({
   session,
   onClose,
+  onParticipantsChanged,
 }: SessionParticipantsPanelProps) {
   const [sessionParticipants, setSessionParticipants] = useState<
     SessionParticipant[]
@@ -72,11 +74,12 @@ function SessionParticipantsPanel({
     }
 
     try {
-      await addSessionParticipant(session.id, Number(selectedParticipantId));
-      await loadSessionParticipants();
-      setSelectedParticipantId("");
       setSaving(true);
       setError(null);
+      await addSessionParticipant(session.id, Number(selectedParticipantId));
+      const updatedParticipants = await loadSessionParticipants();
+      setSelectedParticipantId("");
+      onParticipantsChanged?.(updatedParticipants.length);
     } catch (err) {
       console.error(err);
       setError(
@@ -90,6 +93,7 @@ function SessionParticipantsPanel({
   async function loadSessionParticipants() {
     const data = await getSessionParticipants(session.id);
     setSessionParticipants(data);
+    return data;
   }
 
   async function handleRemoveParticipant(participantId: number) {
@@ -100,10 +104,11 @@ function SessionParticipantsPanel({
     }
 
     try {
-      await removeSessionParticipant(session.id, participantId);
-      await loadSessionParticipants();
       setSaving(true);
       setError(null);
+      await removeSessionParticipant(session.id, participantId);
+      const updatedParticipants = await loadSessionParticipants();
+      onParticipantsChanged?.(updatedParticipants.length);
     } catch (err) {
       console.error(err);
       setError(
@@ -135,26 +140,20 @@ function SessionParticipantsPanel({
   }
 
   return (
-    <div className="mb-6 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4">
-      <div className="flex items-start justify-between">
+    <section aria-label="Session players" className="mb-6 overflow-hidden rounded-2xl border border-stone-200 bg-white dark:border-stone-800 dark:bg-[#17221B]">
+      <div className="flex items-start justify-between gap-3 bg-[#14251B] px-4 py-4 text-white sm:px-5">
         <div className="min-w-0 text-left">
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">
-            Session Players
-          </p>
-
-          <h2 className="truncate text-xl font-semibold">{session.name}</h2>
-
-          <p className="mt-1 text-sm text-zinc-500">
-            {session.maxPlayers === null
-              ? `${sessionParticipants.length} players · Unlimited`
-              : `${sessionParticipants.length} / ${session.maxPlayers} players`}
+          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#D8C86E]">Players</p>
+          <h2 className="mt-1 break-words text-lg font-bold sm:text-xl">{session.name}</h2>
+          <p className="mt-1 text-sm text-white/75">
+            {session.maxPlayers === null ? `${sessionParticipants.length} players · No capacity limit` : `${sessionParticipants.length} of ${session.maxPlayers} player spaces filled`}
           </p>
         </div>
 
         <button
           type="button"
           onClick={onClose}
-          className="text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white"
+          className="min-h-10 shrink-0 rounded-lg border border-white/25 px-3 text-sm font-medium text-white hover:bg-white/10"
         >
           Close
         </button>
@@ -163,7 +162,14 @@ function SessionParticipantsPanel({
         <p className="mt-4 text-sm text-red-600 dark:text-red-400">{error}</p>
       )}
 
-      <div className="mt-5 flex flex-col gap-2 sm:flex-row">
+      {sessionMaxPlayers !== null && (
+        <div className="px-4 pt-4 sm:px-5">
+          <div role="progressbar" aria-label="Session capacity" aria-valuemin={0} aria-valuemax={sessionMaxPlayers} aria-valuenow={Math.min(sessionParticipants.length, sessionMaxPlayers)} className="h-2 overflow-hidden rounded-full bg-stone-100 dark:bg-stone-800">
+            <div className="h-full rounded-full bg-[#D8C86E] transition-[width]" style={{ width: `${sessionMaxPlayers === 0 ? 0 : Math.min(100, sessionParticipants.length / sessionMaxPlayers * 100)}%` }} />
+          </div>
+        </div>
+      )}
+      <div className="flex flex-col gap-2 px-4 pt-4 sm:flex-row sm:px-5">
         <ParticipantPicker
           participants={availableParticipants}
           selectedParticipantId={selectedParticipantId}
@@ -177,15 +183,23 @@ function SessionParticipantsPanel({
           type="button"
           onClick={handleAddParticipant}
           disabled={saving || sessionIsFull || !selectedParticipantId}
-          className="primary-action w-full rounded-lg px-4 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+          className="primary-action min-h-11 w-full rounded-lg px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
         >
           Add Player
         </button>
       </div>
 
-      <div className="mt-6 space-y-2">
+      <div className="px-4 pb-4 pt-5 sm:px-5 sm:pb-5">
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <h3 className="text-sm font-semibold">Roster</h3>
+          <span className="text-xs text-stone-500">{sessionParticipants.length} {sessionParticipants.length === 1 ? "player" : "players"}</span>
+        </div>
+        <div className="divide-y divide-stone-200 dark:divide-stone-800">
         {sessionParticipants.length === 0 ? (
-          <p className="text-sm text-zinc-500">No players added yet.</p>
+          <div className="rounded-xl border border-dashed border-stone-300 px-4 py-6 text-center dark:border-stone-700">
+            <p className="text-sm font-medium">No players yet</p>
+            <p className="mt-1 text-xs text-stone-500">Search above to add the first player to this session.</p>
+          </div>
         ) : (
           sessionParticipants.map((sessionParticipant) => {
             const participant = participants.find(
@@ -196,10 +210,10 @@ function SessionParticipantsPanel({
             return (
               <div
                 key={sessionParticipant.participantId}
-                className="flex items-center justify-between rounded-lg bg-zinc-50 dark:bg-zinc-950 px-4 py-3"
+                className="flex min-w-0 items-center justify-between gap-3 px-2 py-2.5 sm:px-3"
               >
                 <div className="min-w-0 flex-1 text-left">
-                  <p className="truncate font-medium">
+                  <p className="break-words font-medium">
                     {sessionParticipant.nickname ||
                       (participant
                         ? formatFullName(
@@ -210,7 +224,7 @@ function SessionParticipantsPanel({
                   </p>
 
                   {participant && sessionParticipant.nickname && (
-                    <p className="truncate text-sm text-zinc-500">
+                    <p className="break-words text-sm text-zinc-500">
                       {formatFullName(
                         participant.firstName,
                         participant.lastName,
@@ -225,7 +239,7 @@ function SessionParticipantsPanel({
                     handleRemoveParticipant(sessionParticipant.participantId)
                   }
                   disabled={saving}
-                  className="danger-text shrink-0 text-xs disabled:cursor-not-allowed disabled:opacity-50"
+                  className="min-h-10 shrink-0 rounded-lg px-3 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 dark:text-red-300 dark:hover:bg-red-950/30"
                 >
                   Remove
                 </button>
@@ -233,8 +247,9 @@ function SessionParticipantsPanel({
             );
           })
         )}
+        </div>
       </div>
-    </div>
+    </section>
   );
 }
 
